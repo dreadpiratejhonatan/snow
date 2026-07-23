@@ -280,6 +280,23 @@ export class Player {
     this.orbitPitch = 0;
   }
 
+  /** true se a câmera está mais na frente do personagem (vê o rosto). */
+  isOrbitFront() {
+    const y = ((this.orbitYaw % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+    return y > Math.PI * 0.5 && y < Math.PI * 1.5;
+  }
+
+  /** Alterna vista de frente (rosto) ↔ costas. */
+  toggleOrbitFrontView() {
+    if (this.isOrbitFront()) this.resetOrbit();
+    else {
+      this.orbitYaw = Math.PI;
+      this.orbitPitch = 0;
+    }
+    this.syncCamera();
+    return this.isOrbitFront();
+  }
+
   reset(spawn) {
     this.position.copy(spawn);
     this.velocity.set(0, 0, 0);

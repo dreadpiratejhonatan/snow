@@ -1215,14 +1215,48 @@ body.is-touch .inv-bar__hint {
   letter-spacing: 0.02em;
 }
 
-.hud__camera {
+.hud__camera-row {
   position: absolute;
   bottom: 1.5rem;
   right: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.35rem;
+  pointer-events: none;
+}
+
+.hud__camera {
   color: var(--accent);
   font-size: 0.78rem;
   letter-spacing: 0.06em;
   text-transform: uppercase;
+  text-align: right;
+  max-width: 16rem;
+  line-height: 1.25;
+}
+
+.hud__ver-skin {
+  pointer-events: auto;
+  cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: rgba(12, 18, 28, 0.75);
+  color: #f2f6ff;
+  font: inherit;
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 0.35rem 0.7rem;
+  border-radius: 6px;
+}
+
+.hud__ver-skin:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.hud__ver-skin[hidden] {
+  display: none;
 }
 
 .hud__hint {
@@ -1701,6 +1735,12 @@ body.is-touch .hud__status {
 
 body.is-touch .hud__camera {
   display: none;
+}
+
+/* No celular o botão Ver skin fica visível (label 3ª pessoa some) */
+body.is-touch .hud__camera-row {
+  bottom: max(17.5rem, calc(env(safe-area-inset-bottom) + 16.5rem));
+  right: max(0.8rem, env(safe-area-inset-right));
 }
 
 body.is-touch .hud__time {

@@ -79,6 +79,7 @@ class Game {
     this.touch = null;
     this.state = "loading";
     this.cameraMode = "first";
+    this._orbitHintShown = false;
     this.helpOpen = false;
     this._helpFromPlaying = false;
     this.rankOpen = false;
@@ -1149,6 +1150,7 @@ class Game {
   }
 
   bindUI() {
+    this.hud.onVerSkin = () => this.toggleVerSkinView();
     document.getElementById("btn-resume").addEventListener("click", () => this.resume());
     document.getElementById("btn-restart").addEventListener("click", () => this.restart());
     document.getElementById("btn-skin")?.addEventListener("click", () => this.openSkinPickerFromPause());
@@ -1252,9 +1254,34 @@ class Game {
   }
 
   setCameraMode(mode) {
+    const prev = this.cameraMode;
     this.cameraMode = mode === "third" ? "third" : "first";
     this.player.setCameraMode(this.cameraMode);
-    this.hud.updateCameraMode(this.cameraMode);
+    this.hud.updateCameraMode(this.cameraMode, {
+      facingFront: this.player.isOrbitFront(),
+    });
+    if (
+      this.state === "playing" &&
+      this.cameraMode === "third" &&
+      prev !== "third"
+    ) {
+      this.maybeShowOrbitHint();
+    }
+  }
+
+  maybeShowOrbitHint() {
+    if (this._orbitHintShown || this.cameraMode !== "third") return;
+    this._orbitHintShown = true;
+    this.hud.showMsg(
+      "Alt + setas (ou botão Ver skin) para girar e ver seu personagem",
+      5000
+    );
+  }
+
+  toggleVerSkinView() {
+    if (this.cameraMode !== "third") this.setCameraMode("third");
+    this.player.toggleOrbitFrontView();
+    this.hud.updateVerSkinLabel(this.player.isOrbitFront());
   }
 
   toggleCameraMode() {
@@ -1267,6 +1294,7 @@ class Game {
     this.hud.show();
     this.state = "playing";
     if (this.input.mobile) this.setTouchUiVisible(true);
+    this.maybeShowOrbitHint();
     this.input.attach();
     // Cronômetro começa ao entrar na partida (Novo jogo / Continuar), sem exigir clique no canvas
     if (this.speedrun.started) this.speedrun.resume();
@@ -1412,11 +1440,15 @@ class Game {
     }
     if (orbiting) this.player.applyOrbitKeys(dt, this.input);
     else this.player.applyKeyboardLook(dt, this.input);
+    if (this.cameraMode === "third") {
+      this.hud.updateVerSkinLabel(this.player.isOrbitFront());
+    }
     if (this.input.toggleCamera) {
       // Alt+V em 3ª pessoa: zera órbita (volta a ver as costas)
       if (orbiting && this.input.wasPressed("KeyV")) {
         this.player.resetOrbit();
         this.input._tapTab = false;
+        this.hud.updateVerSkinLabel(false);
       } else {
         this.toggleCameraMode();
       }

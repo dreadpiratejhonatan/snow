@@ -2,6 +2,8 @@ export class HUD {
   constructor() {
     this.el = document.getElementById("hud");
     this.cameraMode = document.getElementById("camera-mode");
+    this.verSkinBtn = document.getElementById("btn-ver-skin");
+    this.onVerSkin = null; // () => void
     this.timeEl = document.getElementById("time-of-day");
     this.healthFill = document.getElementById("health-fill");
     this.warmthFill = document.getElementById("warmth-fill");
@@ -35,6 +37,11 @@ export class HUD {
       this.setInventoryVisible(false);
       this.onInvClose?.();
     });
+    this.verSkinBtn?.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this.onVerSkin?.();
+    });
   }
 
   updateTime(dayTime, night) {
@@ -46,9 +53,23 @@ export class HUD {
     this.timeEl.textContent = `${icon} ${hh}:${mm}`;
   }
 
-  updateCameraMode(mode) {
-    if (!this.cameraMode) return;
-    this.cameraMode.textContent = mode === "third" ? "3ª pessoa" : "1ª pessoa";
+  updateCameraMode(mode, { facingFront = false } = {}) {
+    const third = mode === "third";
+    if (this.cameraMode) {
+      this.cameraMode.textContent = third
+        ? "3ª pessoa · Alt+←→ ou Ver skin"
+        : "1ª pessoa";
+    }
+    if (this.verSkinBtn) {
+      this.verSkinBtn.hidden = !third;
+      this.verSkinBtn.textContent = facingFront ? "Ver costas" : "Ver skin";
+    }
+  }
+
+  /** Atualiza só o rótulo do botão Ver skin / Ver costas. */
+  updateVerSkinLabel(facingFront) {
+    if (!this.verSkinBtn || this.verSkinBtn.hidden) return;
+    this.verSkinBtn.textContent = facingFront ? "Ver costas" : "Ver skin";
   }
 
   setHealth(v, max) {

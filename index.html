@@ -88,7 +88,10 @@
         <div class="hud__bar-track"><div id="bear-fill" class="hud__bar-fill hud__bar-fill--bear"></div></div>
       </div>
 
-      <div id="camera-mode" class="hud__camera">1ª pessoa</div>
+      <div class="hud__camera-row">
+        <div id="camera-mode" class="hud__camera">1ª pessoa</div>
+        <button type="button" id="btn-ver-skin" class="hud__ver-skin" hidden>Ver skin</button>
+      </div>
       <div id="speedrun-timer" class="hud__timer">00:00.00</div>
       <div id="ghost-timer" class="hud__ghost" hidden>
         <div id="ghost-label" class="hud__ghost-label">Recorde Top 1</div>
@@ -110,7 +113,7 @@
       <button type="button" id="btn-help-hud" class="hud__help-btn" title="Ajuda (H)" aria-label="Abrir ajuda">?</button>
 
       <div class="hud__bottom">
-        <div class="hud__controls">WASD · IJKL olhar · 1-9/0 arma · R recarga · B armas · E pegar · G/F armadilha · C craft · H ajuda</div>
+        <div class="hud__controls">WASD · IJKL olhar · Alt+←→ ou Ver skin · 1-9/0 arma · R recarga · B armas · E pegar · G/F armadilha · C craft · H ajuda</div>
       </div>
     </div>
 
@@ -284,6 +287,6 @@
     </div>
   </div>
 
-  <script type="module" src="src/js/main.js?v=gh18"></script>
+  <script type="module" src="src/js/main.js?v=gh19"></script>
 </body>
 </html>
