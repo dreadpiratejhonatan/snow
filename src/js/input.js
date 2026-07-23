@@ -79,6 +79,10 @@ export class Input {
     return target instanceof HTMLElement && target.isContentEditable;
   }
 
+  static isTypingNow() {
+    return Input.isTypingTarget(document.activeElement);
+  }
+
   attach() {
     // Um único listener (window + capture) — evita double-fire document+window
     window.addEventListener("keydown", this.onKeyDown, true);
@@ -114,13 +118,14 @@ export class Input {
   }
 
   onKeyDown(e) {
-    if (Input.isTypingTarget(e.target)) return;
+    // activeElement: no desktop o target às vezes não é o input (ex. foco perdido / IME)
+    if (Input.isTypingTarget(e.target) || Input.isTypingNow()) return;
     if (GAME_KEYS.has(e.code)) e.preventDefault();
     this.keys.add(e.code);
   }
 
   onKeyUp(e) {
-    if (Input.isTypingTarget(e.target)) return;
+    if (Input.isTypingTarget(e.target) || Input.isTypingNow()) return;
     this.keys.delete(e.code);
   }
 

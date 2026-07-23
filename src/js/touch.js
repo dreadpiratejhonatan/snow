@@ -1,12 +1,13 @@
 // Controles touch para celular: joystick à esquerda, olhar à direita,
 // botões de ação (pular, interagir, atacar, correr, câmera).
 
+/** Celular/tablet de verdade — NÃO usar ontouchstart (Chrome no PC sempre tem). */
 export function isTouchDevice() {
-  return (
-    "ontouchstart" in window ||
-    navigator.maxTouchPoints > 0 ||
-    window.matchMedia("(pointer: coarse)").matches
-  );
+  const coarse = window.matchMedia("(pointer: coarse)").matches;
+  const noHover = window.matchMedia("(hover: none)").matches;
+  // Mouse/trackpad fino no desktop: teclado + pointer lock, sem camada touch
+  if (window.matchMedia("(hover: hover) and (pointer: fine)").matches) return false;
+  return coarse || (noHover && navigator.maxTouchPoints > 0);
 }
 
 export class TouchControls {

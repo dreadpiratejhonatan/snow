@@ -143,10 +143,13 @@
           <p id="coop-code-display" class="coop-menu__code">————</p>
           <button id="btn-coop-copy" type="button" class="menu__btn menu__btn--ghost">Copiar código</button>
         </div>
-        <div class="coop-menu__join">
-          <label class="coop-menu__join-label" for="coop-code-input">Entrar com código</label>
+        <div id="coop-join-block" class="coop-menu__join">
+          <label class="coop-menu__join-label" for="coop-code-input">Entrar com código (outro PC / aba anônima)</label>
           <input id="coop-code-input" class="coop-menu__input" type="text" maxlength="8" placeholder="Ex: TBVKQ3" autocomplete="off" spellcheck="false" inputmode="text" />
-          <button id="btn-coop-join" type="button" class="menu__btn menu__btn--ghost">Entrar na sala</button>
+          <div class="coop-menu__join-actions">
+            <button id="btn-coop-paste" type="button" class="menu__btn menu__btn--ghost">Colar</button>
+            <button id="btn-coop-join" type="button" class="menu__btn menu__btn--ghost">Entrar na sala</button>
+          </div>
         </div>
         <p id="coop-status" class="coop-menu__status" aria-live="polite"></p>
       </div>
@@ -270,6 +273,6 @@
     </div>
   </div>
 
-  <script type="module" src="src/js/main.js?v=gh8"></script>
+  <script type="module" src="src/js/main.js?v=gh9"></script>
 </body>
 </html>

@@ -42,19 +42,26 @@ export function runSplash({
   }
 
   return new Promise((resolve) => {
+    const onSkip = () => {
+      if (performance.now() - t0 >= skipAfterMs) finish();
+    };
+
+    const detachSkip = () => {
+      el.removeEventListener("click", onSkip);
+      el.removeEventListener("touchstart", onSkip);
+      window.removeEventListener("keydown", onSkip);
+    };
+
     const finish = () => {
       if (settled) return;
       settled = true;
+      detachSkip();
       el.classList.add("is-hiding");
       setTimeout(() => {
         el.hidden = true;
         el.setAttribute("aria-hidden", "true");
         resolve();
       }, fadeMs);
-    };
-
-    const onSkip = () => {
-      if (performance.now() - t0 >= skipAfterMs) finish();
     };
 
     el.addEventListener("click", onSkip);

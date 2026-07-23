@@ -148,33 +148,49 @@ class Game {
     root.hidden = !visible;
   }
 
+  focusCoopCodeInput() {
+    try {
+      this.canvas?.blur?.();
+    } catch {
+      /* ignore */
+    }
+    const codeInput = document.getElementById("coop-code-input");
+    if (!codeInput || codeInput.disabled) return;
+    codeInput.focus({ preventScroll: true });
+    codeInput.select?.();
+  }
+
   /** Solo / criar sala / entrar — retorna { mode, room?, seed? }. */
   promptCoopMenu() {
     const el = document.getElementById("coop-menu");
     const status = document.getElementById("coop-status");
     const codeInput = document.getElementById("coop-code-input");
+    const joinBlock = document.getElementById("coop-join-block");
     if (!el) return Promise.resolve({ mode: "solo" });
     this.setTouchUiVisible(false);
     el.hidden = false;
     el.setAttribute("aria-hidden", "false");
     this.state = "coop";
-    if (status) status.textContent = "";
+    if (status) status.textContent = "No outro navegador: cole o código e Entrar.";
+    if (joinBlock) joinBlock.hidden = false;
     if (codeInput) {
       codeInput.disabled = false;
       codeInput.readOnly = false;
       codeInput.value = "";
     }
-    queueMicrotask(() => codeInput?.focus({ preventScroll: true }));
+    // Desktop: canvas com tabindex rouba foco — força o campo do código
+    requestAnimationFrame(() => this.focusCoopCodeInput());
 
     return new Promise((resolve) => {
       const cleanup = () => {
         el.hidden = true;
         el.setAttribute("aria-hidden", "true");
         codeInput?.removeEventListener("keydown", onCodeKey);
+        joinBlock?.removeEventListener("pointerdown", onJoinPointer);
+        btnPaste?.removeEventListener("click", onPaste);
         btnSolo?.removeEventListener("click", onSolo);
         btnCreate?.removeEventListener("click", onCreate);
         btnJoin?.removeEventListener("click", onJoin);
-        // touch volta no start() / se for solo com continue-menu
       };
       const onSolo = () => {
         cleanup();
@@ -184,7 +200,9 @@ class Game {
         btnCreate.disabled = true;
         btnSolo.disabled = true;
         btnJoin.disabled = true;
-        if (codeInput) codeInput.disabled = true;
+        btnPaste && (btnPaste.disabled = true);
+        // Host não digita aqui — esconde join p/ não parecer que o campo “não aceita” teclado
+        if (joinBlock) joinBlock.hidden = true;
         if (status) status.textContent = "Criando sala…";
         try {
           const room = new WebRtcRoom();
@@ -194,6 +212,9 @@ class Game {
           room.onCode = (code) => {
             if (codeBox) codeBox.hidden = false;
             if (codeDisplay) codeDisplay.textContent = code;
+            if (status) {
+              status.textContent = `Código ${code} — abra o site no outro PC/aba anônima, cole e Entre.`;
+            }
           };
           const { code, seed } = await room.create(this.world.seed);
           await this.waitForRoomOpen(room);
@@ -204,19 +225,22 @@ class Game {
           btnCreate.disabled = false;
           btnSolo.disabled = false;
           btnJoin.disabled = false;
-          if (codeInput) codeInput.disabled = false;
+          if (btnPaste) btnPaste.disabled = false;
+          if (joinBlock) joinBlock.hidden = false;
+          this.focusCoopCodeInput();
         }
       };
       const onJoin = async () => {
         const code = (codeInput?.value || "").trim().toUpperCase();
         if (code.length < 4) {
-          if (status) status.textContent = "Digite o código da sala (ex: TBVKQ3).";
-          codeInput?.focus({ preventScroll: true });
+          if (status) status.textContent = "Clique no campo e digite o código (ex: TBVKQ3).";
+          this.focusCoopCodeInput();
           return;
         }
         btnCreate.disabled = true;
         btnSolo.disabled = true;
         btnJoin.disabled = true;
+        if (btnPaste) btnPaste.disabled = true;
         if (codeInput) codeInput.disabled = true;
         if (status) status.textContent = "Entrando…";
         try {
@@ -233,21 +257,44 @@ class Game {
           btnCreate.disabled = false;
           btnSolo.disabled = false;
           btnJoin.disabled = false;
-          if (codeInput) {
-            codeInput.disabled = false;
-            codeInput.focus({ preventScroll: true });
+          if (btnPaste) btnPaste.disabled = false;
+          if (codeInput) codeInput.disabled = false;
+          this.focusCoopCodeInput();
+        }
+      };
+      const onPaste = async () => {
+        try {
+          const text = (await navigator.clipboard.readText()).trim().toUpperCase();
+          if (!text) {
+            if (status) status.textContent = "Área de transferência vazia — digite o código.";
+            this.focusCoopCodeInput();
+            return;
           }
+          if (codeInput) codeInput.value = text.replace(/[^A-Z0-9]/g, "").slice(0, 8);
+          if (status) status.textContent = "Código colado — clique em Entrar na sala.";
+          this.focusCoopCodeInput();
+        } catch {
+          if (status) status.textContent = "Não deu para colar — clique no campo e Ctrl+V.";
+          this.focusCoopCodeInput();
         }
       };
       const onCodeKey = (e) => {
+        e.stopPropagation();
         if (e.key === "Enter") {
           e.preventDefault();
           onJoin();
         }
       };
+      const onJoinPointer = (e) => {
+        // Clique na área do código (não nos botões) foca o input — PC
+        if (e.target?.closest?.("button")) return;
+        if (e.target === codeInput) return;
+        this.focusCoopCodeInput();
+      };
       const btnSolo = document.getElementById("btn-coop-solo");
       const btnCreate = document.getElementById("btn-coop-create");
       const btnJoin = document.getElementById("btn-coop-join");
+      const btnPaste = document.getElementById("btn-coop-paste");
       const codeBox = document.getElementById("coop-code-box");
       const codeDisplay = document.getElementById("coop-code-display");
       const btnCopy = document.getElementById("btn-coop-copy");
@@ -257,12 +304,14 @@ class Game {
         if (!code || code.includes("—")) return;
         try {
           await navigator.clipboard.writeText(code);
-          if (status) status.textContent = `Código ${code} copiado! Cole no outro aparelho.`;
+          if (status) status.textContent = `Código ${code} copiado! Cole no outro PC (botão Colar).`;
         } catch {
-          if (status) status.textContent = `Código: ${code} (copie manualmente)`;
+          if (status) status.textContent = `Código: ${code} (selecione e Ctrl+C)`;
         }
       });
       codeInput?.addEventListener("keydown", onCodeKey);
+      joinBlock?.addEventListener("pointerdown", onJoinPointer);
+      btnPaste?.addEventListener("click", onPaste);
       btnSolo?.addEventListener("click", onSolo);
       btnCreate?.addEventListener("click", onCreate);
       btnJoin?.addEventListener("click", onJoin);
@@ -1126,8 +1175,9 @@ class Game {
     );
 
     document.addEventListener("keydown", (e) => {
-      const typing = Input.isTypingTarget(e.target);
-      if (e.code === "KeyT" && !typing) {
+      // Desktop: nunca roubar teclas enquanto o foco está num input (código co-op / nome)
+      if (Input.isTypingTarget(e.target) || Input.isTypingNow()) return;
+      if (e.code === "KeyT") {
         if (
           this.state === "playing" ||
           this.state === "paused" ||
@@ -1140,7 +1190,7 @@ class Game {
         }
         return;
       }
-      if (e.code === "KeyH" && !typing) {
+      if (e.code === "KeyH") {
         if (this.state === "playing" || this.state === "paused" || this.helpOpen) {
           e.preventDefault();
           this.toggleHelp();
