@@ -8,7 +8,7 @@ import { execSync } from "node:child_process";
 process.chdir(path.dirname(path.dirname(fileURLToPath(import.meta.url))));
 const DIST = "dist";
 const HOST = path.join("release", "hostgator-snow");
-const CACHE = "gh28";
+const CACHE = "gh29";
 
 /**
  * Copia data/ para o destino.

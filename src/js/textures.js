@@ -203,6 +203,134 @@ function furCanvas() {
   return c;
 }
 
+/** Caixa de suprimentos — madeira + tiras. */
+function crateCanvas() {
+  const [c, g] = blank("#c8a878");
+  // tábuas
+  for (let i = 0; i < 6; i++) {
+    const y = (i / 6) * SIZE;
+    g.fillStyle = i % 2 === 0 ? "rgba(90,60,30,0.18)" : "rgba(255,240,210,0.12)";
+    g.fillRect(0, y, SIZE, SIZE / 6);
+    g.strokeStyle = "rgba(40,24,10,0.35)";
+    g.lineWidth = 2;
+    g.beginPath();
+    g.moveTo(0, y);
+    g.lineTo(SIZE, y);
+    g.stroke();
+  }
+  // cantoneiras
+  g.fillStyle = "rgba(50,40,30,0.55)";
+  g.fillRect(0, 0, 14, SIZE);
+  g.fillRect(SIZE - 14, 0, 14, SIZE);
+  g.fillRect(0, 0, SIZE, 14);
+  g.fillRect(0, SIZE - 14, SIZE, 14);
+  // pregos
+  for (const [x, y] of [
+    [18, 18],
+    [SIZE - 18, 18],
+    [18, SIZE - 18],
+    [SIZE - 18, SIZE - 18],
+  ]) {
+    g.fillStyle = "rgba(30,28,24,0.8)";
+    g.beginPath();
+    g.arc(x, y, 3, 0, Math.PI * 2);
+    g.fill();
+  }
+  speckle(g, 400, ["#6a4420", "#f0e0c8"], 0.06, 0.16, 0.5, 1.5);
+  return c;
+}
+
+/** Metal escovado / lata. */
+function metalCanvas() {
+  const [c, g] = blank("#b8c0c8");
+  for (let i = 0; i < 80; i++) {
+    const y = Math.random() * SIZE;
+    g.strokeStyle = `rgba(255,255,255,${0.04 + Math.random() * 0.1})`;
+    g.lineWidth = 0.6 + Math.random();
+    g.beginPath();
+    g.moveTo(0, y);
+    g.lineTo(SIZE, y + (Math.random() - 0.5) * 4);
+    g.stroke();
+  }
+  for (let i = 0; i < 40; i++) {
+    const y = Math.random() * SIZE;
+    g.strokeStyle = `rgba(20,28,36,${0.06 + Math.random() * 0.12})`;
+    g.lineWidth = 0.5;
+    g.beginPath();
+    g.moveTo(0, y);
+    g.lineTo(SIZE, y);
+    g.stroke();
+  }
+  speckle(g, 180, ["#6a7480", "#e8eef2"], 0.08, 0.2, 0.6, 2.2);
+  // rebites
+  for (let i = 0; i < 12; i++) {
+    const x = 20 + (i % 4) * 60;
+    const y = 24 + ((i / 4) | 0) * 70;
+    g.fillStyle = "rgba(40,48,56,0.55)";
+    g.beginPath();
+    g.arc(x, y, 4, 0, Math.PI * 2);
+    g.fill();
+    g.fillStyle = "rgba(220,230,240,0.35)";
+    g.beginPath();
+    g.arc(x - 1, y - 1, 1.5, 0, Math.PI * 2);
+    g.fill();
+  }
+  return c;
+}
+
+/** Lona / tecido para kits e mapas. */
+function clothCanvas() {
+  const [c, g] = blank("#d8c8a8");
+  for (let i = 0; i < 40; i++) {
+    g.strokeStyle = `rgba(80,60,40,${0.05 + Math.random() * 0.1})`;
+    g.lineWidth = 0.5;
+    const y = (i / 40) * SIZE;
+    g.beginPath();
+    g.moveTo(0, y);
+    for (let x = 0; x <= SIZE; x += 12) {
+      g.lineTo(x, y + Math.sin(x * 0.08 + i) * 1.5);
+    }
+    g.stroke();
+  }
+  // costura
+  g.setLineDash([4, 6]);
+  g.strokeStyle = "rgba(60,40,24,0.35)";
+  g.lineWidth = 1.2;
+  g.strokeRect(18, 18, SIZE - 36, SIZE - 36);
+  g.setLineDash([]);
+  speckle(g, 500, ["#8a6a40", "#f4ead8"], 0.05, 0.14, 0.4, 1.2);
+  return c;
+}
+
+/** Facetas de cristal / gelo para troféus. */
+function crystalCanvas() {
+  const [c, g] = blank("#e8f4ff");
+  for (let i = 0; i < 18; i++) {
+    g.fillStyle =
+      i % 2 === 0 ? "rgba(120,180,220,0.22)" : "rgba(255,255,255,0.28)";
+    g.beginPath();
+    const x = Math.random() * SIZE;
+    const y = Math.random() * SIZE;
+    g.moveTo(x, y);
+    g.lineTo(x + 40 + Math.random() * 60, y + 10);
+    g.lineTo(x + 20, y + 50 + Math.random() * 40);
+    g.closePath();
+    g.fill();
+  }
+  for (let i = 0; i < 30; i++) {
+    g.strokeStyle = "rgba(255,255,255,0.45)";
+    g.lineWidth = 0.8;
+    g.beginPath();
+    const x = Math.random() * SIZE;
+    const y = Math.random() * SIZE;
+    g.moveTo(x, y);
+    g.lineTo(x + 8 + Math.random() * 20, y + 20 + Math.random() * 30);
+    g.stroke();
+  }
+  speckle(g, 200, ["#ffffff", "#a8d0f0"], 0.15, 0.4, 0.4, 1.2);
+  return c;
+}
+
 export function makeTextures() {
   if (!HAS_DOM) return {}; // smoke test em Node não tem canvas
 
@@ -214,6 +342,10 @@ export function makeTextures() {
   const rock = rockCanvas();
   const foliage = foliageCanvas();
   const fur = furCanvas();
+  const crate = crateCanvas();
+  const metal = metalCanvas();
+  const cloth = clothCanvas();
+  const crystal = crystalCanvas();
 
   return {
     snowGround: toTexture(snowGround, 46),
@@ -229,5 +361,12 @@ export function makeTextures() {
     rockBump: toTexture(rock, 1.5, false),
     foliage: toTexture(foliage, 2),
     fur: toTexture(fur, 2),
+    crate: toTexture(crate, 1),
+    crateBump: toTexture(crate, 1, false),
+    metal: toTexture(metal, 1),
+    metalBump: toTexture(metal, 1, false),
+    cloth: toTexture(cloth, 1),
+    clothBump: toTexture(cloth, 1, false),
+    crystal: toTexture(crystal, 1),
   };
 }

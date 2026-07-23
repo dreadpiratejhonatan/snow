@@ -874,31 +874,137 @@ export class World {
   // ------------------------------------------------------------------
   // ITENS PARA DESCOBRIR
   // ------------------------------------------------------------------
-  createItemMesh(color) {
+  /** Tipo visual do pickup no chão (texturas procedurais). */
+  _lootKind(def = {}) {
+    if (def.countsForWin === false && def.trapId) return "trap";
+    if (def.ammoType && !def.weaponId) return "ammo";
+    if (def.trapId) return "trap";
+    if (def.saveId?.startsWith?.("win:trophy") || /troféu/i.test(def.name || "")) return "trophy";
+    if (def.weaponId) return "weapon";
+    // kits / mapas → lona; resto → caixa
+    const n = (def.name || "").toLowerCase();
+    if (/kit|mapa|corda|rádio|radio/.test(n)) return "cloth";
+    return "crate";
+  }
+
+  _lootMat(kind, color) {
+    const T = this.tex || {};
+    const c = color ?? 0xc8d0d8;
+    if (kind === "trophy") {
+      return new THREE.MeshStandardMaterial({
+        color: c,
+        map: T.crystal || null,
+        roughness: 0.25,
+        metalness: 0.55,
+        emissive: c,
+        emissiveIntensity: 0.45,
+      });
+    }
+    if (kind === "ammo" || kind === "metal") {
+      return new THREE.MeshStandardMaterial({
+        color: c,
+        map: T.metal || null,
+        bumpMap: T.metalBump || null,
+        bumpScale: 0.08,
+        roughness: 0.4,
+        metalness: 0.65,
+        emissive: c,
+        emissiveIntensity: 0.12,
+      });
+    }
+    if (kind === "cloth" || kind === "trap") {
+      return new THREE.MeshStandardMaterial({
+        color: c,
+        map: T.cloth || null,
+        bumpMap: T.clothBump || null,
+        bumpScale: 0.06,
+        roughness: 0.85,
+        metalness: 0.05,
+        emissive: c,
+        emissiveIntensity: 0.1,
+      });
+    }
+    // crate / supply
+    return new THREE.MeshStandardMaterial({
+      color: c,
+      map: T.crate || T.plank || null,
+      bumpMap: T.crateBump || T.plankBump || null,
+      bumpScale: 0.1,
+      roughness: 0.8,
+      metalness: 0.08,
+      emissive: c,
+      emissiveIntensity: 0.14,
+    });
+  }
+
+  createItemMesh(color, kind = "crate") {
     const g = new THREE.Group();
-    const crystal = new THREE.Mesh(
-      new THREE.OctahedronGeometry(0.22, 0),
+    const mat = this._lootMat(kind, color);
+    const band = new THREE.MeshStandardMaterial({
+      color: color ?? 0xffd75a,
+      roughness: 0.55,
+      metalness: 0.2,
+      emissive: color ?? 0xffd75a,
+      emissiveIntensity: 0.35,
+    });
+
+    if (kind === "trophy") {
+      const gem = new THREE.Mesh(new THREE.OctahedronGeometry(0.28, 0), mat);
+      gem.position.y = 0.55;
+      const base = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.2, 0.12, 8), this._lootMat("metal", 0xc8a040));
+      base.position.y = 0.22;
+      g.add(gem, base);
+    } else if (kind === "ammo") {
+      const box = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.22, 0.32), mat);
+      box.position.y = 0.18;
+      const lid = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.06, 0.34), band);
+      lid.position.y = 0.32;
+      g.add(box, lid);
+    } else if (kind === "trap") {
+      const body = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.24, 0.14, 10), mat);
+      body.position.y = 0.12;
+      const stripe = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.035, 6, 16), band);
+      stripe.rotation.x = Math.PI / 2;
+      stripe.position.y = 0.16;
+      g.add(body, stripe);
+    } else if (kind === "cloth") {
+      const pack = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.2, 0.28), mat);
+      pack.position.y = 0.16;
+      const strap = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.04, 0.3), band);
+      strap.position.y = 0.28;
+      g.add(pack, strap);
+    } else {
+      // caixa de suprimentos
+      const box = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.3, 0.4), mat);
+      box.position.y = 0.22;
+      const lid = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.05, 0.42), mat);
+      lid.position.y = 0.4;
+      const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.06, 0.08), band);
+      stripe.position.y = 0.28;
+      g.add(box, lid, stripe);
+    }
+
+    // brilho suave no chão para achar na neve
+    const glow = new THREE.Mesh(
+      new THREE.CircleGeometry(0.45, 16),
       new THREE.MeshBasicMaterial({
-        color,
+        color: color ?? 0xa8d0e8,
         transparent: true,
-        opacity: 0.95,
-        blending: THREE.AdditiveBlending,
+        opacity: 0.28,
         depthWrite: false,
+        blending: THREE.AdditiveBlending,
       })
     );
-    crystal.position.y = 0.6;
-    const halo = new THREE.Mesh(
-      new THREE.OctahedronGeometry(0.34, 0),
-      new THREE.MeshBasicMaterial({
-        color,
-        transparent: true,
-        opacity: 0.25,
-        blending: THREE.AdditiveBlending,
-        depthWrite: false,
-      })
-    );
-    halo.position.y = 0.6;
-    g.add(crystal, halo);
+    glow.rotation.x = -Math.PI / 2;
+    glow.position.y = 0.02;
+    g.add(glow);
+
+    g.traverse((m) => {
+      if (m.isMesh && m !== glow) {
+        m.castShadow = true;
+        m.receiveShadow = true;
+      }
+    });
     return g;
   }
 
@@ -919,9 +1025,10 @@ export class World {
       const farFromBase = Math.hypot(x, z) > (nearBase ? 8 : 30);
       if (h > this.waterLevel + 0.6 && farFromBase) break;
     }
+    const kind = this._lootKind({ ...def, countsForWin, saveId });
     const mesh = def.weaponId
       ? this.createWeaponPickupMesh(def.weaponId, def.color)
-      : this.createItemMesh(def.color);
+      : this.createItemMesh(def.color, kind);
     const y = this.groundHeight(x, z) + 0.12;
     mesh.position.set(x, y, z);
     this.scene.add(mesh);
@@ -1542,9 +1649,17 @@ export class World {
     discovered = true,
     saveId = null,
   }) {
+    const kind = this._lootKind({
+      name,
+      weaponId,
+      ammoType,
+      trapId,
+      countsForWin,
+      saveId,
+    });
     const mesh = weaponId
       ? this.createWeaponPickupMesh(weaponId, color)
-      : this.createItemMesh(color);
+      : this.createItemMesh(color, kind);
     mesh.position.copy(pos);
     this.scene.add(mesh);
     this.items.push({
@@ -1565,27 +1680,41 @@ export class World {
     });
   }
 
-  /** Pickup visual distinto para armas (não o cristal genérico). */
+  /** Pickup visual distinto para armas (textura metal/madeira). */
   createWeaponPickupMesh(weaponId, color) {
     const g = new THREE.Group();
+    const T = this.tex || {};
     const mat = new THREE.MeshStandardMaterial({
       color: color ?? 0xc8d0d8,
-      roughness: 0.55,
-      metalness: 0.35,
+      map: T.metal || null,
+      bumpMap: T.metalBump || null,
+      bumpScale: 0.06,
+      roughness: 0.45,
+      metalness: 0.55,
       emissive: color ?? 0xc8d0d8,
-      emissiveIntensity: 0.22,
+      emissiveIntensity: 0.18,
+    });
+    const wood = new THREE.MeshStandardMaterial({
+      color: 0x6b4423,
+      map: T.plank || T.crate || null,
+      bumpMap: T.plankBump || T.crateBump || null,
+      bumpScale: 0.08,
+      roughness: 0.9,
+      metalness: 0.05,
     });
     const w = CONFIG.weapons[weaponId];
     const fire = w?.fire;
     if (fire === "hitscan" || weaponId === "ak47" || weaponId === "revolver" || weaponId === "shotgun") {
       const body = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.14, 0.55), mat);
       body.position.y = 0.2;
+      const stock = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.12, 0.22), wood);
+      stock.position.set(0, 0.18, -0.28);
       const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.45, 6), mat);
       barrel.rotation.x = Math.PI / 2;
       barrel.position.set(0, 0.24, 0.4);
-      g.add(body, barrel);
+      g.add(body, stock, barrel);
     } else if (fire === "projectile" || weaponId === "bow" || weaponId === "crossbow") {
-      const limb = new THREE.Mesh(new THREE.TorusGeometry(0.32, 0.035, 6, 14, Math.PI), mat);
+      const limb = new THREE.Mesh(new THREE.TorusGeometry(0.32, 0.035, 6, 14, Math.PI), wood);
       limb.rotation.y = Math.PI / 2;
       limb.position.y = 0.4;
       const string = new THREE.Mesh(
@@ -1593,28 +1722,49 @@ export class World {
         new THREE.MeshBasicMaterial({ color: 0xf0e8d8 })
       );
       string.position.y = 0.4;
-      const arrow = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.015, 0.015, 0.55, 5),
-        new THREE.MeshStandardMaterial({ color: 0x6b4423, roughness: 0.9 })
-      );
+      const arrow = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.55, 5), wood);
       arrow.rotation.x = Math.PI / 2;
       arrow.position.set(0, 0.4, 0.2);
       g.add(limb, string, arrow);
     } else if (weaponId === "grenade") {
       g.add(new THREE.Mesh(new THREE.SphereGeometry(0.16, 10, 8), mat));
+    } else if (weaponId === "torch") {
+      const stick = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.05, 0.55, 6), wood);
+      stick.position.y = 0.35;
+      const flame = new THREE.Mesh(
+        new THREE.ConeGeometry(0.1, 0.22, 6),
+        new THREE.MeshStandardMaterial({
+          color: 0xff9a3c,
+          emissive: 0xff6a20,
+          emissiveIntensity: 0.7,
+          roughness: 0.6,
+        })
+      );
+      flame.position.y = 0.72;
+      g.add(stick, flame);
     } else {
       // melee: lâmina
       const blade = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.55, 0.04), mat);
       blade.position.y = 0.4;
-      const hilt = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.04, 0.04, 0.2, 6),
-        new THREE.MeshStandardMaterial({ color: 0x4a3020, roughness: 0.9 })
-      );
+      const hilt = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.2, 6), wood);
       hilt.position.y = 0.1;
       g.add(blade, hilt);
     }
+    const glow = new THREE.Mesh(
+      new THREE.CircleGeometry(0.4, 14),
+      new THREE.MeshBasicMaterial({
+        color: color ?? 0xc8d0d8,
+        transparent: true,
+        opacity: 0.22,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+      })
+    );
+    glow.rotation.x = -Math.PI / 2;
+    glow.position.y = 0.02;
+    g.add(glow);
     g.traverse((m) => {
-      if (m.isMesh) {
+      if (m.isMesh && m !== glow) {
         m.castShadow = true;
         m.receiveShadow = true;
       }
