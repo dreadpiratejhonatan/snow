@@ -109,7 +109,7 @@ class Game {
     this.state = "splash";
     this.hud.hide();
     this.setTouchUiVisible(false);
-    await runSplash({ minMs: 3200, maxMs: 4800, fadeMs: 800 });
+    await runSplash({ minMs: 4200, maxMs: 10000, fadeMs: 800 });
     this.state = "skin";
     // Sempre exige escolher um dos 5 personagens (rosto visível + preview girável)
     const skinId = await runSkinPicker({ force: true });

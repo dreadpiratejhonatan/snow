@@ -8,8 +8,8 @@ Com jogadores no ranking, **nunca apague** `data/leaderboard.json` no servidor.
 
 1. Entre em `public_html/snow/`
 2. **Backup:** baixe `data/leaderboard.json` para o PC
-3. **Deixe a pasta `data/` intacta**
-4. Apague apenas: `index.html`, `src/`, `api/`, `music/`, `splash_screen.*`
+3. **Deixe a pasta** `data/` **intacta**
+4. Apague apenas: `index.html`, `src/`, `api/`, `music/`, `faces/`, `splash_screen.*`, `sc2.jpeg`, `sc3.jpeg`, `sc4.jpeg`
 5. Extraia o `snow.zip` novo ali
 6. Se o zip trouxe `data/` sem `leaderboard.json`, está correto — o PHP cria o arquivo se faltar; o ranking antigo permanece
 7. Se por engano sobrescreveu o JSON, restaure o backup do passo 2
@@ -18,12 +18,16 @@ Com jogadores no ranking, **nunca apague** `data/leaderboard.json` no servidor.
 10. Teste ranking: zerar → digitar nome → Enviar → deve dizer **ranking online** → tecla **T** mostra a lista → F5 mantém
 11. Co-op: confirme `api/signal.php` e pasta `data/rooms/` (755/775). Guia: `docs/COOP.md`
 
+
+
 ### Pacote pronto após `npm run build`
 
 - Pasta: `release/hostgator-snow/`
 - Zip: `release/snow.zip`
 - **Não** sobe `data/leaderboard.json` do zip (só `leaderboard.example.json`)
 - Inclui `api/signal.php` para salas co-op
+
+
 
 ### Via FTP (FileZilla, WinSCP)
 
@@ -34,17 +38,23 @@ Com jogadores no ranking, **nunca apague** `data/leaderboard.json` no servidor.
 5. Confirme que `data/leaderboard.json` no servidor ainda é o do backup
 6. Ctrl+F5 no navegador
 
+
+
 ## O que o build faz
 
 - `release/hostgator-snow/data/` **não leva** `leaderboard.json` (só `leaderboard.example.json`)
 - Assim o upload do zip não clobber o ranking em produção
 - Dev local (`dist/`) pode ter seed vazio se ainda não existir arquivo
 
+
+
 ## Se você perdeu o ranking (recuperação)
 
 1. **Cache dos jogadores:** `localStorage.getItem('neveLeaderboardCache')` no F12 — merge parcial
 2. **Backup** que você baixou antes do deploy
 3. **PC de dev:** `web-cs/data/leaderboard.json` se rodou testes com scores
+
+
 
 ## Checklist
 
@@ -53,6 +63,8 @@ Com jogadores no ranking, **nunca apague** `data/leaderboard.json` no servidor.
 - [ ] Permissões `755`/`775` em `data/`
 - [ ] Top 10 aparece após o deploy
 - [ ] Ctrl+F5 (versão nova no `?v=`)
+
+
 
 ## Estrutura do ranking
 

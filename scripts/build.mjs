@@ -8,7 +8,7 @@ import { execSync } from "node:child_process";
 process.chdir(path.dirname(path.dirname(fileURLToPath(import.meta.url))));
 const DIST = "dist";
 const HOST = path.join("release", "hostgator-snow");
-const CACHE = "gh30";
+const CACHE = "gh31";
 
 /**
  * Copia data/ para o destino.
@@ -68,7 +68,13 @@ html = html
   );
 fs.writeFileSync(path.join(DIST, "index.html"), html);
 
-for (const splash of ["splash_screen.png", "splash_screen.jpeg"]) {
+for (const splash of [
+  "splash_screen.png",
+  "splash_screen.jpeg",
+  "sc2.jpeg",
+  "sc3.jpeg",
+  "sc4.jpeg",
+]) {
   if (fs.existsSync(splash)) fs.copyFileSync(splash, path.join(DIST, splash));
 }
 if (fs.existsSync("faces")) {
@@ -120,7 +126,13 @@ fs.mkdirSync(path.join(HOST, "src", "js"), { recursive: true });
 fs.mkdirSync(path.join(HOST, "src", "styles"), { recursive: true });
 fs.copyFileSync(path.join(DIST, "game.js"), path.join(HOST, "src", "js", "bundle.js"));
 fs.copyFileSync("src/styles/styles.css", path.join(HOST, "src", "styles", "styles.css"));
-for (const splash of ["splash_screen.png", "splash_screen.jpeg"]) {
+for (const splash of [
+  "splash_screen.png",
+  "splash_screen.jpeg",
+  "sc2.jpeg",
+  "sc3.jpeg",
+  "sc4.jpeg",
+]) {
   if (fs.existsSync(splash)) fs.copyFileSync(splash, path.join(HOST, splash));
 }
 if (fs.existsSync("faces")) {

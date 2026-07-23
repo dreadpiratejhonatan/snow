@@ -24,17 +24,51 @@
 </head>
 <body>
   <div id="app">
-    <!-- Launcher / splash (arte 1920×1080, contain, sem esticar) -->
+    <!-- Launcher / splash — carrossel (1920×1080, contain). Adicione sc3.jpeg / sc4.jpeg se quiser. -->
     <div id="splash" class="splash" aria-hidden="false">
-      <img
-        id="splash-img"
-        class="splash__img"
-        src="splash_screen.png"
-        alt="Sobrevivência na Neve Geométrica"
-        width="1920"
-        height="1080"
-        decoding="async"
-      />
+      <div class="splash__stage">
+        <div id="splash-track" class="splash__track">
+          <img
+            class="splash__slide is-active"
+            src="splash_screen.png"
+            alt="Neve Selvagem"
+            width="1920"
+            height="1080"
+            decoding="async"
+            data-splash-src="splash_screen.png"
+          />
+          <img
+            class="splash__slide"
+            src="sc2.jpeg"
+            alt="Neve Selvagem"
+            width="1920"
+            height="1080"
+            decoding="async"
+            data-splash-src="sc2.jpeg"
+          />
+          <img
+            class="splash__slide"
+            src="sc3.jpeg"
+            alt="Neve Selvagem"
+            width="1920"
+            height="1080"
+            decoding="async"
+            data-splash-src="sc3.jpeg"
+            hidden
+          />
+          <img
+            class="splash__slide"
+            src="sc4.jpeg"
+            alt="Neve Selvagem"
+            width="1920"
+            height="1080"
+            decoding="async"
+            data-splash-src="sc4.jpeg"
+            hidden
+          />
+        </div>
+      </div>
+      <div id="splash-dots" class="splash__dots" aria-hidden="true"></div>
       <aside class="dedication dedication--splash" aria-label="Dedicatórias">
         <p class="dedication__kicker">Este jogo é dedicado a</p>
         <div class="dedication__row">
@@ -366,6 +400,6 @@
     </div>
   </div>
 
-  <script type="module" src="src/js/main.js?v=gh30"></script>
+  <script type="module" src="src/js/main.js?v=gh31"></script>
 </body>
 </html>
