@@ -14,7 +14,14 @@ Com jogadores no ranking, **nunca apague** `data/leaderboard.json` no servidor.
 6. Se o zip trouxe `data/` sem `leaderboard.json`, está correto — o PHP cria o arquivo se faltar; o ranking antigo permanece
 7. Se por engano sobrescreveu o JSON, restaure o backup do passo 2
 8. Permissões da pasta `data/`: **755** ou **775**
-9. Abra o site e force **Ctrl+F5** (cache `?v=vis3` ou superior)
+9. Abra o site e force **Ctrl+F5** (cache `?v=gh4` ou superior)
+10. Teste ranking: zerar → digitar nome → Enviar → deve dizer **ranking online** → tecla **T** mostra a lista → F5 mantém
+
+### Pacote pronto após `npm run build`
+
+- Pasta: `release/hostgator-snow/`
+- Zip: `release/snow.zip`
+- **Não** sobe `data/leaderboard.json` do zip (só `leaderboard.example.json`)
 
 ### Via FTP (FileZilla, WinSCP)
 

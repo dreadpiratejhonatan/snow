@@ -555,23 +555,48 @@ class Game {
     const name = (input?.value || "").trim() || "Sobrevivente";
     const ms = this.speedrun.finalMs ?? this.speedrun.ms;
     if (btn) btn.disabled = true;
-    if (status) status.textContent = "Enviando…";
+    if (status) {
+      status.textContent = "Enviando ao ranking online…";
+      status.classList.remove("win-panel__status--ok", "win-panel__status--warn", "win-panel__status--err");
+    }
     try {
       const data = await submitScore(name, ms);
       this.leaderboard = data.entries || [];
-      if (status) {
-        status.textContent = data.localOnly
-          ? `Salvo neste navegador (#${data.rank}). Sem conexão com o ranking online.`
-          : `Salvo no ranking online! Posição #${data.rank}`;
-      }
       this.fillLeaderboardList(document.getElementById("leaderboard-list"), this.leaderboard);
       this.fillLeaderboardList(document.getElementById("rank-overlay-list"), this.leaderboard);
-      // Recarrega Top 1 (ghost) a partir do ranking atualizado
       const top = getTopEntry(this.leaderboard);
       if (top) this.speedrun.setRecord(top);
+
+      if (data.localOnly) {
+        // Não celebra como compartilhado — permite reenviar
+        if (status) {
+          status.textContent = `Ranking online indisponível (#${data.rank} só neste navegador). Verifique a rede e toque em Enviar de novo.`;
+          status.classList.add("win-panel__status--warn");
+        }
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = "Tentar de novo";
+        }
+        return;
+      }
+
+      if (status) {
+        status.textContent = `No ranking online! Posição #${data.rank} — todos os jogadores veem seu tempo (tecla T).`;
+        status.classList.add("win-panel__status--ok");
+      }
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = "Enviado";
+      }
     } catch (err) {
-      if (status) status.textContent = err.message || "Falha ao enviar (API offline?).";
-      if (btn) btn.disabled = false;
+      if (status) {
+        status.textContent = err.message || "Falha ao enviar.";
+        status.classList.add("win-panel__status--err");
+      }
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = "Enviar tempo";
+      }
     }
   }
 

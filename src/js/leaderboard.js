@@ -1,5 +1,7 @@
 const HOSTGATOR_API = "https://jhonatanribeiro.com/snow/api/leaderboard.php";
 const LOCAL_KEY = "neveLeaderboardCache";
+const FETCH_RETRIES = 3;
+const RETRY_MS = 450;
 
 /**
  * HostGator: API relativa.
@@ -14,7 +16,6 @@ function resolveApi() {
     if (h.endsWith("github.io") || h === "localhost" || h === "127.0.0.1") {
       return HOSTGATOR_API;
     }
-    // Outros hosts estáticos (ex.: serve preview): preferir ranking compartilhado
     if (h) return HOSTGATOR_API;
   } catch {
     /* SSR / testes */
@@ -24,12 +25,34 @@ function resolveApi() {
 
 const API = resolveApi();
 
+function sleep(ms) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+async function fetchWithRetry(url, options = {}, retries = FETCH_RETRIES) {
+  let lastErr;
+  for (let i = 0; i < retries; i++) {
+    try {
+      const res = await fetch(url, { cache: "no-store", ...options });
+      // Retry em 5xx / 429; 4xx de validação não retenta
+      if ((res.status >= 500 || res.status === 429) && i < retries - 1) {
+        await sleep(RETRY_MS * (i + 1));
+        continue;
+      }
+      return res;
+    } catch (err) {
+      lastErr = err;
+      if (i < retries - 1) await sleep(RETRY_MS * (i + 1));
+    }
+  }
+  throw lastErr || new Error("Falha de rede no ranking");
+}
+
 function readLocal() {
   try {
     const raw = localStorage.getItem(LOCAL_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
-    // aceita tanto array puro quanto { entries: [] }
     const list = Array.isArray(parsed) ? parsed : parsed?.entries;
     return Array.isArray(list) ? list : [];
   } catch {
@@ -70,7 +93,7 @@ function mergeAndSort(a, b) {
 export async function fetchLeaderboard(limit = 10) {
   const local = readLocal();
   try {
-    const res = await fetch(`${API}?limit=50`, { cache: "no-store" });
+    const res = await fetchWithRetry(`${API}?limit=50`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     const remote = Array.isArray(data.entries) ? data.entries : [];
@@ -106,7 +129,7 @@ export async function submitScore(name, timeMs) {
   writeLocal(afterLocal);
 
   try {
-    const res = await fetch(API, {
+    const res = await fetchWithRetry(API, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name: entry.name, timeMs: entry.timeMs }),
