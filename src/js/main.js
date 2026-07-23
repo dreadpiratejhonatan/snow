@@ -1373,7 +1373,7 @@ class Game {
     if (this.input.wasPressed("KeyB") || this.input._tapInv) {
       this.input._tapInv = false;
       const open = this.hud.toggleInventoryExpanded();
-      this.hud.showMsg(open ? "Inventário aberto (B)" : "Inventário recolhido", 1400);
+      this.hud.showMsg(open ? "Barra de armas (B esconde)" : "Barra de armas escondida (B mostra)", 1600);
       this.tutorial?.notify("inventory");
       // no desktop, solta o mouse um instante para clicar nos slots
       if (open && !this.input.mobile && document.pointerLockElement) {

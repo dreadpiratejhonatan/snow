@@ -174,11 +174,20 @@ export class HUD {
     }
   }
 
+  /** Mostra/esconde a barra de armas inteira (atalho B). `force` true=mostrar, false=esconder. */
   toggleInventoryExpanded(force) {
-    if (!this.invBar) return;
-    const open = force != null ? force : !this.invBar.classList.contains("is-open");
-    this.invBar.classList.toggle("is-open", open);
-    return open;
+    if (!this.invBar) return false;
+    const currentlyShown = !this.invBar.hidden && !this.invBar.classList.contains("is-hidden");
+    const show = force != null ? !!force : !currentlyShown;
+    this.invBar.hidden = !show;
+    this.invBar.classList.toggle("is-hidden", !show);
+    this.invBar.classList.toggle("is-open", show);
+    this.invBar.setAttribute("aria-hidden", show ? "false" : "true");
+    return show;
+  }
+
+  isInventoryVisible() {
+    return !!(this.invBar && !this.invBar.hidden && !this.invBar.classList.contains("is-hidden"));
   }
 
   setTraps(text) {

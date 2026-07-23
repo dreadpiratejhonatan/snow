@@ -866,6 +866,11 @@ kbd {
   pointer-events: auto;
 }
 
+.inv-bar[hidden],
+.inv-bar.is-hidden {
+  display: none !important;
+}
+
 .inv-bar__title {
   display: flex;
   justify-content: space-between;

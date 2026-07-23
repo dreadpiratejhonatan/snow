@@ -23,7 +23,7 @@ Site de produção típico: HostGator em `/snow` com API PHP para o leaderboard.
 | Espaço | pular |
 | E | pegar / depositar no baú |
 | IJKL | olhar a câmera sem mouse |
-| B | inventário de armas |
+| B | mostrar / esconder barra de armas |
 | 1–9 / 0 | equipar arma |
 | G / F | tipo / colocar armadilha |
 | V / Tab | 1ª / 3ª pessoa |
