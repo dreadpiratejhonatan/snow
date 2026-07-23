@@ -196,9 +196,31 @@ export class TouchControls {
       this.input.leftClicked = true;
       this.input.mouseDown = true;
     });
-    tap("btn-camera", () => {
-      this.input._tapTab = true;
-    });
+    // 👁: toque curto = 1ª/3ª; segurar + arrastar look = orbitar (ver o rosto)
+    {
+      const el = document.getElementById("btn-camera");
+      if (el) {
+        let downAt = 0;
+        el.addEventListener(
+          "touchstart",
+          (e) => {
+            e.preventDefault();
+            downAt = performance.now();
+            this.input._orbitHold = true;
+            el.classList.add("is-down");
+          },
+          { passive: false }
+        );
+        const up = (e) => {
+          e.preventDefault();
+          this.input._orbitHold = false;
+          el.classList.remove("is-down");
+          if (performance.now() - downAt < 280) this.input._tapTab = true;
+        };
+        el.addEventListener("touchend", up, { passive: false });
+        el.addEventListener("touchcancel", up, { passive: false });
+      }
+    }
     tap("btn-pause", () => {
       this.input._tapEsc = true;
     });

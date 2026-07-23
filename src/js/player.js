@@ -14,6 +14,9 @@ export class Player {
     this.kb = new THREE.Vector3(); // knockback (empurrão do urso)
     this.yaw = 0;
     this.pitch = 0;
+    /** Órbita só da câmera em 3ª pessoa (0 = atrás do corpo). */
+    this.orbitYaw = 0;
+    this.orbitPitch = 0;
     this.onGround = false;
     this.cameraMode = "first";
     this.skinId = "natan";
@@ -266,9 +269,15 @@ export class Player {
 
   setCameraMode(mode) {
     this.cameraMode = mode === "third" ? "third" : "first";
+    if (this.cameraMode === "first") this.resetOrbit();
     this.syncMesh();
     this.syncFpWeaponVisibility();
     this.syncCamera();
+  }
+
+  resetOrbit() {
+    this.orbitYaw = 0;
+    this.orbitPitch = 0;
   }
 
   reset(spawn) {
@@ -278,6 +287,7 @@ export class Player {
     this.kb.set(0, 0, 0);
     this.yaw = 0;
     this.pitch = 0;
+    this.resetOrbit();
     this.onGround = false;
     this.syncMesh();
     this.syncCamera();
@@ -295,6 +305,18 @@ export class Player {
     }
   }
 
+  /** Gira só a câmera em volta do corpo (3ª pessoa) — não vira o personagem. */
+  applyOrbitLook(delta) {
+    const sensitivity = 0.0034;
+    this.orbitYaw -= delta.x * sensitivity;
+    this.orbitPitch -= delta.y * sensitivity;
+    this.orbitPitch = THREE.MathUtils.clamp(this.orbitPitch, -1.2, 1.2);
+    if (this.orbitYaw > Math.PI * 4 || this.orbitYaw < -Math.PI * 4) {
+      this.orbitYaw =
+        ((this.orbitYaw % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+    }
+  }
+
   /** Look contínuo por teclado (não usa setas — elas movem o personagem). */
   applyKeyboardLook(dt, input) {
     const speed = 1.85; // rad/s
@@ -307,6 +329,27 @@ export class Player {
     if (input.isDown("KeyK")) dy += 1;
     if (!dx && !dy) return;
     this.applyLook({ x: dx * speed * dt * 280, y: dy * speed * dt * 280 });
+  }
+
+  /** Alt + setas: orbita a câmera 360° sem mouse e sem girar o corpo. */
+  applyOrbitKeys(dt, input) {
+    const speed = 1.85;
+    let dx = 0;
+    let dy = 0;
+    if (input.orbitLeft) dx -= 1;
+    if (input.orbitRight) dx += 1;
+    if (input.orbitUp) dy -= 1;
+    if (input.orbitDown) dy += 1;
+    if (!dx && !dy) return;
+    this.applyOrbitLook({ x: dx * speed * dt * 280, y: dy * speed * dt * 280 });
+  }
+
+  get cameraYaw() {
+    return this.yaw + this.orbitYaw;
+  }
+
+  get cameraPitch() {
+    return THREE.MathUtils.clamp(this.pitch + this.orbitPitch, -1.55, 1.55);
   }
 
   update(dt, input) {
@@ -420,28 +463,35 @@ export class Player {
 
   syncThirdPersonCamera(dt = 0) {
     const cfg = CONFIG.thirdPerson;
+    const camYaw = this.cameraYaw;
+    const camPitch = this.cameraPitch;
     const pivot = new THREE.Vector3(
       this.position.x,
       this.position.y + cfg.pivotHeight,
       this.position.z
     );
-    // ombro direito: boneco à esquerda, mira livre 360°
-    const right = new THREE.Vector3(Math.cos(this.yaw), 0, -Math.sin(this.yaw));
+    // ombro direito relativo à visão da câmera (órbita incluída)
+    const right = new THREE.Vector3(Math.cos(camYaw), 0, -Math.sin(camYaw));
     pivot.addScaledVector(right, cfg.shoulderOffset);
 
-    const look = this.lookDirection;
+    const cosP = Math.cos(camPitch);
+    const look = new THREE.Vector3(
+      -Math.sin(camYaw) * cosP,
+      Math.sin(camPitch),
+      -Math.cos(camYaw) * cosP
+    ).normalize();
     const back = look.clone().negate();
     const distance = this.clipCameraDistance(pivot, back, cfg.distance);
     const target = pivot.clone().addScaledVector(back, distance);
 
-    // suaviza só a POSIÇÃO; orientação = mesmo Euler da 1ª pessoa (gira 360° sem flip)
+    // suaviza só a POSIÇÃO; orientação acompanha a órbita (360° sem flip)
     if (dt > 0 && this._camSmooth) {
       this._camSmooth.lerp(target, 1 - Math.exp(-dt * 16));
     } else {
       this._camSmooth = target.clone();
     }
     this.camera.position.copy(this._camSmooth);
-    const euler = new THREE.Euler(this.pitch, this.yaw, 0, "YXZ");
+    const euler = new THREE.Euler(camPitch, camYaw, 0, "YXZ");
     this.camera.quaternion.setFromEuler(euler);
   }
 

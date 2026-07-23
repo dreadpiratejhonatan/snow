@@ -28,6 +28,8 @@ const GAME_KEYS = new Set([
   "KeyC",
   "Tab",
   "Escape",
+  "AltLeft",
+  "AltRight",
   "Digit1",
   "Digit2",
   "Digit3",
@@ -58,6 +60,8 @@ export class Input {
     this._tapE = false;
     this._tapTab = false;
     this._tapEsc = false;
+    /** Hold do botão 👁 no touch = órbita da câmera (3ª pessoa). */
+    this._orbitHold = false;
 
     this.onKeyDown = this.onKeyDown.bind(this);
     this.onKeyUp = this.onKeyUp.bind(this);
@@ -249,6 +253,27 @@ export class Input {
     return this.wasPressed("Tab", "KeyV");
   }
 
+  /** Alt (ou hold 👁 no celular): orbitar câmera sem girar o corpo. */
+  get orbitModifier() {
+    return this._orbitHold || this.isDown("AltLeft", "AltRight");
+  }
+
+  get orbitLeft() {
+    return this.orbitModifier && this.isDown("ArrowLeft");
+  }
+
+  get orbitRight() {
+    return this.orbitModifier && this.isDown("ArrowRight");
+  }
+
+  get orbitUp() {
+    return this.orbitModifier && this.isDown("ArrowUp");
+  }
+
+  get orbitDown() {
+    return this.orbitModifier && this.isDown("ArrowDown");
+  }
+
   get pausePressed() {
     return this._tapEsc || this.wasPressed("Escape");
   }
@@ -259,21 +284,25 @@ export class Input {
 
   get moveForward() {
     if (this.analog && this.analog.y > 0.25) return true;
+    if (this.orbitModifier) return this.isDown("KeyW", "KeyZ");
     return this.isDown("KeyW", "KeyZ", "ArrowUp");
   }
 
   get moveBack() {
     if (this.analog && this.analog.y < -0.25) return true;
+    if (this.orbitModifier) return this.isDown("KeyS");
     return this.isDown("KeyS", "ArrowDown");
   }
 
   get moveLeft() {
     if (this.analog && this.analog.x < -0.25) return true;
+    if (this.orbitModifier) return this.isDown("KeyA", "KeyQ");
     return this.isDown("KeyA", "KeyQ", "ArrowLeft");
   }
 
   get moveRight() {
     if (this.analog && this.analog.x > 0.25) return true;
+    if (this.orbitModifier) return this.isDown("KeyD");
     return this.isDown("KeyD", "ArrowRight");
   }
 

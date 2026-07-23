@@ -1404,11 +1404,23 @@ class Game {
     this.tutorial?.update();
 
     const mouseDelta = this.input.consumeMouseDelta();
+    const orbiting =
+      this.cameraMode === "third" && this.input.orbitModifier;
     if (this.input.locked || this.input.mobile || this.input.rightDown) {
-      this.player.applyLook(mouseDelta);
+      if (orbiting) this.player.applyOrbitLook(mouseDelta);
+      else this.player.applyLook(mouseDelta);
     }
-    this.player.applyKeyboardLook(dt, this.input);
-    if (this.input.toggleCamera) this.toggleCameraMode();
+    if (orbiting) this.player.applyOrbitKeys(dt, this.input);
+    else this.player.applyKeyboardLook(dt, this.input);
+    if (this.input.toggleCamera) {
+      // Alt+V em 3ª pessoa: zera órbita (volta a ver as costas)
+      if (orbiting && this.input.wasPressed("KeyV")) {
+        this.player.resetOrbit();
+        this.input._tapTab = false;
+      } else {
+        this.toggleCameraMode();
+      }
+    }
 
     this.player.update(dt, this.input);
     this.coop?.tick(dt);
