@@ -77,7 +77,7 @@ export class Ambience {
     lowFilter.type = "lowpass";
     lowFilter.frequency.value = 240;
     this.windLow = ctx.createGain();
-    this.windLow.gain.value = 0.03;
+    this.windLow.gain.value = 0.022; // um pouco mais baixo — trilha Minecraft sobressai
     low.connect(lowFilter).connect(this.windLow).connect(master);
     low.start();
 

@@ -27,78 +27,91 @@ const FILE_CANDIDATES = [
   "beta.mp3",
 ];
 
-// Faixas procedurais estilo Minecraft / C418: lentas, esparsas, piano + pad.
-// (não é a OST oficial — clima de exploração calma, sem arpeggio estilo Terraria)
+// Motivos em graus da escala (não é a OST oficial — clima C418 / exploração).
+const MOTIFS = [
+  [0, 2, 4, 5, 4, 2], // subida suave e volta
+  [4, 2, 0, 2, 4, 5], // desce e sobe
+  [0, 0, 2, 4, -1, 5], // nota longa + pausa
+  [2, 4, 5, 4, 2, 0], // arco clássico
+  [5, 4, 2, 0, 2, -1], // desce e respira
+  [0, 4, 5, 4, -1, 2], // salto de 3ª/5ª suave
+  [2, 2, 4, 5, 7, 5], // sobe (graus saturam na escala)
+  [0, 2, -1, 4, 2, 0], // silêncio no meio
+];
+
+// Faixas procedurais estilo Minecraft / C418: piano lento + pad quente.
 const PROC_TRACKS = [
   {
-    id: "sweden-soft",
+    id: "sweden-main",
     name: "Planície Quiet",
-    scale: [261.63, 293.66, 329.63, 349.23, 392.0, 440.0], // C major
-    pad: [130.81, 164.81, 196.0, 246.94],
-    beat: 1.15,
-    density: 0.55,
-    bright: 0.12,
-    length: 22,
+    // C major pentatônico-ish (C D E G A) — clima Sweden / exploração
+    scale: [261.63, 293.66, 329.63, 392.0, 440.0, 523.25],
+    pad: [130.81, 164.81, 196.0, 261.63],
+    beat: 1.35,
+    density: 0.72,
+    bright: 0.08,
+    length: 36,
+    main: true,
   },
   {
     id: "key-soft",
     name: "Chave na Neve",
-    scale: [220.0, 246.94, 261.63, 293.66, 329.63, 369.99], // A minor-ish
+    scale: [220.0, 246.94, 261.63, 293.66, 329.63, 369.99],
     pad: [110.0, 146.83, 174.61, 220.0],
-    beat: 1.25,
-    density: 0.5,
-    bright: 0.08,
-    length: 20,
+    beat: 1.4,
+    density: 0.62,
+    bright: 0.06,
+    length: 28,
   },
   {
     id: "haggstrom-soft",
     name: "Haggström Quiet",
-    scale: [196.0, 220.0, 246.94, 261.63, 293.66, 329.63], // G
+    scale: [196.0, 220.0, 246.94, 293.66, 329.63, 392.0],
     pad: [98.0, 123.47, 146.83, 196.0],
-    beat: 1.05,
-    density: 0.58,
-    bright: 0.15,
-    length: 24,
+    beat: 1.2,
+    density: 0.68,
+    bright: 0.1,
+    length: 30,
   },
   {
     id: "living-mice",
     name: "Ratos Vivos",
-    scale: [174.61, 196.0, 220.0, 261.63, 293.66, 329.63], // F
+    scale: [174.61, 196.0, 220.0, 261.63, 293.66, 349.23],
     pad: [87.31, 130.81, 174.61, 220.0],
-    beat: 1.35,
-    density: 0.48,
-    bright: 0.1,
-    length: 18,
+    beat: 1.45,
+    density: 0.6,
+    bright: 0.08,
+    length: 26,
   },
   {
     id: "wet-hands",
     name: "Mãos Molhadas",
-    scale: [146.83, 174.61, 196.0, 220.0, 246.94, 293.66], // D
+    scale: [146.83, 174.61, 196.0, 220.0, 261.63, 293.66],
     pad: [73.42, 110.0, 146.83, 185.0],
-    beat: 1.4,
-    density: 0.5,
-    bright: 0.06,
-    length: 19,
+    beat: 1.5,
+    density: 0.58,
+    bright: 0.05,
+    length: 28,
   },
   {
     id: "subwoofer",
     name: "Canção do Subwoofer",
-    scale: [130.81, 155.56, 174.61, 196.0, 233.08, 261.63], // C minor soft
+    scale: [130.81, 155.56, 174.61, 196.0, 233.08, 261.63],
     pad: [65.41, 98.0, 130.81, 164.81],
-    beat: 1.5,
-    density: 0.45,
-    bright: 0.05,
-    length: 21,
+    beat: 1.55,
+    density: 0.55,
+    bright: 0.04,
+    length: 30,
   },
   {
     id: "mice-venus",
     name: "Ratos em Vênus",
-    scale: [246.94, 277.18, 293.66, 329.63, 369.99, 415.3], // B-ish
+    scale: [246.94, 277.18, 293.66, 349.23, 392.0, 440.0],
     pad: [123.47, 155.56, 185.0, 246.94],
-    beat: 1.2,
-    density: 0.52,
-    bright: 0.18,
-    length: 23,
+    beat: 1.3,
+    density: 0.64,
+    bright: 0.12,
+    length: 28,
   },
 ];
 
@@ -207,7 +220,7 @@ export class MusicPlayer {
     if (!ctx || !master || this.ready) return;
 
     this.bus = ctx.createGain();
-    this.bus.gain.value = 0.42;
+    this.bus.gain.value = 0.58; // trilha principal mais presente sob o vento
     this.bus.connect(master);
 
     // camada de tensão (combate) — some por cima da exploração
@@ -216,12 +229,19 @@ export class MusicPlayer {
     this.combatBus.connect(master);
     this.setupCombatLayer(ctx);
 
-    // 1) Começa JÁ com faixa procedural aleatória (não espera rede).
+    // 1) Começa JÁ com trilha procedural (faixa principal Minecraft primeiro).
     this.mode = "proc";
     this.setupProcGraph(ctx);
     const proc = freshPlaylist(PROC_TRACKS, "id");
     this.playlist = proc.list;
-    this.index = proc.start;
+    // Garante a faixa principal (Planície Quiet) como primeira da sessão
+    const mainIdx = this.playlist.findIndex((t) => t.main);
+    this.index = mainIdx >= 0 ? mainIdx : proc.start;
+    if (mainIdx > 0) {
+      const [main] = this.playlist.splice(mainIdx, 1);
+      this.playlist.unshift(main);
+      this.index = 0;
+    }
     this.beginProcTrack(this.playlist[this.index]);
     this.ready = true;
     this.onTrack?.(this.playlist[this.index]?.name || "Trilha");
@@ -408,32 +428,33 @@ export class MusicPlayer {
     // pad quente e abafado (fundo Minecraft, não chiptune)
     this.padFilter = ctx.createBiquadFilter();
     this.padFilter.type = "lowpass";
-    this.padFilter.frequency.value = 680;
-    this.padFilter.Q.value = 0.5;
+    this.padFilter.frequency.value = 520;
+    this.padFilter.Q.value = 0.4;
     this.padGain = ctx.createGain();
-    this.padGain.gain.value = 0.35;
+    this.padGain.gain.value = 0.42;
     this.padFilter.connect(this.padGain).connect(this.bus);
 
     this.padOsc = [0, 1, 2, 3].map((i) => {
       const o = ctx.createOscillator();
-      o.type = "sine";
+      // sine + triangle leve = pad “orgânico” C418
+      o.type = i % 2 === 0 ? "sine" : "triangle";
       o.frequency.value = 110;
       const g = ctx.createGain();
-      g.gain.value = i === 0 ? 0.055 : 0.028;
+      g.gain.value = i === 0 ? 0.07 : 0.034;
       o.connect(g).connect(this.padFilter);
       o.start();
       return { o, g };
     });
 
-    // eco longo e suave (sala grande), sem ping-pong de game OST
+    // eco longo e suave (sala grande / neve)
     this.echo = ctx.createGain();
-    const d = ctx.createDelay(2.5);
-    d.delayTime.value = 0.85;
+    const d = ctx.createDelay(3.2);
+    d.delayTime.value = 1.05;
     const fb = ctx.createGain();
-    fb.gain.value = 0.38;
+    fb.gain.value = 0.42;
     const damp = ctx.createBiquadFilter();
     damp.type = "lowpass";
-    damp.frequency.value = 1400;
+    damp.frequency.value = 1200;
     this.echo.connect(d);
     d.connect(damp).connect(fb).connect(d);
     d.connect(this.bus);
@@ -441,7 +462,8 @@ export class MusicPlayer {
     // filtro das notas "piano"
     this.noteFilter = ctx.createBiquadFilter();
     this.noteFilter.type = "lowpass";
-    this.noteFilter.frequency.value = 2400;
+    this.noteFilter.frequency.value = 2800;
+    this.noteFilter.Q.value = 0.3;
     this.noteFilter.connect(this.bus);
   }
 
@@ -476,24 +498,29 @@ export class MusicPlayer {
   fillPhrase() {
     const track = this.track;
     if (!track) return;
-    // frases curtas e espaçadas (não arpeggio contínuo)
-    const notes = 3 + ((Math.random() * 4) | 0);
-    let prev = (Math.random() * track.scale.length) | 0;
-    for (let i = 0; i < notes && this.notesLeftInTrack > 0; i++) {
+    // Motivo melódico (estilo exploração Minecraft) + variação leve
+    const motif = MOTIFS[randInt(MOTIFS.length)];
+    const transpose = randInt(3) - 1; // -1, 0, +1
+    const max = track.scale.length - 1;
+    for (let i = 0; i < motif.length && this.notesLeftInTrack > 0; i++) {
       this.notesLeftInTrack--;
-      if (Math.random() > track.density) {
-        // pausa longa entre notas
-        this.queue.push([-1, 2 + ((Math.random() * 3) | 0)]);
+      const raw = motif[i];
+      if (raw < 0 || Math.random() > track.density) {
+        this.queue.push([-1, 2 + randInt(3)]);
         continue;
       }
-      let step = ((Math.random() * 3) | 0) - 1;
-      if (Math.random() < 0.15) step = 0;
-      prev = Math.max(0, Math.min(track.scale.length - 1, prev + step));
-      const beats = [2, 2, 3, 4, 4][(Math.random() * 5) | 0];
-      this.queue.push([prev, beats]);
+      const deg = Math.max(0, Math.min(max, raw + transpose));
+      // notas longas — piano “Sweden”, não arpeggio corrido
+      const beats = [3, 3, 4, 4, 5, 6][randInt(6)];
+      this.queue.push([deg, beats]);
+      // ocasionalmente dobra a nota (eco humano do tema)
+      if (Math.random() < 0.12) {
+        this.notesLeftInTrack = Math.max(0, this.notesLeftInTrack - 1);
+        this.queue.push([deg, 2 + randInt(2)]);
+      }
     }
-    // silêncio no fim da frase
-    this.queue.push([-1, 3 + ((Math.random() * 4) | 0)]);
+    // respiração longa entre frases
+    this.queue.push([-1, 4 + randInt(5)]);
   }
 
   playNote(degree, beats) {
@@ -503,30 +530,33 @@ export class MusicPlayer {
     const base = track.scale[degree % track.scale.length];
     // quase nunca sobe oitava — piano médio, clima C418
     const f = base * (Math.random() < track.bright ? 2 : 1);
-    const dur = Math.max(0.8, beats * this.beat * 1.15);
+    const dur = Math.max(1.1, beats * this.beat * 1.35);
     const t0 = ctx.currentTime;
 
-    // "piano" suave: sine + triangle (volume audível sob o vento)
-    for (const [type, vol, attack] of [
-      ["sine", 0.2, 0.1],
-      ["triangle", 0.09, 0.14],
-    ]) {
+    // "piano" Minecraft: ataque lento, release longo, leve detune
+    const voices = [
+      ["sine", 0.26, 0.12, 1],
+      ["triangle", 0.11, 0.16, 1.003],
+      ["sine", 0.05, 0.22, 0.997],
+    ];
+    for (const [type, vol, attack, ratio] of voices) {
       const osc = ctx.createOscillator();
       osc.type = type;
-      osc.frequency.value = f;
+      osc.frequency.value = f * ratio;
       const g = ctx.createGain();
       g.gain.setValueAtTime(0, t0);
       g.gain.linearRampToValueAtTime(vol, t0 + attack);
+      g.gain.setValueAtTime(vol * 0.85, t0 + attack + dur * 0.35);
       g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
       const dest = this.noteFilter || this.bus;
       osc.connect(g).connect(dest);
       if (this.echo) {
         const send = ctx.createGain();
-        send.gain.value = 0.55;
+        send.gain.value = 0.62;
         g.connect(send).connect(this.echo);
       }
       osc.start(t0);
-      osc.stop(t0 + dur + 0.08);
+      osc.stop(t0 + dur + 0.12);
     }
   }
 
@@ -555,8 +585,8 @@ export class MusicPlayer {
     this._moodBlend += (want - this._moodBlend) * Math.min(1, dt * 1.8);
 
     if (this.bus) {
-      // em combate a exploração baixa um pouco (guia sonoro)
-      const exploreVol = (0.45 - this._moodBlend * 0.12) * dangerMul;
+      // exploração bem audível (clima Minecraft); combate abaixa um pouco
+      const exploreVol = (0.62 - this._moodBlend * 0.14) * dangerMul;
       this.bus.gain.value += (exploreVol - this.bus.gain.value) * Math.min(1, dt * 2);
     }
     if (this.combatBus) {
