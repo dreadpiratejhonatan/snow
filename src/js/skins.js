@@ -1,9 +1,20 @@
 import * as THREE from "three";
 import { CONFIG } from "./config.js";
+import { SkinPreview } from "./skinPreview.js";
 
 const STORAGE_KEY = "nevePlayerSkin";
 const faceTexCache = new Map();
 const loader = new THREE.TextureLoader();
+
+/** URL de asset relativa ao HTML (funciona em /snow/ no Pages). */
+export function assetUrl(rel) {
+  if (!rel) return rel;
+  try {
+    return new URL(rel, document.baseURI || window.location.href).href;
+  } catch {
+    return rel;
+  }
+}
 
 /** Resolve id atual ou alias antigo. */
 export function resolveSkinId(id) {
@@ -46,16 +57,17 @@ export function saveSkinId(id) {
 
 export function faceUrl(skin) {
   const def = typeof skin === "string" ? getSkin(skin) : skin;
-  return def?.face || null;
+  return def?.face ? assetUrl(def.face) : null;
 }
 
 /** Textura do rosto (NEAREST = pixel art). */
 export function loadFaceTexture(url) {
-  if (!url) return Promise.resolve(null);
-  if (faceTexCache.has(url)) return faceTexCache.get(url);
+  const resolved = assetUrl(url);
+  if (!resolved) return Promise.resolve(null);
+  if (faceTexCache.has(resolved)) return faceTexCache.get(resolved);
   const p = new Promise((resolve) => {
     loader.load(
-      url,
+      resolved,
       (tex) => {
         tex.colorSpace = THREE.SRGBColorSpace;
         tex.magFilter = THREE.NearestFilter;
@@ -64,10 +76,13 @@ export function loadFaceTexture(url) {
         resolve(tex);
       },
       undefined,
-      () => resolve(null)
+      () => {
+        console.warn("Face texture failed:", resolved);
+        resolve(null);
+      }
     );
   });
-  faceTexCache.set(url, p);
+  faceTexCache.set(resolved, p);
   return p;
 }
 
@@ -77,37 +92,59 @@ export function applySkinToPlayer(player, id) {
 }
 
 /**
- * Mostra o picker. resolve com o id escolhido.
- * @param {{ force?: boolean }} opts force=true abre mesmo com skin salva (pause)
+ * Escolha obrigatória de personagem (5 rostos).
+ * @param {{ force?: boolean }} opts force=true sempre abre (boot / pause)
  */
-export function runSkinPicker({ force = false } = {}) {
+export function runSkinPicker({ force = true } = {}) {
   const el = document.getElementById("skin-picker");
   const grid = document.getElementById("skin-grid");
+  const btn = document.getElementById("skin-confirm");
+  const canvas = document.getElementById("skin-preview");
+  const hint = document.getElementById("skin-pick-hint");
   if (!el || !grid) {
-    const fallback = loadSkinId() || resolveSkinId("natan");
-    return Promise.resolve(fallback);
+    return Promise.resolve(resolveSkinId(loadSkinId() || "natan"));
   }
 
-  const existing = loadSkinId();
-  if (existing && !force) {
-    el.hidden = true;
-    return Promise.resolve(existing);
+  // Boot: sempre exige escolha. Pause: force=true também reabre.
+  if (!force) {
+    const existing = loadSkinId();
+    if (existing) {
+      el.hidden = true;
+      return Promise.resolve(existing);
+    }
   }
 
   el.hidden = false;
   el.setAttribute("aria-hidden", "false");
 
   const skins = listSkins();
-  let selected = existing || skins[0]?.id || "natan";
+  let selected = null; // obrigatório clicar num dos cinco
+  let preview = null;
+  if (canvas) {
+    try {
+      preview = new SkinPreview(canvas);
+    } catch (err) {
+      console.warn("Skin preview:", err);
+    }
+  }
+
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = "Escolha um personagem";
+  }
+  if (hint) {
+    hint.textContent = "Clique num dos 5 rostos. Arraste o boneco para girar e ver o rosto.";
+  }
 
   const render = () => {
     grid.innerHTML = skins
       .map((s) => {
         const active = s.id === selected ? " is-selected" : "";
-        const face = s.face
-          ? `<img class="skin-card__face" src="${s.face}" alt="" width="72" height="72" draggable="false" />`
+        const src = faceUrl(s) || "";
+        const face = src
+          ? `<img class="skin-card__face" src="${src}" alt="${s.name}" width="88" height="88" draggable="false" />`
           : "";
-        return `<button type="button" class="skin-card${active}" data-skin-id="${s.id}">
+        return `<button type="button" class="skin-card${active}" data-skin-id="${s.id}" aria-pressed="${s.id === selected}">
           ${face}
           <span class="skin-card__name">${s.name}</span>
         </button>`;
@@ -117,20 +154,35 @@ export function runSkinPicker({ force = false } = {}) {
   render();
 
   return new Promise((resolve) => {
+    const finish = (id) => {
+      preview?.dispose();
+      el.hidden = true;
+      el.setAttribute("aria-hidden", "true");
+      el.removeEventListener("click", onClick);
+      window.dispatchEvent(new Event("neve-user-gesture"));
+      resolve(resolveSkinId(id));
+    };
+
     const onClick = (e) => {
       const card = e.target.closest("[data-skin-id]");
       if (card) {
         selected = card.dataset.skinId;
         render();
+        preview?.setSkin(selected);
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = `Jogar como ${getSkin(selected).name}`;
+        }
+        if (hint) hint.textContent = "Arraste o boneco para girar · confirme para jogar";
         return;
       }
       if (e.target.closest("#skin-confirm")) {
+        if (!selected) {
+          if (hint) hint.textContent = "Escolha um dos 5 personagens antes de continuar.";
+          return;
+        }
         saveSkinId(selected);
-        el.hidden = true;
-        el.setAttribute("aria-hidden", "true");
-        el.removeEventListener("click", onClick);
-        window.dispatchEvent(new Event("neve-user-gesture"));
-        resolve(resolveSkinId(selected));
+        finish(selected);
       }
     };
     el.addEventListener("click", onClick);

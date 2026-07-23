@@ -165,13 +165,17 @@
       </div>
     </div>
 
-    <!-- Escolha de skin (1º acesso / pause) -->
+    <!-- Escolha obrigatória de personagem (5 rostos) -->
     <div id="skin-picker" class="skin-picker" hidden aria-hidden="true">
       <div class="skin-picker__panel">
         <h2 class="skin-picker__title">Escolha seu personagem</h2>
-        <p class="skin-picker__sub">Natan, Jhonatan, Jorge Bolado, Caio ou Lorenzo. Pode trocar depois no pause.</p>
+        <p class="skin-picker__sub">Obrigatório: Natan, Jhonatan, Jorge Bolado, Caio ou Lorenzo.</p>
+        <div class="skin-picker__stage">
+          <canvas id="skin-preview" class="skin-picker__canvas" width="320" height="320" aria-label="Preview 3D — arraste para girar"></canvas>
+          <p id="skin-pick-hint" class="skin-picker__hint">Clique num dos 5 rostos. Arraste o boneco para girar.</p>
+        </div>
         <div id="skin-grid" class="skin-picker__grid"></div>
-        <button id="skin-confirm" type="button" class="menu__btn">Jogar com esta</button>
+        <button id="skin-confirm" type="button" class="menu__btn" disabled>Escolha um personagem</button>
       </div>
     </div>
 
@@ -273,6 +277,6 @@
     </div>
   </div>
 
-  <script type="module" src="src/js/main.js?v=gh13"></script>
+  <script type="module" src="src/js/main.js?v=gh14"></script>
 </body>
 </html>

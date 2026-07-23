@@ -105,8 +105,11 @@ class Game {
     this.setTouchUiVisible(false);
     await runSplash({ minMs: 3200, maxMs: 4800, fadeMs: 800 });
     this.state = "skin";
-    const skinId = await runSkinPicker({ force: !loadSkinId() });
+    // Sempre exige escolher um dos 5 personagens (rosto visível + preview girável)
+    const skinId = await runSkinPicker({ force: true });
     applySkinToPlayer(this.player, skinId);
+    // Começa em 3ª pessoa para ver o personagem; mouse gira a câmera
+    if (!this.input.mobile) this.setCameraMode("third");
 
     const coopChoice = await this.promptCoopMenu();
     let resumeSave = null;
