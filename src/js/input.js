@@ -70,11 +70,19 @@ export class Input {
     this.onVisibilityChange = this.onVisibilityChange.bind(this);
   }
 
+  /** Nome / campos de texto: não capturar nem preventDefault. */
+  static isTypingTarget(target) {
+    if (!target || !(target instanceof Element)) return false;
+    if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) {
+      return !target.readOnly && !target.disabled;
+    }
+    return target instanceof HTMLElement && target.isContentEditable;
+  }
+
   attach() {
+    // Um único listener (window + capture) — evita double-fire document+window
     window.addEventListener("keydown", this.onKeyDown, true);
     window.addEventListener("keyup", this.onKeyUp, true);
-    document.addEventListener("keydown", this.onKeyDown, true);
-    document.addEventListener("keyup", this.onKeyUp, true);
     document.addEventListener("visibilitychange", this.onVisibilityChange);
     document.addEventListener("mousemove", this.onMouseMove);
     document.addEventListener("mousedown", this.onMouseDown);
@@ -91,8 +99,6 @@ export class Input {
   detach() {
     window.removeEventListener("keydown", this.onKeyDown, true);
     window.removeEventListener("keyup", this.onKeyUp, true);
-    document.removeEventListener("keydown", this.onKeyDown, true);
-    document.removeEventListener("keyup", this.onKeyUp, true);
     document.removeEventListener("visibilitychange", this.onVisibilityChange);
     document.removeEventListener("mousemove", this.onMouseMove);
     document.removeEventListener("mousedown", this.onMouseDown);
@@ -108,11 +114,13 @@ export class Input {
   }
 
   onKeyDown(e) {
+    if (Input.isTypingTarget(e.target)) return;
     if (GAME_KEYS.has(e.code)) e.preventDefault();
     this.keys.add(e.code);
   }
 
   onKeyUp(e) {
+    if (Input.isTypingTarget(e.target)) return;
     this.keys.delete(e.code);
   }
 

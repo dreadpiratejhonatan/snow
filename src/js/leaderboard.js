@@ -1,15 +1,25 @@
 const HOSTGATOR_API = "https://jhonatanribeiro.com/snow/api/leaderboard.php";
 const LOCAL_KEY = "neveLeaderboardCache";
 
-/** GitHub Pages não roda PHP — usa o ranking da HostGator (CORS liberado). */
+/**
+ * HostGator: API relativa.
+ * GitHub Pages / preview / outros hosts estáticos: API absoluta (CORS).
+ */
 function resolveApi() {
   try {
-    const h = location.hostname || "";
-    if (h.endsWith("github.io")) return HOSTGATOR_API;
+    const h = (location.hostname || "").toLowerCase();
+    if (h === "jhonatanribeiro.com" || h === "www.jhonatanribeiro.com") {
+      return "api/leaderboard.php";
+    }
+    if (h.endsWith("github.io") || h === "localhost" || h === "127.0.0.1") {
+      return HOSTGATOR_API;
+    }
+    // Outros hosts estáticos (ex.: serve preview): preferir ranking compartilhado
+    if (h) return HOSTGATOR_API;
   } catch {
     /* SSR / testes */
   }
-  return "api/leaderboard.php";
+  return HOSTGATOR_API;
 }
 
 const API = resolveApi();
@@ -17,7 +27,10 @@ const API = resolveApi();
 function readLocal() {
   try {
     const raw = localStorage.getItem(LOCAL_KEY);
-    const list = raw ? JSON.parse(raw) : [];
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    // aceita tanto array puro quanto { entries: [] }
+    const list = Array.isArray(parsed) ? parsed : parsed?.entries;
     return Array.isArray(list) ? list : [];
   } catch {
     return [];
@@ -26,7 +39,10 @@ function readLocal() {
 
 function writeLocal(entries) {
   try {
-    localStorage.setItem(LOCAL_KEY, JSON.stringify(entries.slice(0, 50)));
+    const clean = (Array.isArray(entries) ? entries : [])
+      .filter((e) => e && typeof e.timeMs === "number" && e.name)
+      .slice(0, 50);
+    localStorage.setItem(LOCAL_KEY, JSON.stringify(clean));
   } catch {
     /* private mode */
   }
@@ -36,8 +52,16 @@ function mergeAndSort(a, b) {
   const map = new Map();
   for (const e of [...a, ...b]) {
     if (!e || typeof e.timeMs !== "number") continue;
-    const key = `${e.name}|${e.timeMs}`;
-    if (!map.has(key)) map.set(key, e);
+    const name = String(e.name || "").trim();
+    if (!name) continue;
+    const key = `${name}|${e.timeMs}`;
+    if (!map.has(key)) {
+      map.set(key, {
+        name,
+        timeMs: Math.round(e.timeMs),
+        at: e.at || new Date().toISOString(),
+      });
+    }
   }
   return [...map.values()].sort((x, y) => x.timeMs - y.timeMs).slice(0, 50);
 }
@@ -65,8 +89,21 @@ export async function submitScore(name, timeMs) {
     timeMs: Math.round(Number(timeMs)),
     at: new Date().toISOString(),
   };
-  // sempre grava local (persistência no browser)
-  writeLocal(mergeAndSort(readLocal(), [entry]));
+
+  if (entry.name.length < 2) {
+    const err = new Error("Nome inválido (mín. 2 caracteres).");
+    err.code = "NAME";
+    throw err;
+  }
+  if (!Number.isFinite(entry.timeMs) || entry.timeMs < 5000) {
+    const err = new Error("Tempo inválido.");
+    err.code = "TIME";
+    throw err;
+  }
+
+  // Sempre grava local primeiro (sobrevive a reload mesmo se a API falhar)
+  const afterLocal = mergeAndSort(readLocal(), [entry]);
+  writeLocal(afterLocal);
 
   try {
     const res = await fetch(API, {
@@ -76,10 +113,16 @@ export async function submitScore(name, timeMs) {
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
-    if (Array.isArray(data.entries)) writeLocal(mergeAndSort(data.entries, readLocal()));
-    return data;
+    const remote = Array.isArray(data.entries) ? data.entries : [];
+    const merged = mergeAndSort(remote, readLocal());
+    writeLocal(merged);
+    return {
+      ok: true,
+      rank: data.rank,
+      entries: merged.slice(0, 10),
+      localOnly: false,
+    };
   } catch (err) {
-    // API falhou, mas o tempo ficou no cache local
     const local = readLocal();
     const rank = local.findIndex((e) => e.name === entry.name && e.timeMs === entry.timeMs) + 1;
     return {

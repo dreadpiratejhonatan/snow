@@ -524,6 +524,12 @@ class Game {
     if (status) status.textContent = "";
     this.refreshLeaderboardUI();
     this.overlay.hidden = false;
+    // Libera teclado do jogo e foca o nome (Input ignora campos de texto)
+    queueMicrotask(() => {
+      const nameInput = document.getElementById("player-name");
+      nameInput?.focus({ preventScroll: true });
+      nameInput?.select?.();
+    });
   }
 
   async refreshLeaderboardUI() {
@@ -546,30 +552,23 @@ class Game {
     const input = document.getElementById("player-name");
     const status = document.getElementById("score-status");
     const btn = document.getElementById("btn-submit-score");
-    const name = (input?.value || "Sobrevivente").trim();
+    const name = (input?.value || "").trim() || "Sobrevivente";
     const ms = this.speedrun.finalMs ?? this.speedrun.ms;
     if (btn) btn.disabled = true;
     if (status) status.textContent = "Enviando…";
     try {
       const data = await submitScore(name, ms);
+      this.leaderboard = data.entries || [];
       if (status) {
         status.textContent = data.localOnly
           ? `Salvo neste navegador (#${data.rank}). Sem conexão com o ranking online.`
           : `Salvo no ranking online! Posição #${data.rank}`;
       }
-      if (data.entries) {
-        const list = document.getElementById("leaderboard-list");
-        if (list) {
-          list.innerHTML = data.entries
-            .map(
-              (e, i) =>
-                `<li><span>${i + 1}. ${e.name}</span><span>${formatTimeMs(e.timeMs)}</span></li>`
-            )
-            .join("");
-        }
-      } else {
-        await this.refreshLeaderboardUI();
-      }
+      this.fillLeaderboardList(document.getElementById("leaderboard-list"), this.leaderboard);
+      this.fillLeaderboardList(document.getElementById("rank-overlay-list"), this.leaderboard);
+      // Recarrega Top 1 (ghost) a partir do ranking atualizado
+      const top = getTopEntry(this.leaderboard);
+      if (top) this.speedrun.setRecord(top);
     } catch (err) {
       if (status) status.textContent = err.message || "Falha ao enviar (API offline?).";
       if (btn) btn.disabled = false;
@@ -892,10 +891,7 @@ class Game {
     );
 
     document.addEventListener("keydown", (e) => {
-      const typing =
-        e.target instanceof HTMLInputElement ||
-        e.target instanceof HTMLTextAreaElement ||
-        (e.target instanceof HTMLElement && e.target.isContentEditable);
+      const typing = Input.isTypingTarget(e.target);
       if (e.code === "KeyT" && !typing) {
         if (
           this.state === "playing" ||
