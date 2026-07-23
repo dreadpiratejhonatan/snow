@@ -921,12 +921,15 @@ kbd {
 .inv-bar[hidden],
 .inv-bar.is-hidden {
   display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
 }
 
 .inv-bar__title {
   display: flex;
   justify-content: space-between;
-  align-items: baseline;
+  align-items: center;
+  gap: 0.5rem;
   font-size: 0.72rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -935,11 +938,37 @@ kbd {
   padding: 0 0.15rem;
 }
 
+.inv-bar__title-right {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
 .inv-bar__hint {
   font-size: 0.65rem;
   letter-spacing: 0.02em;
   text-transform: none;
   color: rgba(160, 180, 195, 0.55);
+}
+
+.inv-bar__close {
+  flex-shrink: 0;
+  width: 1.7rem;
+  height: 1.7rem;
+  border-radius: 6px;
+  border: 1px solid rgba(200, 220, 235, 0.25);
+  background: rgba(0, 0, 0, 0.35);
+  color: #e8eef4;
+  font: inherit;
+  font-size: 0.85rem;
+  line-height: 1;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.inv-bar__close:hover {
+  border-color: rgba(248, 120, 100, 0.55);
+  color: #ffb4ae;
 }
 
 .inv-bar__slots {

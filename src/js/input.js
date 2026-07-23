@@ -172,7 +172,18 @@ export class Input {
       this.locked = true;
       return;
     }
-    this.locked = document.pointerLockElement === this.lockTarget;
+    const next = document.pointerLockElement === this.lockTarget;
+    // Sair do pointer lock às vezes “come” o keyup — limpa teclas pra B/Esc não travarem
+    if (this.locked !== next) this.clearKeys();
+    this.locked = next;
+  }
+
+  /** Remove teclas específicas (ex.: após toggle do inventário). */
+  releaseKeys(...codes) {
+    for (const c of codes) {
+      this.keys.delete(c);
+      this.prevKeys.delete(c);
+    }
   }
 
   consumeClicks() {

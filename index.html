@@ -68,9 +68,15 @@
         <div id="items-info" class="hud__items">🎒 0 · 📦 0/10</div>
       </div>
 
-      <!-- Inventário de armas: clique ou teclas 1–9/0 para equipar -->
-      <div id="inv-bar" class="inv-bar" role="toolbar" aria-label="Inventário de armas">
-        <div class="inv-bar__title">Armas <span class="inv-bar__hint">B mostra/esconde · clique ou 1-9/0 equipa</span></div>
+      <!-- Inventário de armas: B mostra/esconde · ✕ fecha · 1–9/0 equipa -->
+      <div id="inv-bar" class="inv-bar is-hidden" hidden role="toolbar" aria-label="Inventário de armas" aria-hidden="true" style="display: none">
+        <div class="inv-bar__title">
+          <span>Armas</span>
+          <span class="inv-bar__title-right">
+            <span class="inv-bar__hint">B ou ✕ esconde · 1-9/0 equipa</span>
+            <button type="button" id="btn-inv-close" class="inv-bar__close" title="Esconder armas (B)" aria-label="Esconder inventário">✕</button>
+          </span>
+        </div>
         <div id="inv-slots" class="inv-bar__slots"></div>
         <div id="inv-detail" class="inv-bar__detail">✊ Punhos — dano 12</div>
       </div>
@@ -104,7 +110,7 @@
       <button type="button" id="btn-help-hud" class="hud__help-btn" title="Ajuda (H)" aria-label="Abrir ajuda">?</button>
 
       <div class="hud__bottom">
-        <div class="hud__controls">WASD · IJKL olhar · 1-9/0 arma · R recarga · B armas (mostra/esconde) · E pegar · G/F armadilha · C craft · H ajuda</div>
+        <div class="hud__controls">WASD · IJKL olhar · 1-9/0 arma · R recarga · B armas · E pegar · G/F armadilha · C craft · H ajuda</div>
       </div>
     </div>
 
@@ -277,6 +283,6 @@
     </div>
   </div>
 
-  <script type="module" src="src/js/main.js?v=gh14"></script>
+  <script type="module" src="src/js/main.js?v=gh15"></script>
 </body>
 </html>

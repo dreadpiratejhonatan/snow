@@ -24,7 +24,17 @@ export class HUD {
     this.minimapCtx = this.minimap ? this.minimap.getContext("2d") : null;
     this.msgTimer = null;
     this.onEquip = null; // (weaponId) => void
+    this.onInvClose = null; // () => void — botão X / atalho
     this._invBound = false;
+    this._invVisible = false;
+    // Começa escondido — B mostra (HUD limpo)
+    if (this.invBar) this.setInventoryVisible(false);
+    document.getElementById("btn-inv-close")?.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this.setInventoryVisible(false);
+      this.onInvClose?.();
+    });
   }
 
   updateTime(dayTime, night) {
@@ -174,20 +184,28 @@ export class HUD {
     }
   }
 
-  /** Mostra/esconde a barra de armas inteira (atalho B). `force` true=mostrar, false=esconder. */
+  /** Força visibilidade da barra de armas. */
+  setInventoryVisible(show) {
+    if (!this.invBar) return false;
+    this._invVisible = !!show;
+    this.invBar.hidden = !this._invVisible;
+    this.invBar.classList.toggle("is-hidden", !this._invVisible);
+    this.invBar.classList.toggle("is-open", this._invVisible);
+    this.invBar.setAttribute("aria-hidden", this._invVisible ? "false" : "true");
+    // style inline vence qualquer CSS cacheado antigo
+    this.invBar.style.display = this._invVisible ? "" : "none";
+    return this._invVisible;
+  }
+
+  /** Mostra/esconde a barra de armas (atalho B). `force` true=mostrar, false=esconder. */
   toggleInventoryExpanded(force) {
     if (!this.invBar) return false;
-    const currentlyShown = !this.invBar.hidden && !this.invBar.classList.contains("is-hidden");
-    const show = force != null ? !!force : !currentlyShown;
-    this.invBar.hidden = !show;
-    this.invBar.classList.toggle("is-hidden", !show);
-    this.invBar.classList.toggle("is-open", show);
-    this.invBar.setAttribute("aria-hidden", show ? "false" : "true");
-    return show;
+    const show = force != null ? !!force : !this._invVisible;
+    return this.setInventoryVisible(show);
   }
 
   isInventoryVisible() {
-    return !!(this.invBar && !this.invBar.hidden && !this.invBar.classList.contains("is-hidden"));
+    return !!this._invVisible;
   }
 
   setTraps(text) {
