@@ -1,15 +1,35 @@
 import { signalRequest } from "./signalApi.js";
 
+/** STUN + TURN gratuito (openrelay) — melhora NAT sem custo extra de hosting. */
 const ICE_SERVERS = {
   iceServers: [
     { urls: "stun:stun.l.google.com:19302" },
     { urls: "stun:stun1.l.google.com:19302" },
+    {
+      urls: "turn:openrelay.metered.ca:80",
+      username: "openrelayproject",
+      credential: "openrelayproject",
+    },
+    {
+      urls: "turn:openrelay.metered.ca:443",
+      username: "openrelayproject",
+      credential: "openrelayproject",
+    },
+    {
+      urls: "turn:openrelay.metered.ca:443?transport=tcp",
+      username: "openrelayproject",
+      credential: "openrelayproject",
+    },
   ],
 };
 
+function sdpPayload(desc) {
+  if (!desc) return null;
+  return { type: desc.type, sdp: desc.sdp };
+}
+
 /**
  * Sala WebRTC 2P com signaling via PHP (poll).
- * Eventos: onStatus(msg), onOpen(), onMessage(obj), onClose(reason)
  */
 export class WebRtcRoom {
   constructor() {
@@ -19,15 +39,17 @@ export class WebRtcRoom {
     this.pc = null;
     this.channel = null;
     this._pollTimer = null;
-    this._hostIceSent = 0;
-    this._guestIceSent = 0;
     this._hostIceSeen = 0;
     this._guestIceSeen = 0;
     this._closed = false;
+    this._remoteReady = false;
+    this._pendingIce = [];
+    this._guestJoined = false;
     this.onStatus = null;
     this.onOpen = null;
     this.onMessage = null;
     this.onClose = null;
+    this.onCode = null; // (code) quando a sala é criada
   }
 
   _status(msg) {
@@ -39,7 +61,8 @@ export class WebRtcRoom {
     this.role = "host";
     this.code = data.code;
     this.seed = data.seed;
-    this._status(`Sala ${this.code} — aguardando amigo…`);
+    this.onCode?.(this.code);
+    this._status(`Sala criada. Código ${this.code} — peça ao amigo para Entrar.`);
     await this._setupPeer();
     this._startPoll();
     return { code: this.code, seed: this.seed };
@@ -50,7 +73,7 @@ export class WebRtcRoom {
     this.role = "guest";
     this.code = data.code;
     this.seed = data.seed;
-    this._status(`Entrando na sala ${this.code}…`);
+    this._status(`Entrou na sala ${this.code}. Conectando…`);
     await this._setupPeer();
     this._startPoll();
     return { code: this.code, seed: this.seed };
@@ -61,28 +84,24 @@ export class WebRtcRoom {
     this.pc.onicecandidate = (ev) => {
       if (!ev.candidate || this._closed) return;
       const cand = ev.candidate.toJSON();
-      if (this.role === "host") {
-        this._hostIceSent++;
-        signalRequest("publish", {
-          code: this.code,
-          role: "host",
-          ice: [cand],
-        }).catch(() => {});
-      } else {
-        this._guestIceSent++;
-        signalRequest("publish", {
-          code: this.code,
-          role: "guest",
-          ice: [cand],
-        }).catch(() => {});
+      signalRequest("publish", {
+        code: this.code,
+        role: this.role,
+        ice: [cand],
+      }).catch((e) => console.warn("ice publish", e));
+    };
+    this.pc.oniceconnectionstatechange = () => {
+      const st = this.pc?.iceConnectionState;
+      if (st && st !== "new" && st !== "checking") {
+        this._status(`Rede P2P: ${st}`);
+      }
+      if (st === "failed") {
+        this._status("Falha P2P (NAT). Tente outro Wi‑Fi/4G ou os dois no mesmo Wi‑Fi.");
       }
     };
     this.pc.onconnectionstatechange = () => {
       const st = this.pc?.connectionState;
-      if (st === "failed" || st === "disconnected" || st === "closed") {
-        this._status(`Conexão: ${st}`);
-        if (st === "failed" || st === "closed") this.close(st);
-      }
+      if (st === "failed" || st === "closed") this.close(st);
     };
 
     if (this.role === "host") {
@@ -93,9 +112,9 @@ export class WebRtcRoom {
       await signalRequest("publish", {
         code: this.code,
         role: "host",
-        offer: this.pc.localDescription,
+        offer: sdpPayload(this.pc.localDescription),
       });
-      this._status(`Sala ${this.code} — offer enviado, aguardando guest…`);
+      this._status(`Código ${this.code} — aguardando amigo clicar em Entrar…`);
     } else {
       this.pc.ondatachannel = (ev) => {
         this.channel = ev.channel;
@@ -123,6 +142,32 @@ export class WebRtcRoom {
     };
   }
 
+  async _flushPendingIce() {
+    if (!this._remoteReady || !this.pc) return;
+    const batch = this._pendingIce.splice(0, this._pendingIce.length);
+    for (const c of batch) {
+      try {
+        await this.pc.addIceCandidate(c);
+      } catch {
+        /* ignore */
+      }
+    }
+  }
+
+  async _addIce(list) {
+    for (const c of list || []) {
+      if (!c) continue;
+      if (!this._remoteReady) this._pendingIce.push(c);
+      else {
+        try {
+          await this.pc.addIceCandidate(c);
+        } catch {
+          /* ignore */
+        }
+      }
+    }
+  }
+
   _startPoll() {
     this._stopPoll();
     const tick = async () => {
@@ -131,9 +176,10 @@ export class WebRtcRoom {
         await this._pollOnce();
       } catch (e) {
         console.warn("signal poll", e);
+        this._status(`Sinalização: ${e.message || e}`);
       }
       if (!this._closed && !this.isOpen) {
-        this._pollTimer = setTimeout(tick, 700);
+        this._pollTimer = setTimeout(tick, 600);
       }
     };
     tick();
@@ -153,38 +199,33 @@ export class WebRtcRoom {
     });
 
     if (this.role === "host") {
-      if (data.guestJoined) this._status(`Sala ${this.code} — guest entrou, negociando…`);
+      if (data.guestJoined && !this._guestJoined) {
+        this._guestJoined = true;
+        this._status(`Amigo entrou na sala ${this.code}. Negociando conexão…`);
+      }
       if (data.answer && !this.pc.currentRemoteDescription) {
         await this.pc.setRemoteDescription(data.answer);
-        this._status("Answer recebido…");
+        this._remoteReady = true;
+        await this._flushPendingIce();
+        this._status("Handshake OK — abrindo canal…");
       }
-      for (const c of data.guestIce || []) {
-        try {
-          await this.pc.addIceCandidate(c);
-        } catch {
-          /* ignore */
-        }
-      }
+      await this._addIce(data.guestIce);
       this._guestIceSeen = data.guestIceTotal ?? this._guestIceSeen;
     } else {
       if (data.offer && !this.pc.currentRemoteDescription) {
         await this.pc.setRemoteDescription(data.offer);
+        this._remoteReady = true;
+        await this._flushPendingIce();
         const answer = await this.pc.createAnswer();
         await this.pc.setLocalDescription(answer);
         await signalRequest("publish", {
           code: this.code,
           role: "guest",
-          answer: this.pc.localDescription,
+          answer: sdpPayload(this.pc.localDescription),
         });
-        this._status("Answer enviado…");
+        this._status("Resposta enviada — abrindo canal…");
       }
-      for (const c of data.hostIce || []) {
-        try {
-          await this.pc.addIceCandidate(c);
-        } catch {
-          /* ignore */
-        }
-      }
+      await this._addIce(data.hostIce);
       this._hostIceSeen = data.hostIceTotal ?? this._hostIceSeen;
     }
   }

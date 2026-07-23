@@ -173,10 +173,16 @@ class Game {
           room.onStatus = (m) => {
             if (status) status.textContent = m;
           };
+          room.onCode = (code) => {
+            if (codeBox) codeBox.hidden = false;
+            if (codeDisplay) codeDisplay.textContent = code;
+            try {
+              codeInput.value = code;
+            } catch {
+              /* ignore */
+            }
+          };
           const { code, seed } = await room.create(this.world.seed);
-          if (status) {
-            status.textContent = `Código: ${code} — compartilhe e aguarde o amigo…`;
-          }
           await this.waitForRoomOpen(room);
           cleanup();
           resolve({ mode: "host", room, seed, code });
@@ -216,6 +222,20 @@ class Game {
       const btnSolo = document.getElementById("btn-coop-solo");
       const btnCreate = document.getElementById("btn-coop-create");
       const btnJoin = document.getElementById("btn-coop-join");
+      const codeBox = document.getElementById("coop-code-box");
+      const codeDisplay = document.getElementById("coop-code-display");
+      const btnCopy = document.getElementById("btn-coop-copy");
+      if (codeBox) codeBox.hidden = true;
+      btnCopy?.addEventListener("click", async () => {
+        const code = codeDisplay?.textContent?.trim();
+        if (!code || code.includes("—")) return;
+        try {
+          await navigator.clipboard.writeText(code);
+          if (status) status.textContent = `Código ${code} copiado! Cole no outro aparelho.`;
+        } catch {
+          if (status) status.textContent = `Código: ${code} (copie manualmente)`;
+        }
+      });
       btnSolo?.addEventListener("click", onSolo);
       btnCreate?.addEventListener("click", onCreate);
       btnJoin?.addEventListener("click", onJoin);

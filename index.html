@@ -135,12 +135,18 @@
     <div id="coop-menu" class="coop-menu" hidden aria-hidden="true">
       <div class="coop-menu__panel" role="dialog" aria-labelledby="coop-title">
         <h2 id="coop-title" class="coop-menu__title">Como jogar?</h2>
-        <p class="coop-menu__summary">Solo clássico ou co-op 2 jogadores no mesmo mundo.</p>
+        <p class="coop-menu__summary">Solo clássico ou co-op 2 jogadores. Use <strong>dois celulares/PCs</strong> (ou aba anônima).</p>
         <button id="btn-coop-solo" type="button" class="menu__btn">Solo</button>
         <button id="btn-coop-create" type="button" class="menu__btn menu__btn--ghost">Criar sala co-op</button>
+        <div id="coop-code-box" class="coop-menu__code-box" hidden>
+          <p class="coop-menu__code-label">Código da sala</p>
+          <p id="coop-code-display" class="coop-menu__code">————</p>
+          <button id="btn-coop-copy" type="button" class="menu__btn menu__btn--ghost">Copiar código</button>
+        </div>
         <div class="coop-menu__join">
-          <input id="coop-code-input" class="coop-menu__input" type="text" maxlength="8" placeholder="Código da sala" autocomplete="off" spellcheck="false" />
-          <button id="btn-coop-join" type="button" class="menu__btn menu__btn--ghost">Entrar</button>
+          <label class="coop-menu__join-label" for="coop-code-input">Entrar com código</label>
+          <input id="coop-code-input" class="coop-menu__input" type="text" maxlength="8" placeholder="Ex: TBVKQ3" autocomplete="off" spellcheck="false" inputmode="text" />
+          <button id="btn-coop-join" type="button" class="menu__btn menu__btn--ghost">Entrar na sala</button>
         </div>
         <p id="coop-status" class="coop-menu__status" aria-live="polite"></p>
       </div>
@@ -264,6 +270,6 @@
     </div>
   </div>
 
-  <script type="module" src="src/js/main.js?v=gh6"></script>
+  <script type="module" src="src/js/main.js?v=gh7"></script>
 </body>
 </html>

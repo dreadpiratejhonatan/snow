@@ -357,22 +357,54 @@ body.is-touch .hud__traps {
 
 .coop-menu__join {
   display: flex;
-  gap: 0.5rem;
-  margin-top: 0.65rem;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin-top: 0.85rem;
+  text-align: left;
+}
+
+.coop-menu__join-label {
+  font-size: 0.8rem;
+  color: var(--muted);
 }
 
 .coop-menu__input {
-  flex: 1;
-  min-width: 0;
-  padding: 0.7rem 0.8rem;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.85rem 0.9rem;
   border-radius: 8px;
   border: 1px solid rgba(255, 255, 255, 0.14);
   background: rgba(0, 0, 0, 0.35);
   color: #eef4f8;
   font: inherit;
-  letter-spacing: 0.12em;
+  font-size: 1.25rem;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
   text-align: center;
+}
+
+.coop-menu__code-box {
+  margin-top: 0.85rem;
+  padding: 0.9rem;
+  border-radius: 10px;
+  border: 1px dashed rgba(88, 166, 255, 0.45);
+  background: rgba(88, 166, 255, 0.08);
+}
+
+.coop-menu__code-label {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.coop-menu__code {
+  margin: 0.35rem 0 0.65rem;
+  font-size: clamp(1.8rem, 8vw, 2.4rem);
+  font-weight: 700;
+  letter-spacing: 0.28em;
+  color: #7ec8ff;
 }
 
 .coop-menu__status {
@@ -380,6 +412,7 @@ body.is-touch .hud__traps {
   margin: 0.9rem 0 0;
   font-size: 0.88rem;
   color: #9ec9b0;
+  line-height: 1.4;
 }
 
 .coop-menu__panel .menu__btn {
