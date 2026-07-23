@@ -67,7 +67,7 @@ export class CoopSession {
   /** Chamado quando DataChannel abre. */
   onConnected() {
     this.ensureRemote();
-    const skin = this.game.player.skinId || "classic";
+    const skin = this.game.player.skinId || "natan";
     this.room.send({
       t: "hello",
       role: this.role,

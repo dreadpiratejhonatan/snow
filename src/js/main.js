@@ -346,7 +346,7 @@ class Game {
   async beginCoop(choice) {
     const authority = choice.mode === "host";
     this.recreateWorld(choice.seed, authority);
-    applySkinToPlayer(this.player, loadSkinId() || "classic");
+    applySkinToPlayer(this.player, loadSkinId() || "natan");
     this.coopRoom = choice.room;
     this.coop = new CoopSession(this, choice.room);
     if (choice.room.isOpen) this.coop.onConnected();

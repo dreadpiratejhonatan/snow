@@ -1,20 +1,32 @@
+import * as THREE from "three";
 import { CONFIG } from "./config.js";
 
 const STORAGE_KEY = "nevePlayerSkin";
+const faceTexCache = new Map();
+const loader = new THREE.TextureLoader();
+
+/** Resolve id atual ou alias antigo. */
+export function resolveSkinId(id) {
+  if (id && CONFIG.skins[id]) return id;
+  const alias = id && CONFIG.skinAlias?.[id];
+  if (alias && CONFIG.skins[alias]) return alias;
+  return CONFIG.skinOrder?.[0] || "natan";
+}
 
 export function getSkin(id) {
-  return CONFIG.skins[id] || CONFIG.skins.classic;
+  return CONFIG.skins[resolveSkinId(id)];
 }
 
 export function listSkins() {
   const order = CONFIG.skinOrder || Object.keys(CONFIG.skins);
-  return order.map((id) => getSkin(id)).filter(Boolean);
+  return order.map((id) => CONFIG.skins[id]).filter(Boolean);
 }
 
 export function loadSkinId() {
   try {
     const id = localStorage.getItem(STORAGE_KEY);
-    if (id && CONFIG.skins[id]) return id;
+    if (!id) return null;
+    return resolveSkinId(id);
   } catch {
     /* private mode */
   }
@@ -22,18 +34,46 @@ export function loadSkinId() {
 }
 
 export function saveSkinId(id) {
-  if (!CONFIG.skins[id]) return false;
+  const resolved = resolveSkinId(id);
+  if (!CONFIG.skins[resolved]) return false;
   try {
-    localStorage.setItem(STORAGE_KEY, id);
+    localStorage.setItem(STORAGE_KEY, resolved);
   } catch {
     /* private mode */
   }
   return true;
 }
 
+export function faceUrl(skin) {
+  const def = typeof skin === "string" ? getSkin(skin) : skin;
+  return def?.face || null;
+}
+
+/** Textura do rosto (NEAREST = pixel art). */
+export function loadFaceTexture(url) {
+  if (!url) return Promise.resolve(null);
+  if (faceTexCache.has(url)) return faceTexCache.get(url);
+  const p = new Promise((resolve) => {
+    loader.load(
+      url,
+      (tex) => {
+        tex.colorSpace = THREE.SRGBColorSpace;
+        tex.magFilter = THREE.NearestFilter;
+        tex.minFilter = THREE.NearestFilter;
+        tex.generateMipmaps = false;
+        resolve(tex);
+      },
+      undefined,
+      () => resolve(null)
+    );
+  });
+  faceTexCache.set(url, p);
+  return p;
+}
+
 export function applySkinToPlayer(player, id) {
   if (!player?.applySkin) return;
-  player.applySkin(id);
+  player.applySkin(resolveSkinId(id));
 }
 
 /**
@@ -44,7 +84,7 @@ export function runSkinPicker({ force = false } = {}) {
   const el = document.getElementById("skin-picker");
   const grid = document.getElementById("skin-grid");
   if (!el || !grid) {
-    const fallback = loadSkinId() || "classic";
+    const fallback = loadSkinId() || resolveSkinId("natan");
     return Promise.resolve(fallback);
   }
 
@@ -58,20 +98,17 @@ export function runSkinPicker({ force = false } = {}) {
   el.setAttribute("aria-hidden", "false");
 
   const skins = listSkins();
-  let selected = existing || "classic";
+  let selected = existing || skins[0]?.id || "natan";
 
   const render = () => {
     grid.innerHTML = skins
       .map((s) => {
-        const hex = (n) => `#${n.toString(16).padStart(6, "0")}`;
         const active = s.id === selected ? " is-selected" : "";
+        const face = s.face
+          ? `<img class="skin-card__face" src="${s.face}" alt="" width="72" height="72" draggable="false" />`
+          : "";
         return `<button type="button" class="skin-card${active}" data-skin-id="${s.id}">
-          <span class="skin-card__swatches" aria-hidden="true">
-            <i style="background:${hex(s.suit)}"></i>
-            <i style="background:${hex(s.shirt)}"></i>
-            <i style="background:${hex(s.skin)}"></i>
-            <i style="background:${hex(s.tie)}"></i>
-          </span>
+          ${face}
           <span class="skin-card__name">${s.name}</span>
         </button>`;
       })
@@ -92,9 +129,8 @@ export function runSkinPicker({ force = false } = {}) {
         el.hidden = true;
         el.setAttribute("aria-hidden", "true");
         el.removeEventListener("click", onClick);
-        // gesto do usuário: destrava WebAudio / trilha
         window.dispatchEvent(new Event("neve-user-gesture"));
-        resolve(selected);
+        resolve(resolveSkinId(selected));
       }
     };
     el.addEventListener("click", onClick);

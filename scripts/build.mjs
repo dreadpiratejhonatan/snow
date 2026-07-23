@@ -8,7 +8,7 @@ import { execSync } from "node:child_process";
 process.chdir(path.dirname(path.dirname(fileURLToPath(import.meta.url))));
 const DIST = "dist";
 const HOST = path.join("release", "hostgator-snow");
-const CACHE = "gh11";
+const CACHE = "gh12";
 
 /**
  * Copia data/ para o destino.
@@ -71,6 +71,13 @@ fs.writeFileSync(path.join(DIST, "index.html"), html);
 for (const splash of ["splash_screen.png", "splash_screen.jpeg"]) {
   if (fs.existsSync(splash)) fs.copyFileSync(splash, path.join(DIST, splash));
 }
+if (fs.existsSync("faces")) {
+  fs.cpSync("faces", path.join(DIST, "faces"), { recursive: true });
+  // não publicar debug/preview no site
+  for (const junk of ["_preview.png", "debug"]) {
+    fs.rmSync(path.join(DIST, "faces", junk), { recursive: true, force: true });
+  }
+}
 if (fs.existsSync("music")) {
   fs.cpSync("music", path.join(DIST, "music"), { recursive: true });
 }
@@ -116,6 +123,12 @@ fs.copyFileSync("src/styles/styles.css", path.join(HOST, "src", "styles", "style
 for (const splash of ["splash_screen.png", "splash_screen.jpeg"]) {
   if (fs.existsSync(splash)) fs.copyFileSync(splash, path.join(HOST, splash));
 }
+if (fs.existsSync("faces")) {
+  fs.cpSync("faces", path.join(HOST, "faces"), { recursive: true });
+  for (const junk of ["_preview.png", "debug"]) {
+    fs.rmSync(path.join(HOST, "faces", junk), { recursive: true, force: true });
+  }
+}
 if (fs.existsSync("music")) {
   fs.cpSync("music", path.join(HOST, "music"), { recursive: true });
 }
@@ -148,9 +161,9 @@ fs.writeFileSync(
     "",
     "1. No cPanel, abra public_html/snow",
     "2. BACKUP: baixe data/leaderboard.json para o PC",
-    "3. Apague SOMENTE: index.html, src/, api/, music/, splash_screen.*",
+    "3. Apague SOMENTE: index.html, src/, api/, music/, faces/, splash_screen.*",
     "   (deixe data/ intacta)",
-    "4. Upload deste pacote (index.html + splash + src/ + api/ + music/)",
+    "4. Upload deste pacote (index.html + splash + faces/ + src/ + api/ + music/)",
     "   Se o zip trouxer data/, nao substitua leaderboard.json existente",
     "5. Permissao data/ e data/rooms/ = 755 ou 775",
     "6. Site + Ctrl+F5 (cache ?v=" + CACHE + ")",

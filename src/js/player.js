@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { CONFIG } from "./config.js";
+import { getSkin, loadFaceTexture, resolveSkinId } from "./skins.js";
 import { buildHeldWeaponMesh } from "./weaponVisuals.js";
 
 export class Player {
@@ -15,7 +16,7 @@ export class Player {
     this.pitch = 0;
     this.onGround = false;
     this.cameraMode = "first";
-    this.skinId = "classic";
+    this.skinId = "natan";
     this.buildMesh();
   }
 
@@ -24,41 +25,40 @@ export class Player {
     this.kb.z += dir.z * force;
   }
 
-  /** Aplica paleta de skin (CONFIG.skins) nos materiais existentes. */
+  /** Aplica paleta + textura de rosto (CONFIG.skins). */
   applySkin(skinId) {
-    const def = CONFIG.skins[skinId] || CONFIG.skins.classic;
+    const def = getSkin(skinId);
     this.skinId = def.id;
     if (!this.mats) return;
     this.mats.suit.color.setHex(def.suit);
     this.mats.shirt.color.setHex(def.shirt);
     this.mats.skin.color.setHex(def.skin);
     this.mats.tie.color.setHex(def.tie);
-    this.mats.eye?.color.setHex(def.eye ?? 0x3d5f8c);
-    this.mats.pupil?.color.setHex(def.pupil ?? 0x101014);
-    this.mats.mouth?.color.setHex(def.mouth ?? 0x8a3a3a);
+    const faceMat = this.mats.face;
+    if (faceMat && def.face) {
+      const token = def.id;
+      loadFaceTexture(def.face).then((tex) => {
+        if (this.skinId !== token || !tex) return;
+        faceMat.map = tex;
+        faceMat.color.setHex(0xffffff);
+        faceMat.needsUpdate = true;
+      });
+    }
   }
 
   buildMesh() {
-    const def = CONFIG.skins[this.skinId] || CONFIG.skins.classic;
+    const def = getSkin(this.skinId);
     // formas arredondadas (cilindros/esferas) em vez de caixas
     const suit = new THREE.MeshStandardMaterial({ color: def.suit, roughness: 0.65 });
     const shirt = new THREE.MeshStandardMaterial({ color: def.shirt, roughness: 0.8 });
     const skin = new THREE.MeshStandardMaterial({ color: def.skin, roughness: 0.55 });
     const tie = new THREE.MeshStandardMaterial({ color: def.tie, roughness: 0.7 });
-    const eye = new THREE.MeshStandardMaterial({
-      color: def.eye ?? 0x3d5f8c,
-      roughness: 0.35,
-      metalness: 0.05,
+    const face = new THREE.MeshStandardMaterial({
+      color: 0xffffff,
+      roughness: 0.55,
+      metalness: 0,
     });
-    const pupil = new THREE.MeshStandardMaterial({
-      color: def.pupil ?? 0x101014,
-      roughness: 0.45,
-    });
-    const mouth = new THREE.MeshStandardMaterial({
-      color: def.mouth ?? 0x8a3a3a,
-      roughness: 0.7,
-    });
-    this.mats = { suit, shirt, skin, tie, eye, pupil, mouth };
+    this.mats = { suit, shirt, skin, tie, face };
 
     this.mesh = new THREE.Group();
 
@@ -83,24 +83,11 @@ export class Player {
     const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.055, 0.14, 8), skin);
     neck.position.y = 1.68;
 
-    const head = new THREE.Mesh(new THREE.SphereGeometry(0.15, 20, 16), skin);
-    head.scale.set(0.85, 1.2, 0.92);
-    head.position.y = 1.86;
-
-    // Rosto: olhos + pupilas + boca (irmãos da cabeça — não herdam o scale oval)
-    const eyeGeo = new THREE.SphereGeometry(0.028, 10, 8);
-    const pupilGeo = new THREE.SphereGeometry(0.014, 8, 6);
-    const eyeL = new THREE.Mesh(eyeGeo, eye);
-    eyeL.position.set(-0.048, 1.9, 0.132);
-    const eyeR = new THREE.Mesh(eyeGeo, eye);
-    eyeR.position.set(0.048, 1.9, 0.132);
-    const pupilL = new THREE.Mesh(pupilGeo, pupil);
-    pupilL.position.set(-0.048, 1.9, 0.152);
-    const pupilR = new THREE.Mesh(pupilGeo, pupil);
-    pupilR.position.set(0.048, 1.9, 0.152);
-    const mouthMesh = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.016, 0.02), mouth);
-    mouthMesh.position.set(0, 1.805, 0.128);
-    mouthMesh.rotation.x = -0.15;
+    // Cabeça cubo (estilo Minecraft) — rosto na face +Z
+    const headMats = [skin, skin, skin, skin, face, skin];
+    const head = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.3, 0.28), headMats);
+    head.position.y = 1.88;
+    this.headMesh = head;
 
     this.leftLeg = this.makeLimb(0.07, 0.95, suit, 0.05);
     this.leftLeg.position.set(-0.09, 0.95, 0);
@@ -143,11 +130,6 @@ export class Player {
       tieStrip,
       neck,
       head,
-      eyeL,
-      eyeR,
-      pupilL,
-      pupilR,
-      mouthMesh,
       this.leftLeg,
       this.rightLeg,
       this.leftArm,
@@ -161,6 +143,8 @@ export class Player {
     this.walkPhase = 0;
     this.walkAmp = 0;
     this.syncMesh();
+    // textura do personagem default
+    this.applySkin(resolveSkinId(this.skinId));
   }
 
   // membro cilíndrico afunilado com ponta arredondada; `tipMat` opcional (mãos)

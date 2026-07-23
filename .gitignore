@@ -2,6 +2,8 @@ node_modules/
 dist/
 release/
 tests/*.png
+faces/debug/
+faces/_preview.png
 .DS_Store
 *.log
 .env
