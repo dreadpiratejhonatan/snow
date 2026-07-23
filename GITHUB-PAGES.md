@@ -2,7 +2,7 @@
 
 O jogo fica jogável em `https://SEU_USER.github.io/SEU_REPO/`.
 
-**Importante:** GitHub Pages é só arquivos estáticos. O ranking PHP (`api/leaderboard.php`) **não roda** aqui — os tempos ficam no `localStorage` do navegador. Ranking compartilhado continua na HostGator.
+**Importante:** GitHub Pages é estático, mas o jogo chama o ranking PHP da HostGator (`jhonatanribeiro.com/snow/api/…`) via CORS. A lista Top 10 abre com a tecla **T**. Se a API estiver offline, há cache no `localStorage`.
 
 ## 1. Criar o repositório no GitHub
 

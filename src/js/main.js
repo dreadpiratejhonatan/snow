@@ -79,6 +79,8 @@ class Game {
     this.cameraMode = "first";
     this.helpOpen = false;
     this._helpFromPlaying = false;
+    this.rankOpen = false;
+    this._rankFromPlaying = false;
     this._saveAcc = 0;
     this.clock = new THREE.Clock();
     this.initThree();
@@ -525,24 +527,19 @@ class Game {
   }
 
   async refreshLeaderboardUI() {
-    const list = document.getElementById("leaderboard-list");
-    if (!list) return;
-    list.innerHTML = "<li>Carregando…</li>";
+    const winList = document.getElementById("leaderboard-list");
+    const rankList = document.getElementById("rank-overlay-list");
+    if (winList) winList.innerHTML = "<li>Carregando…</li>";
+    if (rankList) rankList.innerHTML = "<li>Carregando…</li>";
     const entries = await fetchLeaderboard(10);
-    if (entries == null) {
-      list.innerHTML = "<li>Ranking online só no HostGator (API PHP).</li>";
+    this.leaderboard = entries || [];
+    if (!entries?.length) {
+      this.fillLeaderboardList(winList, []);
+      this.fillLeaderboardList(rankList, []);
       return;
     }
-    if (!entries.length) {
-      list.innerHTML = "<li>Nenhum tempo ainda — seja o primeiro.</li>";
-      return;
-    }
-    list.innerHTML = entries
-      .map(
-        (e, i) =>
-          `<li><span>${i + 1}. ${e.name}</span><span>${formatTimeMs(e.timeMs)}</span></li>`
-      )
-      .join("");
+    this.fillLeaderboardList(winList, entries);
+    this.fillLeaderboardList(rankList, entries);
   }
 
   async submitWinScore() {
@@ -557,7 +554,7 @@ class Game {
       const data = await submitScore(name, ms);
       if (status) {
         status.textContent = data.localOnly
-          ? `Salvo neste navegador (#${data.rank}). Ranking online só na HostGator.`
+          ? `Salvo neste navegador (#${data.rank}). Sem conexão com o ranking online.`
           : `Salvo no ranking online! Posição #${data.rank}`;
       }
       if (data.entries) {
@@ -762,6 +759,7 @@ class Game {
     if (this.state === "won" || this.state === "dead" || this.state === "splash" || this.state === "skin") {
       return;
     }
+    if (this.rankOpen) this.closeRank(true);
     const el = document.getElementById("help-overlay");
     if (!el) return;
     if (this.state === "playing") {
@@ -804,12 +802,74 @@ class Game {
     else this.openHelp();
   }
 
+  openRank() {
+    if (this.state === "splash" || this.state === "skin") return;
+    if (this.helpOpen) this.closeHelp(true);
+    const el = document.getElementById("rank-overlay");
+    if (!el) return;
+    if (this.state === "playing") {
+      this._rankFromPlaying = true;
+      this.state = "paused";
+      this.speedrun.pause();
+      if (!this.input.mobile) document.exitPointerLock();
+      this.input.clearKeys();
+      if (this.clickHint) this.clickHint.hidden = true;
+      this.overlay.hidden = true;
+    } else if (this.state === "paused" || this.state === "won" || this.state === "dead") {
+      this._rankFromPlaying = false;
+      if (this.state === "paused") this.overlay.hidden = true;
+    }
+    el.hidden = false;
+    el.setAttribute("aria-hidden", "false");
+    this.rankOpen = true;
+    this.refreshLeaderboardUI();
+  }
+
+  /** @param {boolean} silent se true, não resume / não reexibe pause */
+  closeRank(silent = false) {
+    const el = document.getElementById("rank-overlay");
+    if (el) {
+      el.hidden = true;
+      el.setAttribute("aria-hidden", "true");
+    }
+    const wasFromPlaying = this._rankFromPlaying;
+    this.rankOpen = false;
+    this._rankFromPlaying = false;
+    if (silent) return;
+    if (wasFromPlaying) {
+      this.resume();
+    } else if (this.state === "paused") {
+      this.overlay.hidden = false;
+    }
+  }
+
+  toggleRank() {
+    if (this.rankOpen) this.closeRank();
+    else this.openRank();
+  }
+
+  fillLeaderboardList(listEl, entries) {
+    if (!listEl) return;
+    if (!entries.length) {
+      listEl.innerHTML = "<li>Nenhum tempo ainda — seja o primeiro.</li>";
+      return;
+    }
+    listEl.innerHTML = entries
+      .map(
+        (e, i) =>
+          `<li><span>${i + 1}. ${e.name}</span><span>${formatTimeMs(e.timeMs)}</span></li>`
+      )
+      .join("");
+  }
+
   bindUI() {
     document.getElementById("btn-resume").addEventListener("click", () => this.resume());
     document.getElementById("btn-restart").addEventListener("click", () => this.restart());
     document.getElementById("btn-skin")?.addEventListener("click", () => this.openSkinPickerFromPause());
     document.getElementById("btn-submit-score")?.addEventListener("click", () => this.submitWinScore());
     document.getElementById("btn-help-close")?.addEventListener("click", () => this.closeHelp());
+    document.getElementById("btn-rank-close")?.addEventListener("click", () => this.closeRank());
+    document.getElementById("btn-rank-pause")?.addEventListener("click", () => this.openRank());
     document.getElementById("btn-help-hud")?.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -832,7 +892,24 @@ class Game {
     );
 
     document.addEventListener("keydown", (e) => {
-      if (e.code === "KeyH") {
+      const typing =
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement ||
+        (e.target instanceof HTMLElement && e.target.isContentEditable);
+      if (e.code === "KeyT" && !typing) {
+        if (
+          this.state === "playing" ||
+          this.state === "paused" ||
+          this.state === "won" ||
+          this.state === "dead" ||
+          this.rankOpen
+        ) {
+          e.preventDefault();
+          this.toggleRank();
+        }
+        return;
+      }
+      if (e.code === "KeyH" && !typing) {
         if (this.state === "playing" || this.state === "paused" || this.helpOpen) {
           e.preventDefault();
           this.toggleHelp();
@@ -840,6 +917,11 @@ class Game {
         return;
       }
       if (e.code === "Escape") {
+        if (this.rankOpen) {
+          e.preventDefault();
+          this.closeRank();
+          return;
+        }
         if (this.helpOpen) {
           e.preventDefault();
           this.closeHelp();
@@ -855,7 +937,7 @@ class Game {
     });
 
     const unlock = () => {
-      if (this.state === "playing" && !this.helpOpen) {
+      if (this.state === "playing" && !this.helpOpen && !this.rankOpen) {
         this.requestPointerLock();
         this.speedrun.start();
       }
@@ -917,8 +999,8 @@ class Game {
     if (winPanel) winPanel.hidden = true;
     this.overlayTitle.textContent = "Pausado";
     this.overlayMsg.textContent = this.input.mobile
-      ? "Progresso salvo · Continuar · ? = ajuda."
-      : "Progresso salvo neste aparelho. Continuar · Ajuda (H) · Reiniciar apaga o save.";
+      ? "Progresso salvo · Continuar · Ranking · ? = ajuda."
+      : "Progresso salvo. Continuar · Ranking (T) · Ajuda (H) · Reiniciar apaga o save.";
     document.getElementById("btn-resume").textContent = "Continuar";
     document.getElementById("btn-resume").hidden = false;
     const btnSkin = document.getElementById("btn-skin");
@@ -928,6 +1010,7 @@ class Game {
 
   resume() {
     if (this.helpOpen) this.closeHelp(true);
+    if (this.rankOpen) this.closeRank(true);
     if (this.state === "dead") {
       this.respawn();
       return;

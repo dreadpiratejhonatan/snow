@@ -1111,10 +1111,12 @@ body.is-touch .inv-bar__hint {
   background: rgba(40, 60, 80, 0.7);
 }
 
+.rank-overlay[hidden],
 .help-overlay[hidden] {
   display: none !important;
 }
 
+.rank-overlay,
 .help-overlay {
   position: absolute;
   inset: 0;
@@ -1123,6 +1125,48 @@ body.is-touch .inv-bar__hint {
   background: radial-gradient(ellipse at center, rgba(20, 30, 50, 0.88), rgba(5, 8, 14, 0.96));
   z-index: 30;
   padding: 1rem;
+}
+
+.rank-overlay__panel {
+  width: min(94vw, 420px);
+  max-height: min(88vh, 560px);
+  overflow-y: auto;
+  padding: 1.5rem 1.6rem 1.25rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  background: var(--panel);
+  backdrop-filter: blur(12px);
+  text-align: left;
+  color: #dce6ee;
+}
+
+.rank-overlay__panel h2 {
+  margin: 0 0 0.35rem;
+  font-size: 1.35rem;
+  text-align: center;
+  color: #eef4f8;
+}
+
+.rank-overlay__sub {
+  margin: 0 0 0.85rem;
+  text-align: center;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.rank-overlay kbd {
+  display: inline-block;
+  padding: 0.05rem 0.35rem;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(0, 0, 0, 0.35);
+  font-size: 0.8em;
+  font-family: ui-monospace, Consolas, monospace;
+}
+
+.rank-overlay__panel .menu__btn {
+  margin-top: 1.25rem;
+  width: 100%;
 }
 
 .help-overlay__panel {

@@ -70,7 +70,7 @@ Guia completo: [`GITHUB-PAGES.md`](GITHUB-PAGES.md).
 3. O workflow [`.github/workflows/deploy-pages.yml`](.github/workflows/deploy-pages.yml) publica o `dist/`
 4. URL: `https://SEU_USER.github.io/SEU_REPO/`
 
-No Pages o ranking compartilhado (PHP) **não funciona** — só scores neste navegador. Ranking global: HostGator.
+No Pages o ranking usa a API da HostGator (CORS). Abra a lista com **T**.
 
 ### HostGator
 

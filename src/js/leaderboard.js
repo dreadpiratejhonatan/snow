@@ -1,5 +1,18 @@
-const API = "api/leaderboard.php";
+const HOSTGATOR_API = "https://jhonatanribeiro.com/snow/api/leaderboard.php";
 const LOCAL_KEY = "neveLeaderboardCache";
+
+/** GitHub Pages não roda PHP — usa o ranking da HostGator (CORS liberado). */
+function resolveApi() {
+  try {
+    const h = location.hostname || "";
+    if (h.endsWith("github.io")) return HOSTGATOR_API;
+  } catch {
+    /* SSR / testes */
+  }
+  return "api/leaderboard.php";
+}
+
+const API = resolveApi();
 
 function readLocal() {
   try {
@@ -92,4 +105,8 @@ export function formatTimeMs(ms) {
 export function getTopEntry(entries) {
   if (!entries?.length) return null;
   return entries[0];
+}
+
+export function leaderboardApiUrl() {
+  return API;
 }

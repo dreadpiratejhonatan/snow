@@ -8,7 +8,7 @@ import { execSync } from "node:child_process";
 process.chdir(path.dirname(path.dirname(fileURLToPath(import.meta.url))));
 const DIST = "dist";
 const HOST = path.join("release", "hostgator-snow");
-const CACHE = "gh1";
+const CACHE = "gh2";
 
 /**
  * Copia data/ para o destino.
@@ -101,9 +101,8 @@ fs.writeFileSync(
     "Neve Selvagem — build estático (GitHub Pages)",
     "",
     "O jogo roda 100% no browser.",
-    "Ranking online (api/leaderboard.php) NÃO funciona no GitHub Pages.",
-    "Scores ficam no localStorage deste navegador.",
-    "Para ranking compartilhado use a HostGator (release/snow.zip).",
+    "Ranking online: chama a API PHP da HostGator (CORS).",
+    "Tecla T abre a lista Top 10. Fallback: localStorage.",
     "",
   ].join("\n")
 );

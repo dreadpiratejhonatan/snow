@@ -23,6 +23,7 @@ const GAME_KEYS = new Set([
   "KeyF",
   "KeyG",
   "KeyH",
+  "KeyT",
   "KeyV",
   "KeyC",
   "Tab",

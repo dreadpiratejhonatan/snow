@@ -185,9 +185,20 @@
           </p>
         </aside>
         <button id="btn-resume" type="button" class="menu__btn">Continuar</button>
+        <button id="btn-rank-pause" type="button" class="menu__btn menu__btn--ghost">Ranking (T)</button>
         <button id="btn-help-pause" type="button" class="menu__btn menu__btn--ghost">Ajuda / FAQ</button>
         <button id="btn-skin" type="button" class="menu__btn menu__btn--ghost">Trocar skin</button>
         <button id="btn-restart" type="button" class="menu__btn menu__btn--ghost">Reiniciar</button>
+      </div>
+    </div>
+
+    <!-- Ranking Top 10 (T) — lista compartilhada via HostGator -->
+    <div id="rank-overlay" class="rank-overlay" hidden aria-hidden="true">
+      <div class="rank-overlay__panel" role="dialog" aria-labelledby="rank-title">
+        <h2 id="rank-title">Melhores tempos</h2>
+        <p class="rank-overlay__sub">Ranking compartilhado · tecla <kbd>T</kbd></p>
+        <ol id="rank-overlay-list" class="win-panel__list"></ol>
+        <button id="btn-rank-close" type="button" class="menu__btn">Fechar (T / Esc)</button>
       </div>
     </div>
 
@@ -216,7 +227,7 @@
           <li><kbd>I</kbd> inventário · <kbd>1–9</kbd>/<kbd>0</kbd> trocar arma</li>
           <li><kbd>G</kbd> tipo de armadilha · <kbd>F</kbd> colocar (perto da fogueira)</li>
           <li><kbd>V</kbd> / <kbd>Tab</kbd> 1ª / 3ª pessoa · clique atacar</li>
-          <li><kbd>H</kbd> esta ajuda · <kbd>Esc</kbd> pausar (ou pular tutorial)</li>
+          <li><kbd>H</kbd> esta ajuda · <kbd>T</kbd> ranking · <kbd>Esc</kbd> pausar (ou pular tutorial)</li>
         </ul>
         <h3 class="help-overlay__h">Perguntas frequentes</h3>
         <dl class="help-overlay__faq">
@@ -227,7 +238,7 @@
           <dt>Morri e perdi tudo?</dt>
           <dd>O que você carregava cai no chão perto do local da morte. O que já estava no <strong>baú</strong> fica seguro.</dd>
           <dt>Como entro no ranking?</dt>
-          <dd>Deposite todos os itens (incluindo o Troféu), vença e envie o nome. No GitHub Pages o ranking fica só neste navegador; ranking compartilhado é na HostGator.</dd>
+          <dd>Deposite todos os itens (incluindo o Troféu), vença e envie o nome. A lista Top 10 abre com <kbd>T</kbd> a qualquer momento. Tempos vão para o ranking online da HostGator (também no GitHub Pages).</dd>
           <dt>O minimapa gira?</dt>
           <dd>Sim — a frente do personagem é sempre para cima no mapa. A seta branca fica no centro.</dd>
           <dt>Perdi o progresso ao fechar?</dt>
@@ -238,6 +249,6 @@
     </div>
   </div>
 
-  <script type="module" src="src/js/main.js?v=gh1"></script>
+  <script type="module" src="src/js/main.js?v=gh2"></script>
 </body>
 </html>
