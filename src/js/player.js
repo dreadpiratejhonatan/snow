@@ -33,6 +33,9 @@ export class Player {
     this.mats.shirt.color.setHex(def.shirt);
     this.mats.skin.color.setHex(def.skin);
     this.mats.tie.color.setHex(def.tie);
+    this.mats.eye?.color.setHex(def.eye ?? 0x3d5f8c);
+    this.mats.pupil?.color.setHex(def.pupil ?? 0x101014);
+    this.mats.mouth?.color.setHex(def.mouth ?? 0x8a3a3a);
   }
 
   buildMesh() {
@@ -42,7 +45,20 @@ export class Player {
     const shirt = new THREE.MeshStandardMaterial({ color: def.shirt, roughness: 0.8 });
     const skin = new THREE.MeshStandardMaterial({ color: def.skin, roughness: 0.55 });
     const tie = new THREE.MeshStandardMaterial({ color: def.tie, roughness: 0.7 });
-    this.mats = { suit, shirt, skin, tie };
+    const eye = new THREE.MeshStandardMaterial({
+      color: def.eye ?? 0x3d5f8c,
+      roughness: 0.35,
+      metalness: 0.05,
+    });
+    const pupil = new THREE.MeshStandardMaterial({
+      color: def.pupil ?? 0x101014,
+      roughness: 0.45,
+    });
+    const mouth = new THREE.MeshStandardMaterial({
+      color: def.mouth ?? 0x8a3a3a,
+      roughness: 0.7,
+    });
+    this.mats = { suit, shirt, skin, tie, eye, pupil, mouth };
 
     this.mesh = new THREE.Group();
 
@@ -70,6 +86,21 @@ export class Player {
     const head = new THREE.Mesh(new THREE.SphereGeometry(0.15, 20, 16), skin);
     head.scale.set(0.85, 1.2, 0.92);
     head.position.y = 1.86;
+
+    // Rosto: olhos + pupilas + boca (irmãos da cabeça — não herdam o scale oval)
+    const eyeGeo = new THREE.SphereGeometry(0.028, 10, 8);
+    const pupilGeo = new THREE.SphereGeometry(0.014, 8, 6);
+    const eyeL = new THREE.Mesh(eyeGeo, eye);
+    eyeL.position.set(-0.048, 1.9, 0.132);
+    const eyeR = new THREE.Mesh(eyeGeo, eye);
+    eyeR.position.set(0.048, 1.9, 0.132);
+    const pupilL = new THREE.Mesh(pupilGeo, pupil);
+    pupilL.position.set(-0.048, 1.9, 0.152);
+    const pupilR = new THREE.Mesh(pupilGeo, pupil);
+    pupilR.position.set(0.048, 1.9, 0.152);
+    const mouthMesh = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.016, 0.02), mouth);
+    mouthMesh.position.set(0, 1.805, 0.128);
+    mouthMesh.rotation.x = -0.15;
 
     this.leftLeg = this.makeLimb(0.07, 0.95, suit, 0.05);
     this.leftLeg.position.set(-0.09, 0.95, 0);
@@ -112,6 +143,11 @@ export class Player {
       tieStrip,
       neck,
       head,
+      eyeL,
+      eyeR,
+      pupilL,
+      pupilR,
+      mouthMesh,
       this.leftLeg,
       this.rightLeg,
       this.leftArm,
