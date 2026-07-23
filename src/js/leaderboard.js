@@ -2,6 +2,9 @@ const HOSTGATOR_API = "https://jhonatanribeiro.com/snow/api/leaderboard.php";
 const LOCAL_KEY = "neveLeaderboardCache";
 const FETCH_RETRIES = 3;
 const RETRY_MS = 450;
+/** Alinhado à API PHP — evita Top 1 fantasma (&lt; 2 min). */
+export const MIN_TIME_MS = 120000;
+export const MAX_TIME_MS = 86400000;
 
 /**
  * HostGator: API relativa.
@@ -48,13 +51,39 @@ async function fetchWithRetry(url, options = {}, retries = FETCH_RETRIES) {
   throw lastErr || new Error("Falha de rede no ranking");
 }
 
+/** Nome com ≥2 caracteres distintos (bloqueia ooooo, aaa…). */
+export function isValidLeaderboardName(name) {
+  const n = String(name || "").trim();
+  if (n.length < 2) return false;
+  const unique = new Set([...n.toLowerCase()]);
+  return unique.size >= 2;
+}
+
+export function isValidLeaderboardTime(timeMs) {
+  const t = Math.round(Number(timeMs));
+  return Number.isFinite(t) && t >= MIN_TIME_MS && t <= MAX_TIME_MS;
+}
+
+function sanitizeEntry(e) {
+  if (!e || typeof e.timeMs !== "number") return null;
+  const name = String(e.name || "").trim();
+  if (!isValidLeaderboardName(name)) return null;
+  if (!isValidLeaderboardTime(e.timeMs)) return null;
+  return {
+    name,
+    timeMs: Math.round(e.timeMs),
+    at: e.at || new Date().toISOString(),
+  };
+}
+
 function readLocal() {
   try {
     const raw = localStorage.getItem(LOCAL_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     const list = Array.isArray(parsed) ? parsed : parsed?.entries;
-    return Array.isArray(list) ? list : [];
+    if (!Array.isArray(list)) return [];
+    return list.map(sanitizeEntry).filter(Boolean);
   } catch {
     return [];
   }
@@ -63,7 +92,8 @@ function readLocal() {
 function writeLocal(entries) {
   try {
     const clean = (Array.isArray(entries) ? entries : [])
-      .filter((e) => e && typeof e.timeMs === "number" && e.name)
+      .map(sanitizeEntry)
+      .filter(Boolean)
       .slice(0, 50);
     localStorage.setItem(LOCAL_KEY, JSON.stringify(clean));
   } catch {
@@ -73,18 +103,11 @@ function writeLocal(entries) {
 
 function mergeAndSort(a, b) {
   const map = new Map();
-  for (const e of [...a, ...b]) {
-    if (!e || typeof e.timeMs !== "number") continue;
-    const name = String(e.name || "").trim();
-    if (!name) continue;
-    const key = `${name}|${e.timeMs}`;
-    if (!map.has(key)) {
-      map.set(key, {
-        name,
-        timeMs: Math.round(e.timeMs),
-        at: e.at || new Date().toISOString(),
-      });
-    }
+  for (const raw of [...a, ...b]) {
+    const e = sanitizeEntry(raw);
+    if (!e) continue;
+    const key = `${e.name}|${e.timeMs}`;
+    if (!map.has(key)) map.set(key, e);
   }
   return [...map.values()].sort((x, y) => x.timeMs - y.timeMs).slice(0, 50);
 }
@@ -113,13 +136,13 @@ export async function submitScore(name, timeMs) {
     at: new Date().toISOString(),
   };
 
-  if (entry.name.length < 2) {
-    const err = new Error("Nome inválido (mín. 2 caracteres).");
+  if (!isValidLeaderboardName(entry.name)) {
+    const err = new Error("Nome inválido (use pelo menos 2 letras diferentes).");
     err.code = "NAME";
     throw err;
   }
-  if (!Number.isFinite(entry.timeMs) || entry.timeMs < 5000) {
-    const err = new Error("Tempo inválido.");
+  if (!isValidLeaderboardTime(entry.timeMs)) {
+    const err = new Error("Tempo inválido (mínimo 2 minutos para o ranking).");
     err.code = "TIME";
     throw err;
   }

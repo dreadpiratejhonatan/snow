@@ -16,12 +16,54 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 $dataDir = dirname(__DIR__) . '/data';
 $file = $dataDir . '/leaderboard.json';
 $maxEntries = 50;
+/** Tempo mínimo realista para zerar (2 min) — evita Top 1 fantasma de teste/spam. */
+$minTimeMs = 120000;
+$maxTimeMs = 86400000;
 
 if (!is_dir($dataDir)) {
   mkdir($dataDir, 0755, true);
 }
 if (!file_exists($file)) {
   file_put_contents($file, json_encode(['entries' => []], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+}
+
+/** Nome com pelo menos 2 caracteres distintos (bloqueia ooooo, aaa, etc.). */
+function name_is_valid($name) {
+  $name = trim((string)$name);
+  if (mb_strlen($name) < 2) return false;
+  $chars = preg_split('//u', mb_strtolower($name), -1, PREG_SPLIT_NO_EMPTY);
+  if (!$chars) return false;
+  $unique = array_unique($chars);
+  return count($unique) >= 2;
+}
+
+function time_is_valid($timeMs, $minTimeMs, $maxTimeMs) {
+  $t = (int)$timeMs;
+  return $t >= $minTimeMs && $t <= $maxTimeMs;
+}
+
+function entry_is_valid($e, $minTimeMs, $maxTimeMs) {
+  if (!is_array($e)) return false;
+  $name = trim((string)($e['name'] ?? ''));
+  if (!name_is_valid($name)) return false;
+  return time_is_valid($e['timeMs'] ?? 0, $minTimeMs, $maxTimeMs);
+}
+
+function filter_entries($entries, $minTimeMs, $maxTimeMs) {
+  $out = [];
+  foreach ($entries as $e) {
+    if (entry_is_valid($e, $minTimeMs, $maxTimeMs)) {
+      $out[] = [
+        'name' => trim((string)$e['name']),
+        'timeMs' => (int)$e['timeMs'],
+        'at' => $e['at'] ?? gmdate('c'),
+      ];
+    }
+  }
+  usort($out, function ($a, $b) {
+    return ($a['timeMs'] ?? PHP_INT_MAX) <=> ($b['timeMs'] ?? PHP_INT_MAX);
+  });
+  return $out;
 }
 
 function read_board($file) {
@@ -69,10 +111,11 @@ $method = $_SERVER['REQUEST_METHOD'];
 if ($method === 'GET') {
   [, $data] = read_board($file);
   $limit = isset($_GET['limit']) ? max(1, min(50, (int)$_GET['limit'])) : 10;
-  $entries = $data['entries'];
-  usort($entries, function ($a, $b) {
-    return ($a['timeMs'] ?? PHP_INT_MAX) <=> ($b['timeMs'] ?? PHP_INT_MAX);
-  });
+  $entries = filter_entries($data['entries'], $minTimeMs, $maxTimeMs);
+  // Persistência lazy: se o arquivo tinha lixo (ex. 6s / ooooo), limpa no disco
+  if (count($entries) !== count($data['entries'])) {
+    write_board($file, ['entries' => array_slice($entries, 0, $maxEntries)]);
+  }
   echo json_encode(['entries' => array_slice($entries, 0, $limit)], JSON_UNESCAPED_UNICODE);
   exit;
 }
@@ -92,26 +135,25 @@ if ($method === 'POST') {
   $name = mb_substr($name, 0, 16);
   $timeMs = (int)($body['timeMs'] ?? 0);
 
-  if (mb_strlen($name) < 2) {
+  if (!name_is_valid($name)) {
     http_response_code(400);
-    echo json_encode(['error' => 'Nome inválido (mín. 2 caracteres).']);
+    echo json_encode(['error' => 'Nome inválido (mín. 2 letras diferentes).']);
     exit;
   }
-  if ($timeMs < 5000 || $timeMs > 86400000) {
+  if (!time_is_valid($timeMs, $minTimeMs, $maxTimeMs)) {
     http_response_code(400);
-    echo json_encode(['error' => 'Tempo inválido.']);
+    echo json_encode(['error' => 'Tempo inválido (mínimo 2 minutos para entrar no ranking).']);
     exit;
   }
 
   [, $data] = read_board($file);
+  $data['entries'] = filter_entries($data['entries'], $minTimeMs, $maxTimeMs);
   $data['entries'][] = [
     'name' => $name,
     'timeMs' => $timeMs,
     'at' => gmdate('c'),
   ];
-  usort($data['entries'], function ($a, $b) {
-    return ($a['timeMs'] ?? PHP_INT_MAX) <=> ($b['timeMs'] ?? PHP_INT_MAX);
-  });
+  $data['entries'] = filter_entries($data['entries'], $minTimeMs, $maxTimeMs);
   $data['entries'] = array_slice($data['entries'], 0, $maxEntries);
 
   if (!write_board($file, $data)) {
