@@ -76,7 +76,11 @@ export class SkinPreview {
     const suit = new THREE.MeshStandardMaterial({ color: 0x17171b, roughness: 0.65 });
     const shirt = new THREE.MeshStandardMaterial({ color: 0xe9e5dc, roughness: 0.8 });
     const skin = new THREE.MeshStandardMaterial({ color: 0xf1efe9, roughness: 0.55 });
-    const face = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.5 });
+    const face = new THREE.MeshStandardMaterial({
+      color: 0xffffff,
+      roughness: 0.5,
+      side: THREE.FrontSide,
+    });
     this.mats = { suit, shirt, skin, face };
 
     const body = new THREE.Group();
@@ -86,11 +90,12 @@ export class SkinPreview {
     shirtStrip.position.set(0, 1.32, 0.13);
     const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.055, 0.12, 8), skin);
     neck.position.y = 1.68;
-    // Frente do preview = +Z (câmera olha de +Z para a origem)
-    const headMats = [skin, skin, skin, skin, face, skin];
-    const head = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.32, 0.3), headMats);
+    // Cabeça só pele; rosto no +Z (câmera do preview em +Z vê a frente)
+    const head = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.32, 0.3), skin);
     head.position.y = 1.9;
-    body.add(torso, shirtStrip, neck, head);
+    const facePlane = new THREE.Mesh(new THREE.PlaneGeometry(0.28, 0.3), face);
+    facePlane.position.set(0, 1.9, 0.162);
+    body.add(torso, shirtStrip, neck, head, facePlane);
     this.root.add(body);
   }
 

@@ -57,6 +57,7 @@ export class Player {
       color: 0xffffff,
       roughness: 0.55,
       metalness: 0,
+      side: THREE.FrontSide,
     });
     this.mats = { suit, shirt, skin, tie, face };
 
@@ -83,12 +84,15 @@ export class Player {
     const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.055, 0.14, 8), skin);
     neck.position.y = 1.68;
 
-    // Cabeça cubo: rosto SÓ na frente (+Z). Costas = pele (3ª pessoa vê a nuca, não o rosto).
-    // mesh.rotation.y = yaw+π faz +Z local apontar na direção do olhar.
-    const headMats = [skin, skin, skin, skin, face, skin];
-    const head = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.3, 0.28), headMats);
+    // Cabeça só pele; rosto = plano na frente (+Z, mesmo lado da camisa).
+    // mesh.rotation.y = yaw+π → +Z aponta no olhar; 3ª pessoa (atrás) vê nuca, não o plano.
+    const head = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.3, 0.28), skin);
     head.position.y = 1.88;
     this.headMesh = head;
+
+    const facePlane = new THREE.Mesh(new THREE.PlaneGeometry(0.26, 0.28), face);
+    facePlane.position.set(0, 1.88, 0.152);
+    this.facePlane = facePlane;
 
     this.leftLeg = this.makeLimb(0.07, 0.95, suit, 0.05);
     this.leftLeg.position.set(-0.09, 0.95, 0);
@@ -131,6 +135,7 @@ export class Player {
       tieStrip,
       neck,
       head,
+      facePlane,
       this.leftLeg,
       this.rightLeg,
       this.leftArm,
