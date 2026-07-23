@@ -1340,55 +1340,46 @@ body.is-touch .inv-bar__hint {
   width: fit-content;
 }
 
-.hud__help-btn {
+.hud__corner-btns {
   position: absolute;
   top: 1.2rem;
   right: 1.5rem;
+  display: flex;
+  gap: 0.4rem;
+  z-index: 6;
+  pointer-events: none;
+}
+
+.hud__help-btn,
+.hud__nerd-notes {
+  position: relative;
+  top: auto;
+  right: auto;
   width: 2.2rem;
   height: 2.2rem;
   border-radius: 50%;
   border: 1px solid rgba(255, 255, 255, 0.28);
   background: rgba(0, 0, 0, 0.45);
   color: #eef4f8;
-  font: 700 1.1rem/1 Georgia, "Times New Roman", serif;
+  font: 700 1.05rem/1 Georgia, "Times New Roman", serif;
   cursor: pointer;
-  z-index: 6;
+  pointer-events: auto;
   backdrop-filter: blur(4px);
 }
 
-.hud__help-btn:hover {
-  background: rgba(40, 60, 80, 0.7);
-}
-
-/* Discreto — canto inferior esquerdo, tipo “stats for nerds” */
 .hud__nerd-notes {
-  position: absolute;
-  left: 1.5rem;
-  bottom: 1.35rem;
-  z-index: 6;
-  margin: 0;
-  padding: 0.2rem 0.45rem;
-  border: 1px solid transparent;
-  border-radius: 4px;
-  background: transparent;
-  color: rgba(220, 230, 238, 0.38);
-  font: 600 0.72rem/1 ui-monospace, Consolas, monospace;
-  letter-spacing: 0.18em;
-  cursor: pointer;
-  pointer-events: auto;
-  transition: color 0.15s, background 0.15s, border-color 0.15s;
+  /* discreto, mas legível (N = novidades) */
+  opacity: 0.72;
+  font-size: 0.95rem;
+  letter-spacing: 0.04em;
 }
 
+.hud__help-btn:hover,
 .hud__nerd-notes:hover,
 .hud__nerd-notes:focus-visible {
-  color: rgba(238, 244, 248, 0.85);
-  background: rgba(0, 0, 0, 0.35);
-  border-color: rgba(255, 255, 255, 0.15);
+  background: rgba(40, 60, 80, 0.7);
+  opacity: 1;
   outline: none;
-}
-
-.hud__nerd-notes__glyph {
-  display: block;
 }
 
 .rank-overlay[hidden],
@@ -1795,10 +1786,9 @@ body.is-touch .hud__ghost {
   right: max(0.8rem, env(safe-area-inset-right));
 }
 
-body.is-touch .hud__nerd-notes {
-  left: max(0.8rem, env(safe-area-inset-left));
-  bottom: max(11.5rem, calc(env(safe-area-inset-bottom) + 10.5rem));
-  opacity: 0.9;
+/* No celular o N fica nos botões touch (camada acima do look) */
+body.is-touch .hud__corner-btns {
+  display: none;
 }
 
 body.is-touch .hud__bottom {

@@ -110,12 +110,11 @@
         <button type="button" id="tutorial-skip" class="tutorial-banner__skip">Pular tutorial</button>
       </div>
 
-      <button type="button" id="btn-help-hud" class="hud__help-btn" title="Ajuda (H)" aria-label="Abrir ajuda">?</button>
-
-      <!-- Ícone discreto estilo “stats for nerds”: changelog no próprio jogo -->
-      <button type="button" id="btn-release-notes" class="hud__nerd-notes" title="O que mudou (novidades)" aria-label="Abrir novidades">
-        <span class="hud__nerd-notes__glyph" aria-hidden="true">···</span>
-      </button>
+      <!-- N = novidades (ao lado do ?). No celular também existe nos botões touch. -->
+      <div class="hud__corner-btns">
+        <button type="button" id="btn-release-notes" class="hud__nerd-notes" title="O que mudou (novidades)" aria-label="Abrir novidades">N</button>
+        <button type="button" id="btn-help-hud" class="hud__help-btn" title="Ajuda (H)" aria-label="Abrir ajuda">?</button>
+      </div>
 
       <div class="hud__bottom">
         <div class="hud__controls">WASD · IJKL olhar · Alt+←→ ou Ver skin · 1-9/0 arma · R recarga · B armas · E pegar · G/F armadilha · C craft · H ajuda</div>
@@ -131,6 +130,7 @@
       <div class="touch__actions">
         <button type="button" id="btn-pause" class="touch-btn touch-btn--small">Ⅱ</button>
         <button type="button" id="btn-help" class="touch-btn touch-btn--small">?</button>
+        <button type="button" id="btn-release-touch" class="touch-btn touch-btn--small" title="Novidades" aria-label="Novidades">N</button>
         <button type="button" id="btn-camera" class="touch-btn touch-btn--small">👁</button>
         <button type="button" id="btn-inv" class="touch-btn touch-btn--small">🎒</button>
         <button type="button" id="btn-weapon" class="touch-btn touch-btn--small">⚔</button>
@@ -311,6 +311,6 @@
     </div>
   </div>
 
-  <script type="module" src="src/js/main.js?v=gh24"></script>
+  <script type="module" src="src/js/main.js?v=gh25"></script>
 </body>
 </html>

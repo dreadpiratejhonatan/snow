@@ -1219,6 +1219,14 @@ class Game {
       this.toggleReleaseNotes();
     });
     document.getElementById("btn-release-pause")?.addEventListener("click", () => this.openReleaseNotes());
+    document.getElementById("btn-release-touch")?.addEventListener(
+      "touchstart",
+      (e) => {
+        e.preventDefault();
+        this.openReleaseNotes();
+      },
+      { passive: false }
+    );
     document.getElementById("btn-help-hud")?.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
