@@ -102,6 +102,7 @@ class Game {
   async boot() {
     this.state = "splash";
     this.hud.hide();
+    this.setTouchUiVisible(false);
     await runSplash({ minMs: 3200, maxMs: 4800, fadeMs: 800 });
     this.state = "skin";
     const skinId = await runSkinPicker({ force: !loadSkinId() });
@@ -140,24 +141,40 @@ class Game {
     this.start();
   }
 
+  /** Esconde joystick/look fullscreen durante menus (senão o toque não foca o input). */
+  setTouchUiVisible(visible) {
+    const root = document.getElementById("touch-controls");
+    if (!root) return;
+    root.hidden = !visible;
+  }
+
   /** Solo / criar sala / entrar — retorna { mode, room?, seed? }. */
   promptCoopMenu() {
     const el = document.getElementById("coop-menu");
     const status = document.getElementById("coop-status");
     const codeInput = document.getElementById("coop-code-input");
     if (!el) return Promise.resolve({ mode: "solo" });
+    this.setTouchUiVisible(false);
     el.hidden = false;
     el.setAttribute("aria-hidden", "false");
     this.state = "coop";
     if (status) status.textContent = "";
+    if (codeInput) {
+      codeInput.disabled = false;
+      codeInput.readOnly = false;
+      codeInput.value = "";
+    }
+    queueMicrotask(() => codeInput?.focus({ preventScroll: true }));
 
     return new Promise((resolve) => {
       const cleanup = () => {
         el.hidden = true;
         el.setAttribute("aria-hidden", "true");
+        codeInput?.removeEventListener("keydown", onCodeKey);
         btnSolo?.removeEventListener("click", onSolo);
         btnCreate?.removeEventListener("click", onCreate);
         btnJoin?.removeEventListener("click", onJoin);
+        // touch volta no start() / se for solo com continue-menu
       };
       const onSolo = () => {
         cleanup();
@@ -167,6 +184,7 @@ class Game {
         btnCreate.disabled = true;
         btnSolo.disabled = true;
         btnJoin.disabled = true;
+        if (codeInput) codeInput.disabled = true;
         if (status) status.textContent = "Criando sala…";
         try {
           const room = new WebRtcRoom();
@@ -176,11 +194,6 @@ class Game {
           room.onCode = (code) => {
             if (codeBox) codeBox.hidden = false;
             if (codeDisplay) codeDisplay.textContent = code;
-            try {
-              codeInput.value = code;
-            } catch {
-              /* ignore */
-            }
           };
           const { code, seed } = await room.create(this.world.seed);
           await this.waitForRoomOpen(room);
@@ -191,17 +204,20 @@ class Game {
           btnCreate.disabled = false;
           btnSolo.disabled = false;
           btnJoin.disabled = false;
+          if (codeInput) codeInput.disabled = false;
         }
       };
       const onJoin = async () => {
         const code = (codeInput?.value || "").trim().toUpperCase();
         if (code.length < 4) {
-          if (status) status.textContent = "Digite o código da sala (6 letras).";
+          if (status) status.textContent = "Digite o código da sala (ex: TBVKQ3).";
+          codeInput?.focus({ preventScroll: true });
           return;
         }
         btnCreate.disabled = true;
         btnSolo.disabled = true;
         btnJoin.disabled = true;
+        if (codeInput) codeInput.disabled = true;
         if (status) status.textContent = "Entrando…";
         try {
           const room = new WebRtcRoom();
@@ -217,6 +233,16 @@ class Game {
           btnCreate.disabled = false;
           btnSolo.disabled = false;
           btnJoin.disabled = false;
+          if (codeInput) {
+            codeInput.disabled = false;
+            codeInput.focus({ preventScroll: true });
+          }
+        }
+      };
+      const onCodeKey = (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          onJoin();
         }
       };
       const btnSolo = document.getElementById("btn-coop-solo");
@@ -236,6 +262,7 @@ class Game {
           if (status) status.textContent = `Código: ${code} (copie manualmente)`;
         }
       });
+      codeInput?.addEventListener("keydown", onCodeKey);
       btnSolo?.addEventListener("click", onSolo);
       btnCreate?.addEventListener("click", onCreate);
       btnJoin?.addEventListener("click", onJoin);
@@ -1186,6 +1213,7 @@ class Game {
     this.overlay.hidden = true;
     this.hud.show();
     this.state = "playing";
+    if (this.input.mobile) this.setTouchUiVisible(true);
     this.input.attach();
     // Cronômetro começa ao entrar na partida (Novo jogo / Continuar), sem exigir clique no canvas
     if (this.speedrun.started) this.speedrun.resume();

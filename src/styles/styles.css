@@ -371,16 +371,26 @@ body.is-touch .hud__traps {
 .coop-menu__input {
   width: 100%;
   box-sizing: border-box;
+  min-height: 3.1rem;
   padding: 0.85rem 0.9rem;
   border-radius: 8px;
   border: 1px solid rgba(255, 255, 255, 0.14);
   background: rgba(0, 0, 0, 0.35);
   color: #eef4f8;
   font: inherit;
-  font-size: 1.25rem;
+  font-size: 1.35rem;
   letter-spacing: 0.2em;
   text-transform: uppercase;
   text-align: center;
+  -webkit-user-select: text;
+  user-select: text;
+  touch-action: manipulation;
+  pointer-events: auto;
+}
+
+.coop-menu__input:focus {
+  outline: 2px solid rgba(88, 166, 255, 0.65);
+  border-color: rgba(88, 166, 255, 0.55);
 }
 
 .coop-menu__code-box {
@@ -592,6 +602,9 @@ body.is-touch .hud__traps {
   background: rgba(0, 0, 0, 0.35);
   color: #eef4f8;
   font: inherit;
+  -webkit-user-select: text;
+  user-select: text;
+  touch-action: manipulation;
 }
 
 .win-panel__status {
@@ -1457,6 +1470,15 @@ body {
   -webkit-user-select: none;
   user-select: none;
   overscroll-behavior: none;
+}
+
+/* Campos de texto: body tem user-select/touch-action none — sem isso o teclado não abre no celular */
+input,
+textarea,
+[contenteditable="true"] {
+  -webkit-user-select: text;
+  user-select: text;
+  touch-action: manipulation;
 }
 
 .touch[hidden] {

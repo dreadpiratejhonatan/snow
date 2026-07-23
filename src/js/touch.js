@@ -29,7 +29,9 @@ export class TouchControls {
     if (!this.root) return;
 
     this.enabled = true;
-    this.root.hidden = false;
+    // Fica oculto até Game.start() — se mostrar no boot, a camada look
+    // (tela cheia) impede toque/teclado nos menus (co-op, nome, skin).
+    this.root.hidden = true;
     document.body.classList.add("is-touch");
 
     // movimento analógico e botões virtuais no Input
