@@ -1340,10 +1340,19 @@ body.is-touch .inv-bar__hint {
   width: fit-content;
 }
 
-.hud__help-btn {
+.hud__corner-btns {
   position: absolute;
   top: 1.2rem;
   right: 1.5rem;
+  display: flex;
+  gap: 0.4rem;
+  z-index: 6;
+}
+
+.hud__help-btn {
+  position: relative;
+  top: auto;
+  right: auto;
   width: 2.2rem;
   height: 2.2rem;
   border-radius: 50%;
@@ -1352,8 +1361,12 @@ body.is-touch .inv-bar__hint {
   color: #eef4f8;
   font: 700 1.1rem/1 Georgia, "Times New Roman", serif;
   cursor: pointer;
-  z-index: 6;
   backdrop-filter: blur(4px);
+}
+
+.hud__help-btn--notes {
+  font-size: 0.95rem;
+  letter-spacing: 0.02em;
 }
 
 .hud__help-btn:hover {
@@ -1361,7 +1374,8 @@ body.is-touch .inv-bar__hint {
 }
 
 .rank-overlay[hidden],
-.help-overlay[hidden] {
+.help-overlay[hidden],
+.release-overlay[hidden] {
   display: none !important;
 }
 

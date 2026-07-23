@@ -84,6 +84,8 @@ class Game {
     this._helpFromPlaying = false;
     this.rankOpen = false;
     this._rankFromPlaying = false;
+    this.releaseOpen = false;
+    this._releaseFromPlaying = false;
     this.coop = null;
     this.coopRoom = null;
     this._saveAcc = 0;
@@ -749,6 +751,8 @@ class Game {
     this.ended = true;
     this.state = "dead";
     this.closeHelp(true);
+    this.closeReleaseNotes(true);
+    this.closeRank(true);
     this.dropCarriedOnDeath();
     this.persistSave();
     document.exitPointerLock();
@@ -1042,10 +1046,59 @@ class Game {
     return night;
   }
 
+  openReleaseNotes() {
+    if (this.state === "won" || this.state === "dead" || this.state === "splash" || this.state === "skin") {
+      return;
+    }
+    if (this.helpOpen) this.closeHelp(true);
+    if (this.rankOpen) this.closeRank(true);
+    const el = document.getElementById("release-overlay");
+    if (!el) return;
+    if (this.state === "playing") {
+      this._releaseFromPlaying = true;
+      this.state = "paused";
+      this.speedrun.pause();
+      if (!this.input.mobile) document.exitPointerLock();
+      this.input.clearKeys();
+      if (this.clickHint) this.clickHint.hidden = true;
+      this.overlay.hidden = true;
+    } else if (this.state === "paused") {
+      this._releaseFromPlaying = false;
+      this.overlay.hidden = true;
+    }
+    el.hidden = false;
+    el.setAttribute("aria-hidden", "false");
+    this.releaseOpen = true;
+  }
+
+  /** @param {boolean} silent se true, não resume o jogo */
+  closeReleaseNotes(silent = false) {
+    const el = document.getElementById("release-overlay");
+    if (el) {
+      el.hidden = true;
+      el.setAttribute("aria-hidden", "true");
+    }
+    const wasFromPlaying = this._releaseFromPlaying;
+    this.releaseOpen = false;
+    this._releaseFromPlaying = false;
+    if (silent) return;
+    if (wasFromPlaying) {
+      this.resume();
+    } else if (this.state === "paused") {
+      this.overlay.hidden = false;
+    }
+  }
+
+  toggleReleaseNotes() {
+    if (this.releaseOpen) this.closeReleaseNotes();
+    else this.openReleaseNotes();
+  }
+
   openHelp() {
     if (this.state === "won" || this.state === "dead" || this.state === "splash" || this.state === "skin") {
       return;
     }
+    if (this.releaseOpen) this.closeReleaseNotes(true);
     if (this.rankOpen) this.closeRank(true);
     const el = document.getElementById("help-overlay");
     if (!el) return;
@@ -1091,6 +1144,7 @@ class Game {
 
   openRank() {
     if (this.state === "splash" || this.state === "skin") return;
+    if (this.releaseOpen) this.closeReleaseNotes(true);
     if (this.helpOpen) this.closeHelp(true);
     const el = document.getElementById("rank-overlay");
     if (!el) return;
@@ -1156,8 +1210,14 @@ class Game {
     document.getElementById("btn-skin")?.addEventListener("click", () => this.openSkinPickerFromPause());
     document.getElementById("btn-submit-score")?.addEventListener("click", () => this.submitWinScore());
     document.getElementById("btn-help-close")?.addEventListener("click", () => this.closeHelp());
+    document.getElementById("btn-release-close")?.addEventListener("click", () => this.closeReleaseNotes());
     document.getElementById("btn-rank-close")?.addEventListener("click", () => this.closeRank());
     document.getElementById("btn-rank-pause")?.addEventListener("click", () => this.openRank());
+    document.getElementById("btn-release-notes")?.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this.toggleReleaseNotes();
+    });
     document.getElementById("btn-help-hud")?.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -1203,6 +1263,11 @@ class Game {
         return;
       }
       if (e.code === "Escape") {
+        if (this.releaseOpen) {
+          e.preventDefault();
+          this.closeReleaseNotes();
+          return;
+        }
         if (this.rankOpen) {
           e.preventDefault();
           this.closeRank();
@@ -1223,7 +1288,12 @@ class Game {
     });
 
     const unlock = () => {
-      if (this.state === "playing" && !this.helpOpen && !this.rankOpen) {
+      if (
+        this.state === "playing" &&
+        !this.helpOpen &&
+        !this.rankOpen &&
+        !this.releaseOpen
+      ) {
         this.requestPointerLock();
         this.speedrun.start();
       }
@@ -1326,6 +1396,7 @@ class Game {
 
   resume() {
     if (this.helpOpen) this.closeHelp(true);
+    if (this.releaseOpen) this.closeReleaseNotes(true);
     if (this.rankOpen) this.closeRank(true);
     if (this.state === "dead") {
       this.respawn();
