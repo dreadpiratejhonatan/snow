@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Neve Selvagem — Release Notes · 19–23 jul 2026</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet" />
+  <style>
+    @page {
+      size: A4;
+      margin: 14mm 16mm;
+    }
+
+    :root {
+      --ink: #0e1622;
+      --muted: #5a6b7c;
+      --frost: #e8f1f7;
+      --ice: #9ec9e0;
+      --deep: #1a2a3a;
+      --accent: #3d8fb0;
+      --line: rgba(30, 50, 70, 0.12);
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #f4f8fb;
+      color: var(--ink);
+      font-family: "DM Sans", system-ui, sans-serif;
+      font-size: 10.5pt;
+      line-height: 1.45;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    .page {
+      max-width: 180mm;
+      margin: 0 auto;
+      padding: 8mm 2mm 6mm;
+    }
+
+    .hero {
+      position: relative;
+      padding: 18mm 14mm 14mm;
+      border-radius: 10px;
+      background:
+        radial-gradient(ellipse 90% 70% at 10% 0%, rgba(158, 201, 224, 0.45), transparent 55%),
+        radial-gradient(ellipse 70% 60% at 100% 20%, rgba(61, 143, 176, 0.18), transparent 50%),
+        linear-gradient(165deg, #f7fbfe 0%, #e3eef6 48%, #d4e4f0 100%);
+      border: 1px solid rgba(61, 143, 176, 0.22);
+      overflow: hidden;
+    }
+
+    .hero::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-image: radial-gradient(circle at 20% 30%, rgba(255,255,255,0.7) 0 1px, transparent 1.5px),
+        radial-gradient(circle at 70% 60%, rgba(255,255,255,0.55) 0 1px, transparent 1.5px),
+        radial-gradient(circle at 40% 80%, rgba(255,255,255,0.4) 0 0.8px, transparent 1.2px);
+      background-size: 48px 48px, 72px 72px, 36px 36px;
+      opacity: 0.55;
+      pointer-events: none;
+    }
+
+    .hero__inner { position: relative; z-index: 1; }
+
+    .eyebrow {
+      margin: 0 0 8px;
+      font-size: 8.5pt;
+      font-weight: 600;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+
+    h1 {
+      margin: 0 0 6px;
+      font-family: "Instrument Serif", Georgia, serif;
+      font-size: 32pt;
+      font-weight: 400;
+      letter-spacing: -0.02em;
+      line-height: 1.05;
+      color: var(--deep);
+    }
+
+    h1 em {
+      font-style: italic;
+      color: #2a6080;
+    }
+
+    .lede {
+      margin: 10px 0 0;
+      max-width: 36em;
+      font-size: 11pt;
+      color: var(--muted);
+    }
+
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 18px;
+      margin-top: 16px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(30, 50, 70, 0.1);
+      font-size: 8.5pt;
+      color: var(--muted);
+    }
+
+    .meta strong { color: var(--deep); font-weight: 600; }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .card {
+      padding: 12px 13px 11px;
+      border-radius: 8px;
+      background: #fff;
+      border: 1px solid var(--line);
+      box-shadow: 0 1px 0 rgba(255,255,255,0.8) inset;
+      break-inside: avoid;
+    }
+
+    .card--wide {
+      grid-column: 1 / -1;
+    }
+
+    .card h2 {
+      margin: 0 0 8px;
+      font-family: "Instrument Serif", Georgia, serif;
+      font-size: 14.5pt;
+      font-weight: 400;
+      color: var(--deep);
+      letter-spacing: -0.01em;
+    }
+
+    .card h2 span {
+      display: inline-block;
+      margin-right: 6px;
+      font-family: "DM Sans", sans-serif;
+      font-size: 8pt;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent);
+      vertical-align: middle;
+      position: relative;
+      top: -1px;
+    }
+
+    ul {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    li {
+      position: relative;
+      padding: 3px 0 3px 12px;
+      font-size: 9.4pt;
+      color: #243241;
+    }
+
+    li::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 0.72em;
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--ice);
+      box-shadow: 0 0 0 2px rgba(158, 201, 224, 0.25);
+    }
+
+    li strong { font-weight: 600; color: var(--ink); }
+
+    .howto {
+      margin-top: 12px;
+      padding: 11px 13px;
+      border-radius: 8px;
+      background: linear-gradient(90deg, #1a2a3a, #24384c);
+      color: #e8f1f7;
+    }
+
+    .howto h2 {
+      margin: 0 0 4px;
+      font-family: "Instrument Serif", Georgia, serif;
+      font-size: 13pt;
+      font-weight: 400;
+      color: #fff;
+    }
+
+    .howto p {
+      margin: 0;
+      font-size: 9.2pt;
+      color: rgba(232, 241, 247, 0.82);
+      line-height: 1.4;
+    }
+
+    .howto kbd {
+      display: inline-block;
+      padding: 0 5px;
+      border-radius: 3px;
+      border: 1px solid rgba(255,255,255,0.22);
+      background: rgba(0,0,0,0.25);
+      font-family: ui-monospace, Consolas, monospace;
+      font-size: 8.5pt;
+      color: #cfe6f4;
+    }
+
+    footer {
+      margin-top: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      font-size: 8pt;
+      color: var(--muted);
+    }
+
+    footer a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header class="hero">
+      <div class="hero__inner">
+        <p class="eyebrow">Release Notes</p>
+        <h1>Neve Selvagem <em>19–23 jul 2026</em></h1>
+        <p class="lede">
+          Tudo que entrou desde sábado até hoje: personagens com rostos,
+          câmera para ver a skin, ranking online, co-op e o jogo no ar.
+        </p>
+        <div class="meta">
+          <span><strong>Período</strong> 19–23 julho 2026</span>
+          <span><strong>Build</strong> gh22</span>
+          <span><strong>Repo</strong> dreadpiratejhonatan/snow</span>
+        </div>
+      </div>
+    </header>
+
+    <div class="grid">
+      <section class="card">
+        <h2><span>01</span> Personagens</h2>
+        <ul>
+          <li>Cinco rostos: <strong>Natan</strong>, <strong>Jhonatan</strong>, <strong>Jorge Bolado</strong>, <strong>Caio</strong>, <strong>Lorenzo</strong></li>
+          <li>Escolha obrigatória com preview 3D girável</li>
+          <li>Cards em <strong>ordem aleatória</strong> a cada abertura</li>
+          <li>Rosto só na <strong>frente</strong> da cabeça (3ª pessoa vê a nuca)</li>
+        </ul>
+      </section>
+
+      <section class="card">
+        <h2><span>02</span> Câmera &amp; skin</h2>
+        <ul>
+          <li>Botão <strong>Ver skin</strong> / <strong>Ver costas</strong> em 3ª pessoa</li>
+          <li><strong>Alt + setas</strong> orbitam a câmera 360° sem girar o corpo</li>
+          <li><strong>Alt + V</strong> volta a câmera para trás</li>
+          <li>Dicas na HUD + toast na primeira vez em 3ª pessoa</li>
+        </ul>
+      </section>
+
+      <section class="card">
+        <h2><span>03</span> Inventário</h2>
+        <ul>
+          <li>Tecla <strong>B</strong> mostra/esconde a barra de armas por completo</li>
+          <li>Botão <strong>✕</strong> para fechar; corrige tecla B “presa”</li>
+          <li>Começa escondida — HUD mais limpa</li>
+        </ul>
+      </section>
+
+      <section class="card">
+        <h2><span>04</span> Ranking</h2>
+        <ul>
+          <li>Ranking online com tecla <strong>T</strong> (HostGator API)</li>
+          <li>Funciona também no GitHub Pages</li>
+          <li>Filtro de tempos falsos (mín. 2 min; nomes lixo rejeitados)</li>
+          <li>Digitação do nome na tela de vitória corrigida</li>
+        </ul>
+      </section>
+
+      <section class="card">
+        <h2><span>05</span> Co-op</h2>
+        <ul>
+          <li>Modo 2 jogadores via <strong>WebRTC</strong></li>
+          <li>Sinalização PHP na HostGator (<code>api/signal.php</code>)</li>
+          <li>TURN, fila ICE, código de sala maior</li>
+          <li>Digitação do código no desktop e no celular</li>
+        </ul>
+      </section>
+
+      <section class="card">
+        <h2><span>06</span> Deploy</h2>
+        <ul>
+          <li>GitHub Pages automático a cada push</li>
+          <li>Pacote HostGator: <code>release/snow.zip</code></li>
+          <li>Guia <strong>DEPLOY-SEGURO.md</strong> (preserva o ranking)</li>
+          <li>Jogo: github.io/snow e jhonatanribeiro.com/snow</li>
+        </ul>
+      </section>
+
+      <section class="card card--wide">
+        <h2><span>07</span> Novidades no jogo</h2>
+        <ul>
+          <li>Ícone discreto <strong>···</strong> no canto inferior esquerdo (estilo “stats for nerds”)</li>
+          <li>Abre o painel com o changelog completo</li>
+          <li>Também no menu pausa: botão <strong>O que mudou</strong></li>
+        </ul>
+      </section>
+    </div>
+
+    <div class="howto">
+      <h2>Como ver no jogo</h2>
+      <p>
+        Durante a partida, clique em <kbd>···</kbd> no canto inferior esquerdo —
+        ou pause e escolha <strong>O que mudou</strong>. Ajuda geral continua em <kbd>?</kbd> / <kbd>H</kbd>.
+      </p>
+    </div>
+
+    <footer>
+      <span>Neve Selvagem · Release Notes</span>
+      <a href="https://dreadpiratejhonatan.github.io/snow/">dreadpiratejhonatan.github.io/snow</a>
+    </footer>
+  </div>
+</body>
+</html>
