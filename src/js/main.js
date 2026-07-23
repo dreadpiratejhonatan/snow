@@ -1218,6 +1218,7 @@ class Game {
       e.stopPropagation();
       this.toggleReleaseNotes();
     });
+    document.getElementById("btn-release-pause")?.addEventListener("click", () => this.openReleaseNotes());
     document.getElementById("btn-help-hud")?.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();

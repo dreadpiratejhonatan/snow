@@ -1,6 +1,6 @@
 # Novidades — 19–23 jul 2026
 
-Changelog jogável do que entrou desde sábado até hoje. No jogo, abra pelo botão **N** na HUD (ao lado do `?`).
+Changelog jogável do que entrou desde sábado até hoje. No jogo: ícone discreto **···** no canto inferior esquerdo da HUD (ou **O que mudou** no menu pausa).
 
 ## Personagens
 - 5 rostos: **Natan**, **Jhonatan**, **Jorge Bolado**, **Caio**, **Lorenzo**
