@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { CONFIG } from "./config.js";
 import { makeTextures } from "./textures.js";
+import { createRng, randomSeed } from "./rng.js";
 import {
   Enemy,
   createBearMesh,
@@ -15,8 +16,11 @@ import {
 // Mundo de inverno: terreno nevado por heightmap, lago congelado onde dá
 // para andar, nevasca, base com fogueira e baú, itens escondidos e um urso.
 export class World {
-  constructor(scene) {
+  constructor(scene, opts = {}) {
     this.scene = scene;
+    this.seed = (opts.seed ?? randomSeed()) >>> 0;
+    this.authority = opts.authority !== false; // guest co-op: false (host simula inimigos)
+    this._nextNetId = 1;
     this.size = CONFIG.world.size;
     this.half = this.size / 2;
     this.bounds = this.half - 4;
@@ -72,23 +76,31 @@ export class World {
       bumpScale: 0.35,
     });
 
-    this.buildTerrain();
-    this.buildIce();
-    this.scatterTrees();
-    this.scatterRocks();
-    this.buildGrass();
-    this.buildClouds();
-    this.buildFireflies();
-    this.buildBirds();
-    this.buildSnowfall();
-    this.buildShootingStar();
-    this.buildAurora();
-    this.buildCampfire();
-    this.buildBase();
-    this.buildItems();
-    this.buildRabbits();
-    this.buildEnemies();
-    this.buildMinimap();
+    // Seed compartilhável (co-op): mesma geração procedural nos dois clientes
+    const rng = createRng(this.seed);
+    const prevRandom = Math.random;
+    Math.random = rng;
+    try {
+      this.buildTerrain();
+      this.buildIce();
+      this.scatterTrees();
+      this.scatterRocks();
+      this.buildGrass();
+      this.buildClouds();
+      this.buildFireflies();
+      this.buildBirds();
+      this.buildSnowfall();
+      this.buildShootingStar();
+      this.buildAurora();
+      this.buildCampfire();
+      this.buildBase();
+      this.buildItems();
+      this.buildRabbits();
+      this.buildEnemies();
+      this.buildMinimap();
+    } finally {
+      Math.random = prevRandom;
+    }
   }
 
   // ------------------------------------------------------------------
@@ -1150,6 +1162,7 @@ export class World {
     mesh.position.set(home.x, this.groundHeight(home.x, home.z), home.z);
     this.scene.add(mesh);
     const enemy = new Enemy(type, mesh, home, this);
+    enemy.netId = this._nextNetId++;
     this.enemies.push(enemy);
     if (type === "bear_elite" || !this.bear) this.bear = enemy;
     this.onEnemySpawned?.(enemy);
@@ -1157,6 +1170,7 @@ export class World {
   }
 
   flushPendingEnemies(elapsed) {
+    if (!this.authority) return;
     while (this.pendingEnemies.length && this.pendingEnemies[0].at <= elapsed) {
       const next = this.pendingEnemies.shift();
       this.spawnEnemyNow(next.type);
@@ -1164,6 +1178,7 @@ export class World {
   }
 
   updateEnemies(dt, elapsed, playerPos) {
+    if (!this.authority) return;
     this.flushPendingEnemies(elapsed);
     for (const e of this.enemies) {
       e.update(dt, elapsed, playerPos, this._enemyHooks);

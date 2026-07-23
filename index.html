@@ -131,6 +131,21 @@
 
     <div id="boot-error" class="boot-error" hidden></div>
 
+    <!-- Co-op 2P -->
+    <div id="coop-menu" class="coop-menu" hidden aria-hidden="true">
+      <div class="coop-menu__panel" role="dialog" aria-labelledby="coop-title">
+        <h2 id="coop-title" class="coop-menu__title">Como jogar?</h2>
+        <p class="coop-menu__summary">Solo clássico ou co-op 2 jogadores no mesmo mundo.</p>
+        <button id="btn-coop-solo" type="button" class="menu__btn">Solo</button>
+        <button id="btn-coop-create" type="button" class="menu__btn menu__btn--ghost">Criar sala co-op</button>
+        <div class="coop-menu__join">
+          <input id="coop-code-input" class="coop-menu__input" type="text" maxlength="8" placeholder="Código da sala" autocomplete="off" spellcheck="false" />
+          <button id="btn-coop-join" type="button" class="menu__btn menu__btn--ghost">Entrar</button>
+        </div>
+        <p id="coop-status" class="coop-menu__status" aria-live="polite"></p>
+      </div>
+    </div>
+
     <!-- Continuar expedição salva -->
     <div id="continue-menu" class="continue-menu" hidden aria-hidden="true">
       <div class="continue-menu__panel">
@@ -249,6 +264,6 @@
     </div>
   </div>
 
-  <script type="module" src="src/js/main.js?v=gh5"></script>
+  <script type="module" src="src/js/main.js?v=gh6"></script>
 </body>
 </html>

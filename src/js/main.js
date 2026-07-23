@@ -16,6 +16,8 @@ import { SpeedrunTimer } from "./speedrun.js";
 import { fetchLeaderboard, submitScore, formatTimeMs, getTopEntry } from "./leaderboard.js";
 import { runSplash } from "./splash.js";
 import { runSkinPicker, applySkinToPlayer, loadSkinId } from "./skins.js";
+import { WebRtcRoom } from "./net/webrtcRoom.js";
+import { CoopSession } from "./net/coopSession.js";
 import { Tutorial } from "./tutorial.js";
 import { TrapInventory } from "./traps.js";
 import {
@@ -81,6 +83,8 @@ class Game {
     this._helpFromPlaying = false;
     this.rankOpen = false;
     this._rankFromPlaying = false;
+    this.coop = null;
+    this.coopRoom = null;
     this._saveAcc = 0;
     this.clock = new THREE.Clock();
     this.initThree();
@@ -103,22 +107,179 @@ class Game {
     const skinId = await runSkinPicker({ force: !loadSkinId() });
     applySkinToPlayer(this.player, skinId);
 
+    const coopChoice = await this.promptCoopMenu();
     let resumeSave = null;
-    if (hasMidRunSave()) {
-      const choice = await this.promptContinueOrNew();
-      if (choice === "continue") resumeSave = loadMidRunSave();
-      else clearMidRunSave();
+
+    if (coopChoice.mode === "solo") {
+      if (hasMidRunSave()) {
+        const choice = await this.promptContinueOrNew();
+        if (choice === "continue") resumeSave = loadMidRunSave();
+        else clearMidRunSave();
+      }
+    } else {
+      clearMidRunSave();
+      try {
+        await this.beginCoop(coopChoice);
+      } catch (err) {
+        console.error(err);
+        this.hud.showMsg(err.message || "Falha no co-op — modo solo.", 5000);
+        this.coop = null;
+        this.coopRoom = null;
+      }
     }
 
     this.tutorial = new Tutorial(this);
     this.refreshTrapUI();
     if (resumeSave) {
-      // continua = já jogou; não força tutorial de novo
       this.tutorial.skip();
       applyGameState(this, resumeSave);
       this.hud.showMsg("Expedição restaurada. Progresso auto-salva.", 4000);
+    } else if (this.coop) {
+      this.tutorial.skip();
     }
     this.start();
+  }
+
+  /** Solo / criar sala / entrar — retorna { mode, room?, seed? }. */
+  promptCoopMenu() {
+    const el = document.getElementById("coop-menu");
+    const status = document.getElementById("coop-status");
+    const codeInput = document.getElementById("coop-code-input");
+    if (!el) return Promise.resolve({ mode: "solo" });
+    el.hidden = false;
+    el.setAttribute("aria-hidden", "false");
+    this.state = "coop";
+    if (status) status.textContent = "";
+
+    return new Promise((resolve) => {
+      const cleanup = () => {
+        el.hidden = true;
+        el.setAttribute("aria-hidden", "true");
+        btnSolo?.removeEventListener("click", onSolo);
+        btnCreate?.removeEventListener("click", onCreate);
+        btnJoin?.removeEventListener("click", onJoin);
+      };
+      const onSolo = () => {
+        cleanup();
+        resolve({ mode: "solo" });
+      };
+      const onCreate = async () => {
+        btnCreate.disabled = true;
+        btnSolo.disabled = true;
+        btnJoin.disabled = true;
+        if (status) status.textContent = "Criando sala…";
+        try {
+          const room = new WebRtcRoom();
+          room.onStatus = (m) => {
+            if (status) status.textContent = m;
+          };
+          const { code, seed } = await room.create(this.world.seed);
+          if (status) {
+            status.textContent = `Código: ${code} — compartilhe e aguarde o amigo…`;
+          }
+          await this.waitForRoomOpen(room);
+          cleanup();
+          resolve({ mode: "host", room, seed, code });
+        } catch (err) {
+          if (status) status.textContent = err.message || "Erro ao criar sala";
+          btnCreate.disabled = false;
+          btnSolo.disabled = false;
+          btnJoin.disabled = false;
+        }
+      };
+      const onJoin = async () => {
+        const code = (codeInput?.value || "").trim().toUpperCase();
+        if (code.length < 4) {
+          if (status) status.textContent = "Digite o código da sala (6 letras).";
+          return;
+        }
+        btnCreate.disabled = true;
+        btnSolo.disabled = true;
+        btnJoin.disabled = true;
+        if (status) status.textContent = "Entrando…";
+        try {
+          const room = new WebRtcRoom();
+          room.onStatus = (m) => {
+            if (status) status.textContent = m;
+          };
+          const joined = await room.join(code);
+          await this.waitForRoomOpen(room);
+          cleanup();
+          resolve({ mode: "guest", room, seed: joined.seed, code: joined.code });
+        } catch (err) {
+          if (status) status.textContent = err.message || "Erro ao entrar";
+          btnCreate.disabled = false;
+          btnSolo.disabled = false;
+          btnJoin.disabled = false;
+        }
+      };
+      const btnSolo = document.getElementById("btn-coop-solo");
+      const btnCreate = document.getElementById("btn-coop-create");
+      const btnJoin = document.getElementById("btn-coop-join");
+      btnSolo?.addEventListener("click", onSolo);
+      btnCreate?.addEventListener("click", onCreate);
+      btnJoin?.addEventListener("click", onJoin);
+    });
+  }
+
+  waitForRoomOpen(room, timeoutMs = 180000) {
+    return new Promise((resolve, reject) => {
+      if (room.isOpen) {
+        resolve();
+        return;
+      }
+      const timer = setTimeout(() => {
+        room.close("timeout");
+        reject(new Error("Tempo esgotado aguardando conexão P2P."));
+      }, timeoutMs);
+      const prevOpen = room.onOpen;
+      const prevClose = room.onClose;
+      room.onOpen = () => {
+        clearTimeout(timer);
+        prevOpen?.();
+        resolve();
+      };
+      room.onClose = (why) => {
+        clearTimeout(timer);
+        prevClose?.(why);
+        reject(new Error(`Conexão fechada (${why})`));
+      };
+    });
+  }
+
+  async beginCoop(choice) {
+    const authority = choice.mode === "host";
+    this.recreateWorld(choice.seed, authority);
+    applySkinToPlayer(this.player, loadSkinId() || "classic");
+    this.coopRoom = choice.room;
+    this.coop = new CoopSession(this, choice.room);
+    if (choice.room.isOpen) this.coop.onConnected();
+    else {
+      choice.room.onOpen = () => this.coop.onConnected();
+    }
+  }
+
+  /** Recria mundo/player com seed (co-op guest/host alinhados). */
+  recreateWorld(seed, authority = true) {
+    const preserve = new Set([
+      this.camera,
+      this.hemi,
+      this.ambient,
+      this.sunLight,
+      this.sunLight.target,
+      this.moonLight,
+      this.skyDome,
+    ]);
+    for (const child of [...this.scene.children]) {
+      if (!preserve.has(child)) this.scene.remove(child);
+    }
+    // limpa viewmodel órfão na câmera
+    for (const c of [...this.camera.children]) this.camera.remove(c);
+
+    this.world = new World(this.scene, { seed, authority });
+    this.player = new Player(this.camera, this.scene, this.world, this.world.getSpawn());
+    this.setCameraMode(this.cameraMode);
+    this.initSurvival();
   }
 
   /** Menu Continuar / Novo jogo. */
@@ -153,6 +314,7 @@ class Game {
   }
 
   persistSave() {
+    if (this.coop) return; // co-op não usa save mid-run local
     if (this.state !== "playing" && this.state !== "paused") return;
     if (this.ended) return;
     writeMidRunSave(captureGameState(this));
@@ -505,6 +667,7 @@ class Game {
     this.ended = true;
     this.state = "won";
     clearMidRunSave();
+    if (this.coop?.isHost) this.coop.broadcastEvent("win", {});
     const ms = this.speedrun.stop();
     this.ambience.victory();
     document.exitPointerLock();
@@ -1145,6 +1308,7 @@ class Game {
     if (this.input.toggleCamera) this.toggleCameraMode();
 
     this.player.update(dt, this.input);
+    this.coop?.tick(dt);
 
     const night = this.updateDayNight(dt);
     this.world.update(dt, this.clock.elapsedTime, night, this.duskF, this.player.position);
@@ -1212,6 +1376,7 @@ class Game {
     if (this.input.interact) {
       if (item) {
         this.world.collectItem(item);
+        this.coop?.broadcastEvent("pickup", { saveId: item.saveId });
         const loot = this.weapons.onCollectItem(item);
         const gotTrap = this.traps.onCollectItem(item);
         if (item.countsForWin !== false) this.carried++;
@@ -1259,6 +1424,7 @@ class Game {
         this.ambience.deposit();
         this.tutorial?.notify("deposit");
         this.persistSave();
+        this.coop?.broadcastEvent("deposit", { deposited: this.deposited });
         this.hud.showMsg(
           `Baú: ${this.deposited}/${this.world.itemsTotal} guardados (só o baú conta na vitória)`,
           3200

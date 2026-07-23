@@ -62,6 +62,10 @@ npm run pages:preview # build + preview (igual GitHub Pages)
 npm run test:smoke
 ```
 
+### Co-op 2 jogadores
+
+Menu após a skin: **Criar sala** / **Entrar** com código. Signaling na HostGator (`api/signal.php`), sync via WebRTC. Detalhes: [`docs/COOP.md`](docs/COOP.md).
+
 ### GitHub Pages (jogar online de graça)
 
 Guia completo: [`GITHUB-PAGES.md`](GITHUB-PAGES.md).

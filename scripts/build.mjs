@@ -8,7 +8,7 @@ import { execSync } from "node:child_process";
 process.chdir(path.dirname(path.dirname(fileURLToPath(import.meta.url))));
 const DIST = "dist";
 const HOST = path.join("release", "hostgator-snow");
-const CACHE = "gh5";
+const CACHE = "gh6";
 
 /**
  * Copia data/ para o destino.
@@ -103,6 +103,7 @@ fs.writeFileSync(
     "O jogo roda 100% no browser.",
     "Ranking online: chama a API PHP da HostGator (CORS).",
     "Tecla T abre a lista Top 10. Fallback: localStorage.",
+    "Co-op 2P: signaling em api/signal.php (HostGator) + WebRTC P2P.",
     "",
   ].join("\n")
 );
@@ -122,6 +123,11 @@ if (fs.existsSync("api")) {
   fs.cpSync("api", path.join(HOST, "api"), { recursive: true });
 }
 copyDataDir(HOST, { omitLeaderboard: true });
+const roomsHost = path.join(HOST, "data", "rooms");
+fs.mkdirSync(roomsHost, { recursive: true });
+if (fs.existsSync("data/rooms/.htaccess")) {
+  fs.copyFileSync("data/rooms/.htaccess", path.join(roomsHost, ".htaccess"));
+}
 
 let hostHtml = fs.readFileSync("index.html", "utf8");
 hostHtml = hostHtml
@@ -146,11 +152,12 @@ fs.writeFileSync(
     "   (deixe data/ intacta)",
     "4. Upload deste pacote (index.html + splash + src/ + api/ + music/)",
     "   Se o zip trouxer data/, nao substitua leaderboard.json existente",
-    "5. Permissao data/ = 755 ou 775",
+    "5. Permissao data/ e data/rooms/ = 755 ou 775",
     "6. Site + Ctrl+F5 (cache ?v=" + CACHE + ")",
     "",
     "Ajuda in-game: tecla H ou botao ?",
     "Ranking: api/leaderboard.php -> data/leaderboard.json",
+    "Co-op: api/signal.php -> data/rooms/ (ver docs/COOP.md)",
     "Guia completo: DEPLOY-SEGURO.md no repositorio",
     "",
   ].join("\n")

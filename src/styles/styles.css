@@ -318,10 +318,12 @@ body.is-touch .hud__traps {
 .overlay[hidden],
 .hud[hidden],
 .skin-picker[hidden],
-.continue-menu[hidden] {
+.continue-menu[hidden],
+.coop-menu[hidden] {
   display: none !important;
 }
 
+.coop-menu,
 .continue-menu {
   position: absolute;
   inset: 0;
@@ -329,6 +331,60 @@ body.is-touch .hud__traps {
   display: grid;
   place-items: center;
   background: radial-gradient(ellipse at center, rgba(20, 30, 50, 0.9), rgba(5, 8, 14, 0.96));
+}
+
+.coop-menu__panel {
+  width: min(92vw, 420px);
+  padding: 2rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  background: var(--panel);
+  text-align: center;
+}
+
+.coop-menu__title {
+  margin: 0 0 0.5rem;
+  font-size: 1.4rem;
+  color: #eef4f8;
+}
+
+.coop-menu__summary {
+  margin: 0 0 1.1rem;
+  font-size: 0.92rem;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.coop-menu__join {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.65rem;
+}
+
+.coop-menu__input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.7rem 0.8rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(0, 0, 0, 0.35);
+  color: #eef4f8;
+  font: inherit;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  text-align: center;
+}
+
+.coop-menu__status {
+  min-height: 1.3em;
+  margin: 0.9rem 0 0;
+  font-size: 0.88rem;
+  color: #9ec9b0;
+}
+
+.coop-menu__panel .menu__btn {
+  width: 100%;
+  margin-top: 0.45rem;
 }
 
 .continue-menu__panel {
