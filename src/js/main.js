@@ -189,20 +189,49 @@ class Game {
     const status = document.getElementById("coop-status");
     const codeInput = document.getElementById("coop-code-input");
     const joinBlock = document.getElementById("coop-join-block");
+    const stepMode = document.getElementById("coop-step-mode");
+    const stepFriends = document.getElementById("coop-step-friends");
+    const btnSolo = document.getElementById("btn-coop-solo");
+    const btnFriends = document.getElementById("btn-coop-friends");
+    const btnBack = document.getElementById("btn-coop-back");
+    const btnCreate = document.getElementById("btn-coop-create");
+    const btnJoin = document.getElementById("btn-coop-join");
+    const btnPaste = document.getElementById("btn-coop-paste");
+    const codeBox = document.getElementById("coop-code-box");
+    const codeDisplay = document.getElementById("coop-code-display");
+    const btnCopy = document.getElementById("btn-coop-copy");
     if (!el) return Promise.resolve({ mode: "solo" });
     this.setTouchUiVisible(false);
     el.hidden = false;
     el.setAttribute("aria-hidden", "false");
     this.state = "coop";
-    if (status) status.textContent = "No outro navegador: cole o código e Entrar.";
-    if (joinBlock) joinBlock.hidden = false;
-    if (codeInput) {
-      codeInput.disabled = false;
-      codeInput.readOnly = false;
-      codeInput.value = "";
-    }
-    // Desktop: canvas com tabindex rouba foco — força o campo do código
-    requestAnimationFrame(() => this.focusCoopCodeInput());
+
+    const showMode = () => {
+      if (stepMode) stepMode.hidden = false;
+      if (stepFriends) stepFriends.hidden = true;
+      if (status) status.textContent = "";
+      if (codeBox) codeBox.hidden = true;
+      if (joinBlock) joinBlock.hidden = false;
+      if (codeInput) {
+        codeInput.disabled = false;
+        codeInput.readOnly = false;
+        codeInput.value = "";
+      }
+      if (btnCreate) btnCreate.disabled = false;
+      if (btnJoin) btnJoin.disabled = false;
+      if (btnPaste) btnPaste.disabled = false;
+      if (btnBack) btnBack.disabled = false;
+      if (btnFriends) btnFriends.disabled = false;
+      if (btnSolo) btnSolo.disabled = false;
+    };
+    const showFriends = () => {
+      if (stepMode) stepMode.hidden = true;
+      if (stepFriends) stepFriends.hidden = false;
+      if (status) status.textContent = "Crie a sala ou cole o código do amigo.";
+      if (joinBlock) joinBlock.hidden = false;
+      requestAnimationFrame(() => this.focusCoopCodeInput());
+    };
+    showMode();
 
     return new Promise((resolve) => {
       const cleanup = () => {
@@ -212,19 +241,26 @@ class Game {
         joinBlock?.removeEventListener("pointerdown", onJoinPointer);
         btnPaste?.removeEventListener("click", onPaste);
         btnSolo?.removeEventListener("click", onSolo);
+        btnFriends?.removeEventListener("click", onFriends);
+        btnBack?.removeEventListener("click", onBack);
         btnCreate?.removeEventListener("click", onCreate);
         btnJoin?.removeEventListener("click", onJoin);
+        btnCopy?.removeEventListener("click", onCopy);
       };
       const onSolo = () => {
         cleanup();
         resolve({ mode: "solo" });
       };
+      const onFriends = () => showFriends();
+      const onBack = () => {
+        if (btnCreate?.disabled && btnJoin?.disabled) return;
+        showMode();
+      };
       const onCreate = async () => {
         btnCreate.disabled = true;
-        btnSolo.disabled = true;
         btnJoin.disabled = true;
-        btnPaste && (btnPaste.disabled = true);
-        // Host não digita aqui — esconde join p/ não parecer que o campo “não aceita” teclado
+        if (btnPaste) btnPaste.disabled = true;
+        if (btnBack) btnBack.disabled = true;
         if (joinBlock) joinBlock.hidden = true;
         if (status) status.textContent = "Criando sala…";
         try {
@@ -236,7 +272,7 @@ class Game {
             if (codeBox) codeBox.hidden = false;
             if (codeDisplay) codeDisplay.textContent = code;
             if (status) {
-              status.textContent = `Código ${code} — abra o site no outro PC/aba anônima, cole e Entre.`;
+              status.textContent = `Código ${code} — no outro aparelho: Com um amigo → colar → Entrar.`;
             }
           };
           const { code, seed } = await room.create(this.world.seed);
@@ -246,9 +282,9 @@ class Game {
         } catch (err) {
           if (status) status.textContent = err.message || "Erro ao criar sala";
           btnCreate.disabled = false;
-          btnSolo.disabled = false;
           btnJoin.disabled = false;
           if (btnPaste) btnPaste.disabled = false;
+          if (btnBack) btnBack.disabled = false;
           if (joinBlock) joinBlock.hidden = false;
           this.focusCoopCodeInput();
         }
@@ -256,14 +292,14 @@ class Game {
       const onJoin = async () => {
         const code = (codeInput?.value || "").trim().toUpperCase();
         if (code.length < 4) {
-          if (status) status.textContent = "Clique no campo e digite o código (ex: TBVKQ3).";
+          if (status) status.textContent = "Digite o código (ex: TBVKQ3).";
           this.focusCoopCodeInput();
           return;
         }
         btnCreate.disabled = true;
-        btnSolo.disabled = true;
         btnJoin.disabled = true;
         if (btnPaste) btnPaste.disabled = true;
+        if (btnBack) btnBack.disabled = true;
         if (codeInput) codeInput.disabled = true;
         if (status) status.textContent = "Entrando…";
         try {
@@ -278,9 +314,9 @@ class Game {
         } catch (err) {
           if (status) status.textContent = err.message || "Erro ao entrar";
           btnCreate.disabled = false;
-          btnSolo.disabled = false;
           btnJoin.disabled = false;
           if (btnPaste) btnPaste.disabled = false;
+          if (btnBack) btnBack.disabled = false;
           if (codeInput) codeInput.disabled = false;
           this.focusCoopCodeInput();
         }
@@ -294,7 +330,7 @@ class Game {
             return;
           }
           if (codeInput) codeInput.value = text.replace(/[^A-Z0-9]/g, "").slice(0, 8);
-          if (status) status.textContent = "Código colado — clique em Entrar na sala.";
+          if (status) status.textContent = "Código colado — toque em Entrar.";
           this.focusCoopCodeInput();
         } catch {
           if (status) status.textContent = "Não deu para colar — clique no campo e Ctrl+V.";
@@ -309,33 +345,27 @@ class Game {
         }
       };
       const onJoinPointer = (e) => {
-        // Clique na área do código (não nos botões) foca o input — PC
         if (e.target?.closest?.("button")) return;
         if (e.target === codeInput) return;
         this.focusCoopCodeInput();
       };
-      const btnSolo = document.getElementById("btn-coop-solo");
-      const btnCreate = document.getElementById("btn-coop-create");
-      const btnJoin = document.getElementById("btn-coop-join");
-      const btnPaste = document.getElementById("btn-coop-paste");
-      const codeBox = document.getElementById("coop-code-box");
-      const codeDisplay = document.getElementById("coop-code-display");
-      const btnCopy = document.getElementById("btn-coop-copy");
-      if (codeBox) codeBox.hidden = true;
-      btnCopy?.addEventListener("click", async () => {
+      const onCopy = async () => {
         const code = codeDisplay?.textContent?.trim();
         if (!code || code.includes("—")) return;
         try {
           await navigator.clipboard.writeText(code);
-          if (status) status.textContent = `Código ${code} copiado! Cole no outro PC (botão Colar).`;
+          if (status) status.textContent = `Código ${code} copiado — cole no outro aparelho.`;
         } catch {
           if (status) status.textContent = `Código: ${code} (selecione e Ctrl+C)`;
         }
-      });
+      };
+      btnCopy?.addEventListener("click", onCopy);
       codeInput?.addEventListener("keydown", onCodeKey);
       joinBlock?.addEventListener("pointerdown", onJoinPointer);
       btnPaste?.addEventListener("click", onPaste);
       btnSolo?.addEventListener("click", onSolo);
+      btnFriends?.addEventListener("click", onFriends);
+      btnBack?.addEventListener("click", onBack);
       btnCreate?.addEventListener("click", onCreate);
       btnJoin?.addEventListener("click", onJoin);
     });

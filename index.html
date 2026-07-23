@@ -9,6 +9,9 @@
   <meta name="theme-color" content="#1a1f2e" />
   <title>Neve Selvagem — sobrevivência 3D no navegador</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>❄️</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="src/styles/styles.css" />
   <script type="importmap">
   {
@@ -146,34 +149,56 @@
     <div id="boot-error" class="boot-error" hidden></div>
 
     <!-- Co-op 2P -->
-    <div id="coop-menu" class="coop-menu" hidden aria-hidden="true">
-      <div class="coop-menu__panel" role="dialog" aria-labelledby="coop-title">
-        <h2 id="coop-title" class="coop-menu__title">Como jogar?</h2>
-        <p class="coop-menu__summary">Solo clássico ou co-op 2 jogadores. Use <strong>dois celulares/PCs</strong> (ou aba anônima).</p>
-        <button id="btn-coop-solo" type="button" class="menu__btn">Solo</button>
-        <button id="btn-coop-create" type="button" class="menu__btn menu__btn--ghost">Criar sala co-op</button>
-        <div id="coop-code-box" class="coop-menu__code-box" hidden>
-          <p class="coop-menu__code-label">Código da sala</p>
-          <p id="coop-code-display" class="coop-menu__code">————</p>
-          <button id="btn-coop-copy" type="button" class="menu__btn menu__btn--ghost">Copiar código</button>
-        </div>
-        <div id="coop-join-block" class="coop-menu__join">
-          <label class="coop-menu__join-label" for="coop-code-input">Entrar com código (outro PC / aba anônima)</label>
-          <input id="coop-code-input" class="coop-menu__input" type="text" maxlength="8" placeholder="Ex: TBVKQ3" autocomplete="off" spellcheck="false" inputmode="text" />
-          <div class="coop-menu__join-actions">
-            <button id="btn-coop-paste" type="button" class="menu__btn menu__btn--ghost">Colar</button>
-            <button id="btn-coop-join" type="button" class="menu__btn menu__btn--ghost">Entrar na sala</button>
+    <div id="coop-menu" class="boot-screen coop-menu" hidden aria-hidden="true">
+      <div class="boot-panel" role="dialog" aria-labelledby="coop-title">
+        <p class="boot-brand">Neve Selvagem</p>
+
+        <div id="coop-step-mode" class="coop-step">
+          <h2 id="coop-title" class="boot-title">Como quer jogar?</h2>
+          <p class="boot-sub">Uma escolha. O resto fica simples.</p>
+          <div class="boot-choice-grid">
+            <button id="btn-coop-solo" type="button" class="boot-choice">
+              <span class="boot-choice__title">Solo</span>
+              <span class="boot-choice__desc">Expedição clássica — ranking e save neste aparelho</span>
+            </button>
+            <button id="btn-coop-friends" type="button" class="boot-choice boot-choice--alt">
+              <span class="boot-choice__title">Com um amigo</span>
+              <span class="boot-choice__desc">Dois aparelhos ou aba anônima — mesma tempestade</span>
+            </button>
           </div>
         </div>
-        <p id="coop-status" class="coop-menu__status" aria-live="polite"></p>
+
+        <div id="coop-step-friends" class="coop-step" hidden>
+          <button id="btn-coop-back" type="button" class="boot-back">← Voltar</button>
+          <h2 class="boot-title">Co-op</h2>
+          <p class="boot-sub">Um cria a sala. O outro cola o código.</p>
+
+          <button id="btn-coop-create" type="button" class="menu__btn">Criar sala</button>
+
+          <div id="coop-code-box" class="coop-menu__code-box" hidden>
+            <p class="coop-menu__code-label">Código da sala</p>
+            <p id="coop-code-display" class="coop-menu__code">————</p>
+            <button id="btn-coop-copy" type="button" class="menu__btn menu__btn--ghost">Copiar código</button>
+          </div>
+
+          <div id="coop-join-block" class="coop-menu__join">
+            <p class="coop-menu__join-label">Já tem um código?</p>
+            <input id="coop-code-input" class="coop-menu__input" type="text" maxlength="8" placeholder="TBVKQ3" autocomplete="off" spellcheck="false" inputmode="text" aria-label="Código da sala" />
+            <div class="coop-menu__join-actions">
+              <button id="btn-coop-paste" type="button" class="menu__btn menu__btn--ghost">Colar</button>
+              <button id="btn-coop-join" type="button" class="menu__btn">Entrar</button>
+            </div>
+          </div>
+          <p id="coop-status" class="coop-menu__status" aria-live="polite"></p>
+        </div>
       </div>
     </div>
 
-    <!-- Continuar expedição salva -->
-    <div id="difficulty-picker" class="difficulty-picker" hidden aria-hidden="true">
-      <div class="difficulty-picker__panel" role="dialog" aria-labelledby="difficulty-title">
-        <h2 id="difficulty-title" class="difficulty-picker__title">Dificuldade</h2>
-        <p class="difficulty-picker__sub">Médio é o balance padrão. Você pode mudar em cada nova expedição.</p>
+    <div id="difficulty-picker" class="boot-screen difficulty-picker" hidden aria-hidden="true">
+      <div class="boot-panel" role="dialog" aria-labelledby="difficulty-title">
+        <p class="boot-brand">Neve Selvagem</p>
+        <h2 id="difficulty-title" class="boot-title">Dificuldade</h2>
+        <p class="boot-sub">Médio é o balance padrão.</p>
         <div class="difficulty-picker__grid">
           <button type="button" class="difficulty-card" data-difficulty="easy">
             <span class="difficulty-card__name">Fácil</span>
@@ -191,23 +216,24 @@
       </div>
     </div>
 
-    <div id="continue-menu" class="continue-menu" hidden aria-hidden="true">
-      <div class="continue-menu__panel">
-        <h2 class="continue-menu__title">Expedição salva</h2>
-        <p id="continue-summary" class="continue-menu__summary">Há um progresso guardado neste aparelho.</p>
+    <div id="continue-menu" class="boot-screen continue-menu" hidden aria-hidden="true">
+      <div class="boot-panel">
+        <p class="boot-brand">Neve Selvagem</p>
+        <h2 class="boot-title">Expedição salva</h2>
+        <p id="continue-summary" class="boot-sub">Há um progresso guardado neste aparelho.</p>
         <button id="btn-continue-game" type="button" class="menu__btn">Continuar</button>
         <button id="btn-new-game" type="button" class="menu__btn menu__btn--ghost">Novo jogo</button>
       </div>
     </div>
 
-    <!-- Escolha obrigatória de personagem (5 rostos) -->
-    <div id="skin-picker" class="skin-picker" hidden aria-hidden="true">
-      <div class="skin-picker__panel">
-        <h2 class="skin-picker__title">Escolha seu personagem</h2>
-        <p class="skin-picker__sub">Obrigatório: Natan, Jhonatan, Jorge Bolado, Caio ou Lorenzo.</p>
+    <div id="skin-picker" class="boot-screen skin-picker" hidden aria-hidden="true">
+      <div class="boot-panel boot-panel--wide">
+        <p class="boot-brand">Neve Selvagem</p>
+        <h2 class="boot-title">Escolha seu personagem</h2>
+        <p class="boot-sub">Natan, Jhonatan, Jorge Bolado, Caio ou Lorenzo.</p>
         <div class="skin-picker__stage">
           <canvas id="skin-preview" class="skin-picker__canvas" width="320" height="320" aria-label="Preview 3D — arraste para girar"></canvas>
-          <p id="skin-pick-hint" class="skin-picker__hint">Clique num dos 5 rostos. Arraste o boneco para girar.</p>
+          <p id="skin-pick-hint" class="skin-picker__hint">Toque num rosto. Arraste o boneco para girar.</p>
         </div>
         <div id="skin-grid" class="skin-picker__grid"></div>
         <button id="skin-confirm" type="button" class="menu__btn" disabled>Escolha um personagem</button>
@@ -272,6 +298,7 @@
         <h2 id="release-title">Novidades</h2>
         <p class="rank-overlay__sub">19–23 jul 2026 · o que entrou desde sábado</p>
         <ul class="help-overlay__list">
+          <li>Menus de entrada redesenhados — co-op em <strong>2 passos</strong> (Solo vs Com um amigo)</li>
           <li><strong>Dificuldade</strong> Fácil / Médio / Difícil (depois da skin) — muda loot, inimigos, dano e frio</li>
           <li>Quatro chefs novos: <strong>Panda</strong>, <strong>Saci</strong>, <strong>T-Rex gatling</strong> e <strong>Boto-cor-de-rosa</strong> (troféu final no lago)</li>
           <li>Vitória: itens do baú + troféu do urso alfa + <strong>Troféu do Boto</strong></li>
@@ -337,6 +364,6 @@
     </div>
   </div>
 
-  <script type="module" src="src/js/main.js?v=gh27"></script>
+  <script type="module" src="src/js/main.js?v=gh28"></script>
 </body>
 </html>

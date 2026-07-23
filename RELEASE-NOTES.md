@@ -2,6 +2,10 @@
 
 Changelog jogável do que entrou desde sábado até hoje. No jogo: botão **N** (ao lado do `?` no PC; nos botões touch no celular) ou **O que mudou** no menu pausa.
 
+## Menus de entrada
+- Visual unificado (tipografia + noite gelada)
+- Co-op em **2 passos**: Solo **ou** Com um amigo → criar/entrar
+
 ## Dificuldade e chefs
 - Picker **Fácil / Médio / Difícil** depois da skin (Médio = balance padrão)
 - Multiplicadores de loot, HP/dano inimigo, dano das armas e frio
