@@ -1,6 +1,6 @@
 # Prepara git local e instrui push para GitHub Pages.
 # Uso: powershell -ExecutionPolicy Bypass -File scripts/github-setup.ps1
-# Opcional: -Repo "usuario/neve-selvagem"
+# Opcional: -Repo "usuario/snow"
 
 param(
   [string]$Repo = ""
@@ -66,13 +66,13 @@ if ($status) {
 
 Write-Host ""
 Write-Host "=== Proximos passos ==="
-Write-Host "1. Crie o repo em https://github.com/new (ex.: neve-selvagem)"
+Write-Host "1. Crie o repo em https://github.com/new (ex.: snow)"
 Write-Host "2. Rode:"
 if ($Repo) {
   Write-Host "   git remote add origin https://github.com/$Repo.git"
   Write-Host "   git push -u origin main"
 } else {
-  Write-Host "   git remote add origin https://github.com/SEU_USER/neve-selvagem.git"
+  Write-Host "   git remote add origin https://github.com/SEU_USER/snow.git"
   Write-Host "   git push -u origin main"
 }
 Write-Host "3. Settings → Pages → Source: GitHub Actions"

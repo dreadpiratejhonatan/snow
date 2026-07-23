@@ -6,7 +6,7 @@ O jogo fica jogável em `https://SEU_USER.github.io/SEU_REPO/`.
 
 ## 1. Criar o repositório no GitHub
 
-1. Em [github.com/new](https://github.com/new), crie um repo (ex.: `neve-selvagem`), público.
+1. Em [github.com/new](https://github.com/new), crie um repo (ex.: `snow`), público.
 2. Não marque “Add README” se for enviar esta pasta já pronta.
 
 ## 2. Enviar o código (PowerShell)
@@ -19,16 +19,16 @@ git init
 git add .
 git commit -m "Neve Selvagem — pronto para GitHub Pages"
 git branch -M main
-git remote add origin https://github.com/SEU_USER/neve-selvagem.git
+git remote add origin https://github.com/SEU_USER/snow.git
 git push -u origin main
 ```
 
-Troque `SEU_USER` e `neve-selvagem` pelos seus.
+Troque `SEU_USER` e `snow` pelos seus.
 
 Com GitHub CLI (`gh auth login` antes):
 
 ```powershell
-gh repo create neve-selvagem --public --source=. --remote=origin --push
+gh repo create snow --public --source=. --remote=origin --push
 ```
 
 ## 3. Ativar Pages
@@ -38,7 +38,7 @@ gh repo create neve-selvagem --public --source=. --remote=origin --push
 3. Abra a aba **Actions**, rode o workflow **Deploy GitHub Pages** (ou espere o push)
 4. Quando ficar verde, o link aparece em Settings → Pages
 
-URL típica: `https://SEU_USER.github.io/neve-selvagem/`
+URL típica: `https://SEU_USER.github.io/snow/`
 
 ## 4. Testar local (igual ao Pages)
 
