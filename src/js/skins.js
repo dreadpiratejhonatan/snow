@@ -33,6 +33,18 @@ export function listSkins() {
   return order.map((id) => CONFIG.skins[id]).filter(Boolean);
 }
 
+/** Fisher–Yates — cópia embaralhada (não altera CONFIG.skinOrder). */
+export function shuffleSkins(skins) {
+  const arr = skins.slice();
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const tmp = arr[i];
+    arr[i] = arr[j];
+    arr[j] = tmp;
+  }
+  return arr;
+}
+
 export function loadSkinId() {
   try {
     const id = localStorage.getItem(STORAGE_KEY);
@@ -117,7 +129,8 @@ export function runSkinPicker({ force = true } = {}) {
   el.hidden = false;
   el.setAttribute("aria-hidden", "false");
 
-  const skins = listSkins();
+  // Ordem visual aleatória a cada abertura do picker
+  const skins = shuffleSkins(listSkins());
   let selected = null; // obrigatório clicar num dos cinco
   let preview = null;
   if (canvas) {
