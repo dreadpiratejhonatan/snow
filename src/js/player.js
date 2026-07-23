@@ -274,10 +274,10 @@ export class Player {
     const speed = 1.85; // rad/s
     let dx = 0;
     let dy = 0;
-    // I fica reservado para o inventário; olhar vertical com K/U
+    // IJKL = olhar sem mouse (I cima, K baixo, J esquerda, L direita); U = alias de I
     if (input.isDown("KeyJ")) dx -= 1;
     if (input.isDown("KeyL")) dx += 1;
-    if (input.isDown("KeyU")) dy -= 1;
+    if (input.isDown("KeyI", "KeyU")) dy -= 1;
     if (input.isDown("KeyK")) dy += 1;
     if (!dx && !dy) return;
     this.applyLook({ x: dx * speed * dt * 280, y: dy * speed * dt * 280 });

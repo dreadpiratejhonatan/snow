@@ -22,7 +22,8 @@ Site de produção típico: HostGator em `/snow` com API PHP para o leaderboard.
 | Shift | correr |
 | Espaço | pular |
 | E | pegar / depositar no baú |
-| I / B | inventário de armas |
+| IJKL | olhar a câmera sem mouse |
+| B | inventário de armas |
 | 1–9 / 0 | equipar arma |
 | G / F | tipo / colocar armadilha |
 | V / Tab | 1ª / 3ª pessoa |
@@ -38,7 +39,7 @@ No celular: stick + botões (incluindo `?` de ajuda).
 
 ### FAQ rápido (também in-game com H)
 
-- **Flechas sem arco?** Flechas liberam o arco — abra o inventário (`I`).
+- **Flechas sem arco?** Flechas liberam o arco — abra o inventário (`B`).
 - **Morri e perdi tudo?** O carregado cai no chão; o baú fica seguro.
 - **Ranking?** Vença e envie o nome no painel de vitória (API no HostGator).
 

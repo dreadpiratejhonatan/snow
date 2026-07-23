@@ -19,7 +19,7 @@ const STEPS = [
   },
   {
     id: "inventory",
-    hint: "Tutorial 4/6 — Abra o inventário (I) ou troque de arma (1–0)",
+    hint: "Tutorial 4/6 — Abra o inventário (B) ou troque de arma (1–0)",
     check: (g, ev) => ev === "inventory" || ev === "equip",
   },
   {

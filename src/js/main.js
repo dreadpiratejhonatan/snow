@@ -1004,6 +1004,9 @@ class Game {
     this.hud.show();
     this.state = "playing";
     this.input.attach();
+    // Cronômetro começa ao entrar na partida (Novo jogo / Continuar), sem exigir clique no canvas
+    if (this.speedrun.started) this.speedrun.resume();
+    else this.speedrun.start();
     this.clock.start();
     this.loop();
   }
@@ -1093,18 +1096,6 @@ class Game {
       this.tryCraftFence();
     }
 
-    // inicia speedrun ao se mover / olhar
-    if (
-      !this.speedrun.started &&
-      (this.input.locked || this.input.mobile) &&
-      (this.input.moveForward ||
-        this.input.moveBack ||
-        this.input.moveLeft ||
-        this.input.moveRight ||
-        this.input.analog)
-    ) {
-      this.speedrun.start();
-    }
     this.speedrun.update(dt);
     this.hud.setTimer(this.speedrun.format());
     this.updateGhostHud();
@@ -1118,10 +1109,10 @@ class Game {
         this.tutorial?.notify("equip");
       }
     }
-    if (this.input.wasPressed("KeyI", "KeyB") || this.input._tapInv) {
+    if (this.input.wasPressed("KeyB") || this.input._tapInv) {
       this.input._tapInv = false;
       const open = this.hud.toggleInventoryExpanded();
-      this.hud.showMsg(open ? "Inventário aberto" : "Inventário recolhido", 1400);
+      this.hud.showMsg(open ? "Inventário aberto (B)" : "Inventário recolhido", 1400);
       this.tutorial?.notify("inventory");
       // no desktop, solta o mouse um instante para clicar nos slots
       if (open && !this.input.mobile && document.pointerLockElement) {
@@ -1235,12 +1226,12 @@ class Game {
           if (this.cameraMode === "first") {
             this.setCameraMode("third");
             this.hud.showMsg(
-              `Arma no inventário: ${this.weapons.current.name} (I) · V = 1ª/3ª pessoa`,
+              `Arma no inventário: ${this.weapons.current.name} (B) · V = 1ª/3ª pessoa`,
               4500
             );
           } else {
             this.hud.showMsg(
-              `Arma no inventário: ${this.weapons.current.name} — teclas 1-9/0 ou clique (I)`,
+              `Arma no inventário: ${this.weapons.current.name} — teclas 1-9/0 ou clique (B)`,
               4000
             );
           }
@@ -1249,7 +1240,7 @@ class Game {
         } else if (loot.ammoGained > 0 || item.ammoType) {
           const at = CONFIG.ammoTypes[item.ammoType];
           const wName = loot.weaponId ? CONFIG.weapons[loot.weaponId]?.name : null;
-          const unlockNote = wName ? ` · ${wName} liberado (veja I)` : "";
+          const unlockNote = wName ? ` · ${wName} liberado (veja B)` : "";
           this.hud.showMsg(
             `Munição: +${loot.ammoGained || item.ammoAmount} ${at?.name || "tiros"} (total ${this.weapons.ammo[item.ammoType]})${unlockNote}`,
             3200
