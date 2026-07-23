@@ -1736,8 +1736,18 @@ body.is-touch .inv-bar__hint {
   animation: damage-flash 0.5s ease-out;
 }
 
+.hud__flash.loot {
+  background: radial-gradient(ellipse at center, transparent 45%, rgba(120, 210, 230, 0.4) 100%);
+  animation: loot-flash 0.35s ease-out;
+}
+
 @keyframes damage-flash {
   0% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@keyframes loot-flash {
+  0% { opacity: 0.85; }
   100% { opacity: 0; }
 }
 

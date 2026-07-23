@@ -881,9 +881,15 @@ export class World {
     if (def.trapId) return "trap";
     if (def.saveId?.startsWith?.("win:trophy") || /troféu/i.test(def.name || "")) return "trophy";
     if (def.weaponId) return "weapon";
-    // kits / mapas → lona; resto → caixa
     const n = (def.name || "").toLowerCase();
-    if (/kit|mapa|corda|rádio|radio/.test(n)) return "cloth";
+    if (/kit|médic|medic/.test(n)) return "medkit";
+    if (/mapa/.test(n)) return "map";
+    if (/rádio|radio/.test(n)) return "radio";
+    if (/lanterna/.test(n)) return "lantern";
+    if (/bússola|bussola/.test(n)) return "compass";
+    if (/corda/.test(n)) return "rope";
+    if (/lata|comida/.test(n)) return "cans";
+    if (/isqueiro/.test(n)) return "lighter";
     return "crate";
   }
 
@@ -894,113 +900,253 @@ export class World {
       return new THREE.MeshStandardMaterial({
         color: c,
         map: T.crystal || null,
-        roughness: 0.25,
-        metalness: 0.55,
+        roughness: 0.22,
+        metalness: 0.6,
         emissive: c,
-        emissiveIntensity: 0.45,
+        emissiveIntensity: 0.5,
       });
     }
-    if (kind === "ammo" || kind === "metal") {
+    if (kind === "ammo" || kind === "metal" || kind === "radio" || kind === "lantern" || kind === "compass" || kind === "lighter" || kind === "cans") {
       return new THREE.MeshStandardMaterial({
         color: c,
         map: T.metal || null,
         bumpMap: T.metalBump || null,
-        bumpScale: 0.08,
-        roughness: 0.4,
-        metalness: 0.65,
+        bumpScale: 0.07,
+        roughness: 0.38,
+        metalness: 0.7,
         emissive: c,
-        emissiveIntensity: 0.12,
+        emissiveIntensity: 0.14,
       });
     }
-    if (kind === "cloth" || kind === "trap") {
+    if (kind === "medkit" || kind === "map" || kind === "rope" || kind === "cloth" || kind === "trap") {
       return new THREE.MeshStandardMaterial({
         color: c,
         map: T.cloth || null,
         bumpMap: T.clothBump || null,
-        bumpScale: 0.06,
-        roughness: 0.85,
-        metalness: 0.05,
+        bumpScale: 0.05,
+        roughness: 0.82,
+        metalness: 0.04,
         emissive: c,
-        emissiveIntensity: 0.1,
+        emissiveIntensity: 0.12,
       });
     }
-    // crate / supply
     return new THREE.MeshStandardMaterial({
       color: c,
       map: T.crate || T.plank || null,
       bumpMap: T.crateBump || T.plankBump || null,
-      bumpScale: 0.1,
-      roughness: 0.8,
-      metalness: 0.08,
+      bumpScale: 0.12,
+      roughness: 0.78,
+      metalness: 0.06,
       emissive: c,
-      emissiveIntensity: 0.14,
+      emissiveIntensity: 0.16,
     });
   }
 
-  createItemMesh(color, kind = "crate") {
-    const g = new THREE.Group();
-    const mat = this._lootMat(kind, color);
-    const band = new THREE.MeshStandardMaterial({
-      color: color ?? 0xffd75a,
-      roughness: 0.55,
-      metalness: 0.2,
-      emissive: color ?? 0xffd75a,
-      emissiveIntensity: 0.35,
-    });
-
-    if (kind === "trophy") {
-      const gem = new THREE.Mesh(new THREE.OctahedronGeometry(0.28, 0), mat);
-      gem.position.y = 0.55;
-      const base = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.2, 0.12, 8), this._lootMat("metal", 0xc8a040));
-      base.position.y = 0.22;
-      g.add(gem, base);
-    } else if (kind === "ammo") {
-      const box = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.22, 0.32), mat);
-      box.position.y = 0.18;
-      const lid = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.06, 0.34), band);
-      lid.position.y = 0.32;
-      g.add(box, lid);
-    } else if (kind === "trap") {
-      const body = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.24, 0.14, 10), mat);
-      body.position.y = 0.12;
-      const stripe = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.035, 6, 16), band);
-      stripe.rotation.x = Math.PI / 2;
-      stripe.position.y = 0.16;
-      g.add(body, stripe);
-    } else if (kind === "cloth") {
-      const pack = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.2, 0.28), mat);
-      pack.position.y = 0.16;
-      const strap = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.04, 0.3), band);
-      strap.position.y = 0.28;
-      g.add(pack, strap);
-    } else {
-      // caixa de suprimentos
-      const box = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.3, 0.4), mat);
-      box.position.y = 0.22;
-      const lid = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.05, 0.42), mat);
-      lid.position.y = 0.4;
-      const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.06, 0.08), band);
-      stripe.position.y = 0.28;
-      g.add(box, lid, stripe);
-    }
-
-    // brilho suave no chão para achar na neve
+  _addLootGlow(g, color, r = 0.48) {
     const glow = new THREE.Mesh(
-      new THREE.CircleGeometry(0.45, 16),
+      new THREE.CircleGeometry(r, 20),
       new THREE.MeshBasicMaterial({
         color: color ?? 0xa8d0e8,
         transparent: true,
-        opacity: 0.28,
+        opacity: 0.32,
         depthWrite: false,
         blending: THREE.AdditiveBlending,
       })
     );
     glow.rotation.x = -Math.PI / 2;
-    glow.position.y = 0.02;
+    glow.position.y = 0.015;
+    glow.userData.isGlow = true;
     g.add(glow);
+    g.userData.glow = glow;
+    return glow;
+  }
 
+  createItemMesh(color, kind = "crate") {
+    const g = new THREE.Group();
+    const mat = this._lootMat(kind, color);
+    const accent = new THREE.MeshStandardMaterial({
+      color: color ?? 0xffd75a,
+      roughness: 0.45,
+      metalness: 0.25,
+      emissive: color ?? 0xffd75a,
+      emissiveIntensity: 0.42,
+    });
+    const dark = new THREE.MeshStandardMaterial({
+      color: 0x2a2218,
+      map: this.tex?.plank || null,
+      roughness: 0.9,
+      metalness: 0.05,
+    });
+    const gold = this._lootMat("metal", 0xd4a84a);
+
+    if (kind === "trophy") {
+      const pedestal = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.22, 0.14, 10), gold);
+      pedestal.position.y = 0.14;
+      const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.08, 0.18, 8), gold);
+      stem.position.y = 0.3;
+      const gem = new THREE.Mesh(new THREE.OctahedronGeometry(0.26, 0), mat);
+      gem.position.y = 0.58;
+      const gem2 = new THREE.Mesh(new THREE.OctahedronGeometry(0.14, 0), accent);
+      gem2.position.y = 0.72;
+      gem2.rotation.y = Math.PI / 4;
+      g.add(pedestal, stem, gem, gem2);
+      g.userData.pulse = [gem, gem2];
+    } else if (kind === "ammo") {
+      const box = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.16, 0.28), mat);
+      box.position.y = 0.14;
+      const rim = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.04, 0.3), dark);
+      rim.position.y = 0.24;
+      g.add(box, rim);
+      for (let i = 0; i < 4; i++) {
+        const shell = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.2, 6), accent);
+        shell.rotation.x = Math.PI / 2;
+        shell.position.set(-0.1 + i * 0.07, 0.3, 0);
+        g.add(shell);
+      }
+    } else if (kind === "trap") {
+      const body = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.24, 0.1, 12), mat);
+      body.position.y = 0.08;
+      const top = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.16, 0.06, 10), dark);
+      top.position.y = 0.15;
+      const light = new THREE.Mesh(
+        new THREE.SphereGeometry(0.05, 8, 6),
+        new THREE.MeshStandardMaterial({
+          color: 0xff4040,
+          emissive: 0xff2020,
+          emissiveIntensity: 1.2,
+          roughness: 0.3,
+        })
+      );
+      light.position.y = 0.22;
+      g.add(body, top, light);
+      g.userData.pulse = [light];
+    } else if (kind === "medkit") {
+      const pack = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.22, 0.26), mat);
+      pack.position.y = 0.18;
+      const crossH = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.06, 0.04), accent);
+      crossH.position.set(0, 0.3, 0.14);
+      const crossV = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.22, 0.04), accent);
+      crossV.position.set(0, 0.3, 0.14);
+      const handle = new THREE.Mesh(new THREE.TorusGeometry(0.08, 0.02, 5, 10, Math.PI), dark);
+      handle.rotation.x = Math.PI / 2;
+      handle.position.set(0, 0.32, 0);
+      g.add(pack, crossH, crossV, handle);
+    } else if (kind === "map") {
+      const sheet = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.02, 0.32), mat);
+      sheet.position.y = 0.12;
+      sheet.rotation.z = 0.08;
+      const fold = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.015, 0.32), accent);
+      fold.position.set(-0.05, 0.14, 0);
+      fold.rotation.z = -0.15;
+      g.add(sheet, fold);
+    } else if (kind === "radio") {
+      const body = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.2, 0.18), mat);
+      body.position.y = 0.16;
+      const dial = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.03, 8), accent);
+      dial.rotation.x = Math.PI / 2;
+      dial.position.set(0.06, 0.2, 0.1);
+      const ant = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.35, 5), dark);
+      ant.position.set(-0.08, 0.38, 0);
+      ant.rotation.z = 0.2;
+      g.add(body, dial, ant);
+    } else if (kind === "lantern") {
+      const base = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.12, 0.08, 8), dark);
+      base.position.y = 0.08;
+      const glass = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.09, 0.09, 0.22, 8),
+        new THREE.MeshStandardMaterial({
+          color: color ?? 0xffd75a,
+          map: this.tex?.crystal || null,
+          emissive: color ?? 0xffd75a,
+          emissiveIntensity: 0.65,
+          roughness: 0.35,
+          metalness: 0.2,
+          transparent: true,
+          opacity: 0.9,
+        })
+      );
+      glass.position.y = 0.24;
+      const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 0.06, 8), dark);
+      cap.position.y = 0.38;
+      const handle = new THREE.Mesh(new THREE.TorusGeometry(0.1, 0.015, 5, 12, Math.PI), dark);
+      handle.position.y = 0.44;
+      g.add(base, glass, cap, handle);
+      g.userData.pulse = [glass];
+    } else if (kind === "compass") {
+      const body = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.06, 16), gold);
+      body.position.y = 0.1;
+      const glass = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.12, 0.12, 0.03, 14),
+        new THREE.MeshStandardMaterial({
+          color: 0xa8e0ff,
+          emissive: 0x4080a0,
+          emissiveIntensity: 0.35,
+          roughness: 0.2,
+          metalness: 0.4,
+        })
+      );
+      glass.position.y = 0.14;
+      const needle = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.02, 0.18), accent);
+      needle.position.y = 0.16;
+      g.add(body, glass, needle);
+      g.userData.spin = needle;
+    } else if (kind === "rope") {
+      const coil = new THREE.Mesh(new THREE.TorusGeometry(0.16, 0.06, 8, 18), mat);
+      coil.rotation.x = Math.PI / 2;
+      coil.position.y = 0.12;
+      const coil2 = new THREE.Mesh(new THREE.TorusGeometry(0.1, 0.05, 8, 14), accent);
+      coil2.rotation.x = Math.PI / 2;
+      coil2.position.y = 0.16;
+      g.add(coil, coil2);
+    } else if (kind === "cans") {
+      for (let i = 0; i < 3; i++) {
+        const can = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.18, 10), mat);
+        can.position.set(-0.1 + i * 0.1, 0.14, (i % 2) * 0.06);
+        const label = new THREE.Mesh(new THREE.CylinderGeometry(0.072, 0.072, 0.06, 10), accent);
+        label.position.copy(can.position);
+        g.add(can, label);
+      }
+    } else if (kind === "lighter") {
+      const body = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.18, 0.06), mat);
+      body.position.y = 0.14;
+      const top = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.06, 0.05), dark);
+      top.position.y = 0.26;
+      const flame = new THREE.Mesh(
+        new THREE.ConeGeometry(0.03, 0.1, 5),
+        new THREE.MeshStandardMaterial({
+          color: 0xff9a3c,
+          emissive: 0xff6020,
+          emissiveIntensity: 0.9,
+          roughness: 0.5,
+        })
+      );
+      flame.position.y = 0.36;
+      g.add(body, top, flame);
+      g.userData.pulse = [flame];
+    } else {
+      // caixa de suprimentos com cantoneiras
+      const box = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.26, 0.36), mat);
+      box.position.y = 0.2;
+      const lid = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.04, 0.38), mat);
+      lid.position.y = 0.35;
+      const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.07, 0.07), accent);
+      stripe.position.y = 0.22;
+      g.add(box, lid, stripe);
+      for (const [sx, sy, sz] of [
+        [0.17, 0.2, 0.17],
+        [-0.17, 0.2, 0.17],
+        [0.17, 0.2, -0.17],
+        [-0.17, 0.2, -0.17],
+      ]) {
+        const corner = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.28, 0.05), dark);
+        corner.position.set(sx, sy, sz);
+        g.add(corner);
+      }
+    }
+
+    this._addLootGlow(g, color, kind === "trophy" ? 0.55 : 0.42);
     g.traverse((m) => {
-      if (m.isMesh && m !== glow) {
+      if (m.isMesh && !m.userData.isGlow) {
         m.castShadow = true;
         m.receiveShadow = true;
       }
@@ -1031,10 +1177,12 @@ export class World {
       : this.createItemMesh(def.color, kind);
     const y = this.groundHeight(x, z) + 0.12;
     mesh.position.set(x, y, z);
+    mesh.userData.baseScale = 1;
     this.scene.add(mesh);
     this.items.push({
       name: def.name,
       color: def.color,
+      kind,
       mesh,
       pos: new THREE.Vector3(x, y, z),
       collected: false,
@@ -1096,7 +1244,7 @@ export class World {
     if (thin && !this._diffLootThinned && loot < 1) {
       for (const it of this.items || []) {
         if (it.countsForWin || it.collected) continue;
-        if (Math.random() > loot) this.collectItem(it);
+        if (Math.random() > loot) this.collectItem(it, { instant: true });
       }
       this._diffLootThinned = true;
     }
@@ -1116,21 +1264,110 @@ export class World {
     return best;
   }
 
-  collectItem(item) {
+  collectItem(item, { instant = false } = {}) {
+    if (!item || item.collected) return;
     item.collected = true;
-    this.scene.remove(item.mesh);
+    if (instant || !item.mesh) {
+      if (item.mesh) this.scene.remove(item.mesh);
+      return;
+    }
+    // scale-out animado; remove no updateLootFx
+    item._collectT = 0.22;
+    this.spawnLootBurst(item.mesh.position, item.color ?? 0xa8d0e8, 14);
+  }
+
+  /** Faíscas / neve colorida ao pegar ou matar. */
+  spawnLootBurst(pos, color = 0xa8d0e8, count = 12) {
+    if (!this.lootFx) this.lootFx = [];
+    const col = new THREE.Color(color);
+    for (let i = 0; i < count; i++) {
+      const mesh = new THREE.Mesh(
+        new THREE.SphereGeometry(0.04 + Math.random() * 0.04, 5, 4),
+        new THREE.MeshBasicMaterial({
+          color: col,
+          transparent: true,
+          opacity: 0.95,
+          depthWrite: false,
+        })
+      );
+      mesh.position.copy(pos);
+      mesh.position.y += 0.3;
+      this.scene.add(mesh);
+      this.lootFx.push({
+        mesh,
+        vel: new THREE.Vector3(
+          (Math.random() - 0.5) * 3.5,
+          1.5 + Math.random() * 2.5,
+          (Math.random() - 0.5) * 3.5
+        ),
+        ttl: 0.45 + Math.random() * 0.35,
+      });
+    }
+  }
+
+  updateLootFx(dt) {
+    if (!this.lootFx?.length) return;
+    for (let i = this.lootFx.length - 1; i >= 0; i--) {
+      const p = this.lootFx[i];
+      p.ttl -= dt;
+      p.vel.y -= 9 * dt;
+      p.mesh.position.addScaledVector(p.vel, dt);
+      if (p.mesh.material) p.mesh.material.opacity = Math.max(0, p.ttl * 2);
+      if (p.ttl <= 0) {
+        this.scene.remove(p.mesh);
+        p.mesh.geometry?.dispose?.();
+        p.mesh.material?.dispose?.();
+        this.lootFx.splice(i, 1);
+      }
+    }
   }
 
   updateItems(dt, elapsed, playerPos) {
     for (const it of this.items) {
-      if (it.collected) continue;
-      it.mesh.rotation.y = elapsed * 1.4 + it.phase;
-      it.mesh.position.y = it.pos.y + Math.sin(elapsed * 2 + it.phase) * 0.12;
+      if (it.collected) {
+        if (it._collectT != null && it.mesh) {
+          it._collectT -= dt;
+          const t = Math.max(0, it._collectT / 0.22);
+          it.mesh.scale.setScalar(t * 1.15);
+          it.mesh.position.y += dt * 1.8;
+          if (it._collectT <= 0) {
+            this.scene.remove(it.mesh);
+            it.mesh = null;
+            it._collectT = null;
+          }
+        }
+        continue;
+      }
+      const bob = Math.sin(elapsed * 2.2 + it.phase) * 0.1;
+      it.mesh.rotation.y = elapsed * 1.1 + it.phase;
+      it.mesh.position.y = it.pos.y + bob;
+      // highlight perto do jogador
+      let near = 0;
+      if (playerPos) {
+        const d = playerPos.distanceTo(it.pos);
+        if (d < 4) near = 1 - d / 4;
+      }
+      const breathe = 1 + Math.sin(elapsed * 3.5 + it.phase) * 0.03 + near * 0.12;
+      it.mesh.scale.setScalar(breathe);
+      const glow = it.mesh.userData.glow;
+      if (glow?.material) {
+        glow.material.opacity = 0.22 + near * 0.28 + Math.sin(elapsed * 4 + it.phase) * 0.06;
+        glow.scale.setScalar(1 + near * 0.25);
+      }
+      for (const m of it.mesh.userData.pulse || []) {
+        if (m.material?.emissiveIntensity != null) {
+          m.material.emissiveIntensity = 0.5 + Math.sin(elapsed * 5 + it.phase) * 0.45;
+        }
+      }
+      if (it.mesh.userData.spin) {
+        it.mesh.userData.spin.rotation.y = elapsed * 3;
+      }
       if (!it.discovered && playerPos && playerPos.distanceTo(it.pos) < 22) {
         it.discovered = true;
         this._justDiscovered = it;
       }
     }
+    this.updateLootFx(dt);
     if (this.chestMarker) {
       this.chestMarker.rotation.y = elapsed * 2;
     }
@@ -1246,13 +1483,17 @@ export class World {
     this.projectiles = [];
     this.explosions = [];
     this.tracers = [];
+    this.lootFx = [];
     this.bear = null;
     const hooks = {
       onAttack: (dmg, dir, enemy) => {
+        enemy?.triggerStartle?.();
         this.onEnemyAttack?.(dmg, dir, enemy);
         this.onBearAttack?.(dmg, dir);
       },
       onEvent: (ev, enemy) => {
+        if (ev === "growl") enemy?.triggerStartle?.();
+        if (ev === "teleport") enemy?.triggerStartle?.();
         this.onEnemyEvent?.(ev, enemy);
         this.onBearEvent?.(ev);
       },
@@ -1341,13 +1582,20 @@ export class World {
 
   /** Dano + morte/drops compartilhado por melee, tiros e explosões. */
   _applyDamage(enemy, dmg, opts = {}) {
-    const result = enemy.takeDamage(dmg);
+    const from =
+      opts.from ||
+      opts.pos ||
+      (enemy.mesh
+        ? enemy.mesh.position.clone().add(new THREE.Vector3(0, 0, 1))
+        : null);
+    const result = enemy.takeDamage(dmg, { from });
     if (opts.slowElite && enemy.type === "bear_elite") {
       enemy.applySlow(opts.slowElite);
     }
     if (result === "killed") {
       const dropPos = enemy.mesh.position.clone();
       dropPos.y = this.groundHeight(dropPos.x, dropPos.z);
+      this.spawnLootBurst(dropPos, 0xe8f0f8, 18);
       if (enemy.cfg.dropsTrophy) {
         this.spawnGroundLoot({
           name: enemy.cfg.trophyName || "Troféu do Urso Alfa",
@@ -1363,6 +1611,8 @@ export class World {
       enemy._lastDrops = looted;
       this.onEnemyEvent?.("dead", enemy);
       this.onBearEvent?.("dead");
+    } else if (result) {
+      this.onEnemyEvent?.("hurt", enemy);
     }
     return enemy;
   }
@@ -1386,7 +1636,7 @@ export class World {
       }
     }
     if (!best) return null;
-    return this._applyDamage(best, dmg, opts);
+    return this._applyDamage(best, dmg, { ...opts, from: pos });
   }
 
   /** Dano em área (granada): atinge todos no raio, com queda linear. */
@@ -1397,7 +1647,7 @@ export class World {
       const d = e.mesh.position.distanceTo(pos);
       if (d > radius) continue;
       const falloff = 1 - (d / radius) * 0.6;
-      this._applyDamage(e, Math.round(dmg * falloff));
+      this._applyDamage(e, Math.round(dmg * falloff), { from: pos });
       hit.push(e);
     }
     return hit;
@@ -1427,7 +1677,7 @@ export class World {
     }
     this._spawnTracer(origin, dir, best ? bestT : Math.min(maxDist, 40));
     if (!best) return null;
-    this._applyDamage(best, dmg, opts);
+    this._applyDamage(best, dmg, { ...opts, from: origin });
     return { enemy: best, dist: bestT };
   }
 
@@ -1524,7 +1774,10 @@ export class World {
           center.y += 0.9 * (e.cfg.scale || 1);
           const hitR = 0.9 * (e.cfg.scale || 1) + 0.35;
           if (p.mesh.position.distanceTo(center) < hitR) {
-            this._applyDamage(e, p.damage, { slowElite: p.slowElite });
+            this._applyDamage(e, p.damage, {
+              slowElite: p.slowElite,
+              from: p.mesh.position.clone(),
+            });
             this.onProjectileHit?.(e);
             this.scene.remove(p.mesh);
             this.projectiles.splice(i, 1);
@@ -1661,10 +1914,12 @@ export class World {
       ? this.createWeaponPickupMesh(weaponId, color)
       : this.createItemMesh(color, kind);
     mesh.position.copy(pos);
+    mesh.userData.baseScale = 1;
     this.scene.add(mesh);
     this.items.push({
       name,
       color,
+      kind,
       mesh,
       pos: pos.clone(),
       collected: false,
@@ -1750,21 +2005,9 @@ export class World {
       hilt.position.y = 0.1;
       g.add(blade, hilt);
     }
-    const glow = new THREE.Mesh(
-      new THREE.CircleGeometry(0.4, 14),
-      new THREE.MeshBasicMaterial({
-        color: color ?? 0xc8d0d8,
-        transparent: true,
-        opacity: 0.22,
-        depthWrite: false,
-        blending: THREE.AdditiveBlending,
-      })
-    );
-    glow.rotation.x = -Math.PI / 2;
-    glow.position.y = 0.02;
-    g.add(glow);
+    this._addLootGlow(g, color, 0.4);
     g.traverse((m) => {
-      if (m.isMesh && m !== glow) {
+      if (m.isMesh && !m.userData.isGlow) {
         m.castShadow = true;
         m.receiveShadow = true;
       }

@@ -521,6 +521,12 @@ export class Enemy {
     this.lurePos = null;
     this.lureTimer = 0;
     this.rivalTarget = null;
+    this.flashT = 0;
+    this.startleT = 0;
+    this.knockVel = new THREE.Vector3();
+    this._baseEmissive = [];
+    this._cacheEmissive();
+    this._restScale = mesh.scale.x || 1;
   }
 
   get night() {
@@ -591,10 +597,49 @@ export class Enemy {
     this.slowTimer = Math.max(this.slowTimer, sec);
   }
 
-  takeDamage(dmg) {
+  _cacheEmissive() {
+    this._baseEmissive = [];
+    this.mesh?.traverse((o) => {
+      if (!o.isMesh || !o.material) return;
+      const mats = Array.isArray(o.material) ? o.material : [o.material];
+      for (const mat of mats) {
+        if (mat.emissive) {
+          this._baseEmissive.push({
+            mat,
+            color: mat.emissive.clone(),
+            intensity: mat.emissiveIntensity ?? 0,
+          });
+        }
+      }
+    });
+  }
+
+  _setFlash(on) {
+    for (const e of this._baseEmissive) {
+      if (on) {
+        e.mat.emissive.setHex(0xff3030);
+        e.mat.emissiveIntensity = 0.85;
+      } else {
+        e.mat.emissive.copy(e.color);
+        e.mat.emissiveIntensity = e.intensity;
+      }
+    }
+  }
+
+  takeDamage(dmg, opts = {}) {
     if (!this.alive) return false;
     this.hp -= dmg;
-    this.hurtTimer = 0.3;
+    this.hurtTimer = 0.28;
+    this.flashT = 0.18;
+    this._setFlash(true);
+    if (opts.from) {
+      const away = new THREE.Vector3()
+        .subVectors(this.mesh.position, opts.from)
+        .setY(0);
+      if (away.lengthSq() < 0.01) away.set(1, 0, 0);
+      away.normalize();
+      this.knockVel.copy(away).multiplyScalar(4.2);
+    }
     if (this.state !== "chase" && this.state !== "flee") this.state = "chase";
     if (this.hp <= 0) {
       this.hp = 0;
@@ -602,6 +647,7 @@ export class Enemy {
       this.mesh.rotation.z = Math.PI / 2;
       const p = this.mesh.position;
       this.mesh.position.y = this.world.groundHeight(p.x, p.z) + 0.4;
+      this._setFlash(false);
       return "killed";
     }
     // lobo foge com pouca vida
@@ -611,10 +657,40 @@ export class Enemy {
     return true;
   }
 
+  /** Punch de escala no aggro. */
+  triggerStartle() {
+    this.startleT = 0.28;
+  }
+
   update(dt, elapsed, playerPos, hooks) {
-    if (!this.alive || !playerPos) return;
+    if (!this.alive) return;
     const cfg = this.cfg;
     const m = this.mesh;
+
+    if (this.flashT > 0) {
+      this.flashT -= dt;
+      if (this.flashT <= 0) this._setFlash(false);
+    }
+    if (this.startleT > 0) {
+      this.startleT -= dt;
+      const t = this.startleT / 0.28;
+      const punch = 1 + t * 0.1;
+      m.scale.setScalar(this._restScale * punch);
+    } else if (m.scale.x !== this._restScale && this.state !== "dead") {
+      m.scale.setScalar(this._restScale);
+    }
+    // knockback
+    if (this.knockVel.lengthSq() > 0.01) {
+      const nx = m.position.x + this.knockVel.x * dt;
+      const nz = m.position.z + this.knockVel.z * dt;
+      const bounds = this.world.bounds;
+      m.position.x = THREE.MathUtils.clamp(nx, -bounds, bounds);
+      m.position.z = THREE.MathUtils.clamp(nz, -bounds, bounds);
+      m.position.y = this.world.groundHeight(m.position.x, m.position.z);
+      this.knockVel.multiplyScalar(Math.max(0, 1 - dt * 8));
+    }
+
+    if (!playerPos) return;
     const dist = m.position.distanceTo(playerPos);
 
     this.attackCd -= dt;

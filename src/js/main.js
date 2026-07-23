@@ -590,6 +590,16 @@ class Game {
         this.ambience.growl();
         const label = enemy?.label || "Um inimigo";
         this.hud.showMsg(`${label} te viu. Corra ou lute!`);
+      } else if (ev === "hurt") {
+        const now = performance.now();
+        if (!this._hurtSfxAt || now - this._hurtSfxAt > 90) {
+          this._hurtSfxAt = now;
+          this.ambience.npcHurt();
+        }
+      } else if (ev === "teleport") {
+        this.ambience.teleportWhoosh();
+      } else if (ev === "gunfire") {
+        this.ambience.gunfireBurst();
       } else if (ev === "npc_fight") {
         if (Math.random() < 0.08) {
           this.hud.showMsg("Inimigos estão brigando entre si!", 2200);
@@ -759,6 +769,8 @@ class Game {
     this.health = Math.max(0, this.health - dmg);
     this.player.applyKnockback(dir, enemy?.type === "wolf" ? 7 : 9);
     this.hud.flashDamage();
+    if (enemy?.cfg?.ai === "gunner") this.ambience.gunfireBurst();
+    else this.ambience.npcBite();
     this.ambience.hurt();
     this.hud.setHealth(this.health, CONFIG.survival.maxHealth);
     if (this.health <= 0) {
@@ -1650,12 +1662,16 @@ class Game {
 
     if (this.input.interact) {
       if (item) {
+        const kind =
+          item.kind ||
+          (item.weaponId ? "weapon" : item.ammoType ? "ammo" : item.trapId ? "trap" : "crate");
         this.world.collectItem(item);
         this.coop?.broadcastEvent("pickup", { saveId: item.saveId });
         const loot = this.weapons.onCollectItem(item);
         const gotTrap = this.traps.onCollectItem(item);
         if (item.countsForWin !== false) this.carried++;
-        this.ambience.pickup();
+        this.ambience.pickupKind(kind === "weapon" || item.weaponId ? "weapon" : kind);
+        this.hud.flashLoot();
         // sempre sincroniza mesh da arma equipada após loot
         this.player.setHeldWeapon(this.weapons.current.id);
         this.refreshInventoryUI();
@@ -1697,6 +1713,8 @@ class Game {
         this.deposited += this.carried;
         this.carried = 0;
         this.ambience.deposit();
+        this.hud.flashLoot();
+        this.world.spawnLootBurst?.(this.world.chestPos, 0xffd75a, 10);
         this.tutorial?.notify("deposit");
         this.persistSave();
         this.coop?.broadcastEvent("deposit", { deposited: this.deposited });

@@ -192,6 +192,30 @@ export class Ambience {
     setTimeout(() => ctx && this.blip(1320, 0.12, 0.06, "triangle", 1760, 0.3), 90);
   }
 
+  /** Som por tipo de loot no chão. */
+  pickupKind(kind) {
+    if (!this.started || !ctx) return;
+    if (kind === "trophy") {
+      this.blip(880, 0.12, 0.08, "sine", 1320, 0.4);
+      setTimeout(() => ctx && this.blip(1320, 0.16, 0.07, "sine", 1760, 0.35), 80);
+      setTimeout(() => ctx && this.blip(1760, 0.2, 0.05, "triangle", 2200, 0.3), 160);
+      return;
+    }
+    if (kind === "weapon" || kind === "ammo") {
+      this.noiseBurst(0.06, 0.08, 1400, 1.2, "bandpass");
+      this.blip(420, 0.08, 0.07, "triangle", 680, 0.25);
+      setTimeout(() => ctx && this.blip(720, 0.1, 0.05, "square", 900, 0.3), 70);
+      return;
+    }
+    if (kind === "trap") {
+      this.blip(200, 0.1, 0.08, "square", 140, 0.2);
+      this.noiseBurst(0.08, 0.07, 600, 0.8, "lowpass");
+      return;
+    }
+    // supply / medkit / crate…
+    this.pickup();
+  }
+
   discover() {
     if (!this.started || !ctx) return;
     // sininho misterioso de "tem algo por perto"
@@ -204,6 +228,31 @@ export class Ambience {
     this.blip(520, 0.1, 0.07, "triangle", 660, 0.25);
     setTimeout(() => ctx && this.blip(660, 0.14, 0.06, "triangle", 880, 0.25), 110);
     setTimeout(() => ctx && this.blip(880, 0.18, 0.06, "triangle", 1040, 0.3), 230);
+    this.noiseBurst(0.1, 0.06, 400, 0.7, "lowpass");
+  }
+
+  teleportWhoosh() {
+    if (!this.started || !ctx) return;
+    this.noiseBurst(0.18, 0.12, 900, 0.6, "bandpass", 0.35);
+    this.blip(600, 0.12, 0.05, "sine", 200, 0.3);
+  }
+
+  gunfireBurst() {
+    if (!this.started || !ctx) return;
+    this.noiseBurst(0.05, 0.14, 2400, 1.1, "bandpass");
+    this.blip(180, 0.04, 0.06, "square", 90, 0.2);
+  }
+
+  npcHurt() {
+    if (!this.started || !ctx) return;
+    this.noiseBurst(0.08, 0.1, 480, 0.9, "bandpass");
+    this.blip(220, 0.1, 0.08, "sawtooth", 90);
+  }
+
+  npcBite() {
+    if (!this.started || !ctx) return;
+    this.noiseBurst(0.1, 0.12, 350, 0.7, "lowpass");
+    this.blip(140, 0.12, 0.1, "sawtooth", 60);
   }
 
   hurt() {

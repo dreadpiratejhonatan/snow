@@ -254,9 +254,17 @@ export class HUD {
 
   flashDamage() {
     if (!this.flashEl) return;
-    this.flashEl.classList.remove("hit");
+    this.flashEl.classList.remove("hit", "loot");
     void this.flashEl.offsetWidth;
     this.flashEl.classList.add("hit");
+  }
+
+  /** Flash curto ciano/dourado ao pegar item. */
+  flashLoot() {
+    if (!this.flashEl) return;
+    this.flashEl.classList.remove("hit", "loot");
+    void this.flashEl.offsetWidth;
+    this.flashEl.classList.add("loot");
   }
 
   show() {

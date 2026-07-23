@@ -2,6 +2,10 @@
 
 Changelog jogável do que entrou desde sábado até hoje. No jogo: botão **N** (ao lado do `?` no PC; nos botões touch no celular) ou **O que mudou** no menu pausa.
 
+## Pickups e combate
+- Itens no chão com silhuetas próprias + partículas/flash ao pegar
+- NPCs: flash vermelho, knockback, startle no aggro; SFX de hurt/teleporte/gatling
+
 ## Menus de entrada
 - Visual unificado (tipografia + noite gelada)
 - Co-op em **2 passos**: Solo **ou** Com um amigo → criar/entrar
