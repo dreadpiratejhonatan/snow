@@ -48,7 +48,7 @@ const PROC_TRACKS = [
     scale: [261.63, 293.66, 329.63, 392.0, 440.0, 523.25],
     pad: [130.81, 164.81, 196.0, 261.63],
     beat: 1.35,
-    density: 0.72,
+    density: 0.82,
     bright: 0.08,
     length: 36,
   },
@@ -58,7 +58,7 @@ const PROC_TRACKS = [
     scale: [220.0, 246.94, 261.63, 293.66, 329.63, 369.99],
     pad: [110.0, 146.83, 174.61, 220.0],
     beat: 1.4,
-    density: 0.62,
+    density: 0.78,
     bright: 0.06,
     length: 28,
   },
@@ -68,7 +68,7 @@ const PROC_TRACKS = [
     scale: [196.0, 220.0, 246.94, 293.66, 329.63, 392.0],
     pad: [98.0, 123.47, 146.83, 196.0],
     beat: 1.2,
-    density: 0.68,
+    density: 0.8,
     bright: 0.1,
     length: 30,
   },
@@ -78,7 +78,7 @@ const PROC_TRACKS = [
     scale: [174.61, 196.0, 220.0, 261.63, 293.66, 349.23],
     pad: [87.31, 130.81, 174.61, 220.0],
     beat: 1.45,
-    density: 0.6,
+    density: 0.76,
     bright: 0.08,
     length: 26,
   },
@@ -88,7 +88,7 @@ const PROC_TRACKS = [
     scale: [146.83, 174.61, 196.0, 220.0, 261.63, 293.66],
     pad: [73.42, 110.0, 146.83, 185.0],
     beat: 1.5,
-    density: 0.58,
+    density: 0.75,
     bright: 0.05,
     length: 28,
   },
@@ -98,7 +98,7 @@ const PROC_TRACKS = [
     scale: [130.81, 155.56, 174.61, 196.0, 233.08, 261.63],
     pad: [65.41, 98.0, 130.81, 164.81],
     beat: 1.55,
-    density: 0.55,
+    density: 0.75,
     bright: 0.04,
     length: 30,
   },
@@ -108,7 +108,7 @@ const PROC_TRACKS = [
     scale: [246.94, 277.18, 293.66, 349.23, 392.0, 440.0],
     pad: [123.47, 155.56, 185.0, 246.94],
     beat: 1.3,
-    density: 0.64,
+    density: 0.78,
     bright: 0.12,
     length: 28,
   },
@@ -218,9 +218,10 @@ export class MusicPlayer {
     const master = this.getMaster();
     if (!ctx || !master || this.ready) return;
 
+    if (ctx.state === "suspended") ctx.resume();
     this.bus = ctx.createGain();
-    // Baixo com presença (Minecraft / Vintage Story) — não some, não grita
-    this.bus.gain.value = 0.52;
+    // Presente o bastante para ouvir no celular (ainda suave)
+    this.bus.gain.value = 0.65;
     this.bus.connect(master);
 
     // camada de tensão (combate) — some por cima da exploração
@@ -358,35 +359,28 @@ export class MusicPlayer {
   }
 
   async discoverFiles() {
-    // tenta manifesto opcional + lista de nomes conhecidos
+    // Só usa arquivos se existir music/manifest.json (evita soft-404 e atraso).
+    // Sem manifesto → 100% procedural.
     const found = [];
     const base = new URL("music/", window.location.href).href;
-
     try {
       const man = await fetch(new URL("manifest.json", base).href, { cache: "no-store" });
-      if (man.ok) {
-        const list = await man.json();
-        if (Array.isArray(list)) {
-          for (const name of list) {
-            const url = new URL(name, base).href;
-            if (await probeUrl(url)) found.push({ name: name.replace(/\.[^.]+$/, ""), url });
-          }
+      if (!man.ok) return found;
+      const ct = (man.headers.get("content-type") || "").toLowerCase();
+      if (ct.includes("text/html")) return found;
+      const list = await man.json();
+      if (!Array.isArray(list) || !list.length) return found;
+      for (const name of list) {
+        const url = new URL(String(name), base).href;
+        if (await probeUrl(url)) {
+          found.push({
+            name: String(name).replace(/\.[^.]+$/, "").replace(/[_-]/g, " "),
+            url,
+          });
         }
       }
     } catch {
-      /* sem manifesto */
-    }
-
-    if (!found.length) {
-      // sonda nomes comuns (Minecraft OST se o usuário colocar os arquivos)
-      await Promise.all(
-        FILE_CANDIDATES.map(async (name) => {
-          const url = new URL(name, base).href;
-          if (await probeUrl(url)) {
-            found.push({ name: name.replace(/\.[^.]+$/, "").replace(/[_-]/g, " "), url });
-          }
-        })
-      );
+      /* sem manifesto válido */
     }
     return found;
   }
@@ -424,7 +418,7 @@ export class MusicPlayer {
     this.padFilter.frequency.value = 520;
     this.padFilter.Q.value = 0.4;
     this.padGain = ctx.createGain();
-    this.padGain.gain.value = 0.32; // fundo sob o piano
+    this.padGain.gain.value = 0.4;
     this.padFilter.connect(this.padGain).connect(this.bus);
 
     this.padOsc = [0, 1, 2, 3].map((i) => {
@@ -433,7 +427,7 @@ export class MusicPlayer {
       o.type = i % 2 === 0 ? "sine" : "triangle";
       o.frequency.value = 110;
       const g = ctx.createGain();
-      g.gain.value = i === 0 ? 0.055 : 0.028;
+      g.gain.value = i === 0 ? 0.08 : 0.04;
       o.connect(g).connect(this.padFilter);
       o.start();
       return { o, g };
@@ -464,11 +458,14 @@ export class MusicPlayer {
     this.track = track;
     this.beat = track.beat;
     this.notesLeftInTrack = track.length;
-    this.timer = 1.2 + Math.random() * 2; // entra devagar, estilo Minecraft
     this.silence = 0;
     this.queue = [];
     this.retunePad(track.pad);
     this.fillPhrase();
+    // Primeira nota quase imediata (antes parecia “sem música”)
+    this.timer = 0.12;
+    this.playNote(2, 4);
+    this.notesLeftInTrack = Math.max(0, this.notesLeftInTrack - 1);
     this.onTrack?.(track.name);
   }
 
@@ -483,7 +480,7 @@ export class MusicPlayer {
       this.padOsc[i].o.frequency.setValueAtTime(cur, t);
       this.padOsc[i].o.frequency.exponentialRampToValueAtTime(Math.max(40, f), t + 2.5);
       this.padOsc[i].o.type = "sine";
-      const vol = i === 0 ? 0.09 : i === 1 ? 0.06 : 0.038;
+      const vol = i === 0 ? 0.11 : i === 1 ? 0.07 : 0.045;
       this.padOsc[i].g.gain.setTargetAtTime(vol, t, 1.2);
     }
   }
@@ -528,9 +525,9 @@ export class MusicPlayer {
 
     // "piano" Minecraft: suave, emocional, audível sob o vento
     const voices = [
-      ["sine", 0.22, 0.12, 1],
-      ["triangle", 0.095, 0.16, 1.003],
-      ["sine", 0.045, 0.22, 0.997],
+      ["sine", 0.28, 0.1, 1],
+      ["triangle", 0.12, 0.14, 1.003],
+      ["sine", 0.06, 0.2, 0.997],
     ];
     for (const [type, vol, attack, ratio] of voices) {
       const osc = ctx.createOscillator();
@@ -578,8 +575,7 @@ export class MusicPlayer {
     this._moodBlend += (want - this._moodBlend) * Math.min(1, dt * 1.8);
 
     if (this.bus) {
-      // baixo com presença; combate abaixa um pouco
-      const exploreVol = (0.52 - this._moodBlend * 0.12) * dangerMul;
+      const exploreVol = (0.65 - this._moodBlend * 0.12) * dangerMul;
       this.bus.gain.value += (exploreVol - this.bus.gain.value) * Math.min(1, dt * 2);
     }
     if (this.combatBus) {

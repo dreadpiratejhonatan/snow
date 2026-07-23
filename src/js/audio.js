@@ -77,7 +77,7 @@ export class Ambience {
     lowFilter.type = "lowpass";
     lowFilter.frequency.value = 240;
     this.windLow = ctx.createGain();
-    this.windLow.gain.value = 0.022; // um pouco mais baixo — trilha Minecraft sobressai
+    this.windLow.gain.value = 0.016; // trilha sobressai no celular
     low.connect(lowFilter).connect(this.windLow).connect(master);
     low.start();
 
@@ -452,6 +452,7 @@ export class Ambience {
 
   update(dt, s) {
     if (!this.started || !ctx) return;
+    if (ctx.state === "suspended") ctx.resume();
 
     this.updateMusic(dt, s);
 
@@ -463,9 +464,9 @@ export class Ambience {
       this.gustTarget = Math.random();
     }
     this.gust += (this.gustTarget - this.gust) * Math.min(1, dt * 0.6);
-    const base = 0.024 + s.night * 0.014 + (s.sprint && s.moving ? 0.01 : 0);
-    this.windLow.gain.value = base + this.gust * 0.022;
-    this.windHigh.gain.value = 0.003 + this.gust * 0.011 + s.night * 0.004;
+    const base = 0.018 + s.night * 0.012 + (s.sprint && s.moving ? 0.008 : 0);
+    this.windLow.gain.value = base + this.gust * 0.016;
+    this.windHigh.gain.value = 0.0025 + this.gust * 0.008 + s.night * 0.003;
 
     // coruja distante à noite
     if (s.night > 0.5) {
