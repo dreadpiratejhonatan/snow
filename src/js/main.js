@@ -16,6 +16,7 @@ import { SpeedrunTimer } from "./speedrun.js";
 import { fetchLeaderboard, submitScore, formatTimeMs, getTopEntry } from "./leaderboard.js";
 import { runSplash } from "./splash.js";
 import { runSkinPicker, applySkinToPlayer, loadSkinId } from "./skins.js";
+import { runDifficultyPicker, getDifficulty } from "./difficulty.js";
 import { WebRtcRoom } from "./net/webrtcRoom.js";
 import { CoopSession } from "./net/coopSession.js";
 import { Tutorial } from "./tutorial.js";
@@ -88,6 +89,8 @@ class Game {
     this._releaseFromPlaying = false;
     this.coop = null;
     this.coopRoom = null;
+    this.difficultyId = "medium";
+    this.difficulty = getDifficulty("medium");
     this._saveAcc = 0;
     this.clock = new THREE.Clock();
     this.initThree();
@@ -113,6 +116,10 @@ class Game {
     applySkinToPlayer(this.player, skinId);
     // Começa em 3ª pessoa para ver o personagem; mouse gira a câmera
     if (!this.input.mobile) this.setCameraMode("third");
+
+    this.state = "difficulty";
+    const diffId = await runDifficultyPicker();
+    this.setDifficulty(diffId);
 
     const coopChoice = await this.promptCoopMenu();
     let resumeSave = null;
@@ -143,8 +150,18 @@ class Game {
       this.hud.showMsg("Expedição restaurada. Progresso auto-salva.", 4000);
     } else if (this.coop) {
       this.tutorial.skip();
+    } else {
+      // nova run: garante dificuldade no mundo (co-op recria o mundo depois)
+      this.setDifficulty(this.difficultyId || diffId);
     }
     this.start();
+  }
+
+  /** Multiplicadores de dificuldade no Game + World (runtime). */
+  setDifficulty(id, opts = {}) {
+    this.difficultyId = getDifficulty(id).id;
+    this.difficulty = getDifficulty(this.difficultyId);
+    this.world?.applyDifficulty?.(this.difficultyId, opts);
   }
 
   /** Esconde joystick/look fullscreen durante menus (senão o toque não foca o input). */
@@ -382,6 +399,7 @@ class Game {
     this.player = new Player(this.camera, this.scene, this.world, this.world.getSpawn());
     this.setCameraMode(this.cameraMode);
     this.initSurvival();
+    if (this.difficultyId) this.setDifficulty(this.difficultyId);
   }
 
   /** Menu Continuar / Novo jogo. */
@@ -1695,6 +1713,9 @@ class Game {
     const origin = this.player.eyePosition;
     const dir = this.player.lookDirection.clone().normalize();
 
+    const dmgScale = this.difficulty?.weapon ?? 1;
+    const dmg = Math.max(1, Math.round(weapon.damage * dmgScale));
+
     if (weapon.fire === "hitscan") {
       const pellets = weapon.pellets || 1;
       let hitAny = false;
@@ -1707,7 +1728,7 @@ class Game {
           d.z += (Math.random() - 0.5) * spread * 2;
           d.normalize();
         }
-        if (this.world.hitscan(origin, d, weapon.damage, weapon.range)) hitAny = true;
+        if (this.world.hitscan(origin, d, dmg, weapon.range)) hitAny = true;
       }
       this.ambience.weaponFire(weapon);
       if (hitAny) this.ambience.bearHit();
@@ -1716,7 +1737,7 @@ class Game {
         pos: origin.clone().addScaledVector(dir, 0.6),
         dir,
         speed: weapon.projSpeed || 34,
-        damage: weapon.damage,
+        damage: dmg,
         kind: "arrow",
       });
       this.ambience.weaponFire(weapon);
@@ -1728,7 +1749,7 @@ class Game {
         pos: origin.clone().addScaledVector(dir, 0.6),
         dir: lob,
         speed: weapon.projSpeed || 16,
-        damage: weapon.damage,
+        damage: dmg,
         kind: "grenade",
         fuse: 2.0,
         explodeRadius: weapon.explodeRadius || 6,
@@ -1737,7 +1758,7 @@ class Game {
     } else {
       // melee
       this.ambience.weaponFire(weapon);
-      const hit = this.world.damageEnemyAt(p, weapon.damage, weapon.range, {
+      const hit = this.world.damageEnemyAt(p, dmg, weapon.range, {
         slowElite: weapon.slowElite || 0,
       });
       if (hit) {
@@ -1758,7 +1779,8 @@ class Game {
       this._coldWarned = false;
       this._freezingWarned = false;
     } else {
-      const drain = night > 0.5 ? s.warmthDrainNight : s.warmthDrainDay;
+      const coldMul = this.difficulty?.cold ?? 1;
+      const drain = (night > 0.5 ? s.warmthDrainNight : s.warmthDrainDay) * coldMul;
       this.warmth = Math.max(0, this.warmth - drain * dt);
 
       // avisos claros — o frio não mata “do nada”
@@ -1770,7 +1792,7 @@ class Game {
       if (this.warmth <= 0) {
         // dano de frio, mas NUNCA mata — só o urso pode matar
         const floor = s.coldMinHealth ?? 20;
-        this.health = Math.max(floor, this.health - s.coldDamage * dt);
+        this.health = Math.max(floor, this.health - s.coldDamage * coldMul * dt);
         if (!this._freezingWarned) {
           this._freezingWarned = true;
           this.hud.showMsg("Você está congelando! Corra para a base.");

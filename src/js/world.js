@@ -10,8 +10,14 @@ import {
   createMulaMesh,
   createSlenderMesh,
   createChuckMesh,
+  createPandaMesh,
+  createSaciMesh,
+  createTrexMesh,
+  createBotoMesh,
   spawnPointFar,
+  spawnPointOnIce,
 } from "./enemies.js";
+import { getDifficulty } from "./difficulty.js";
 
 // Mundo de inverno: terreno nevado por heightmap, lago congelado onde dá
 // para andar, nevasca, base com fogueira e baú, itens escondidos e um urso.
@@ -27,6 +33,9 @@ export class World {
     this.waterLevel = CONFIG.world.waterLevel;
     this.colliders = []; // troncos/rochas/base: { x, z, y, r }
     this.trees = [];
+    this.diff = getDifficulty("medium");
+    this._diffSpawnScaled = false;
+    this._diffLootThinned = false;
 
     // callbacks preenchidos pelo Game
     this.onEnemyAttack = null; // (damage, dirVector, enemy)
@@ -956,8 +965,34 @@ export class World {
     for (const def of CONFIG.trapPickups || []) {
       this._spawnItemDef(def, { countsForWin: false, nearBase: true, saveId: `trap:${i++}` });
     }
-    // vitória = itens de sobrevivência + troféu do urso alfa
-    this.itemsTotal = CONFIG.items.length + 1;
+    // vitória = itens de sobrevivência + troféu do urso + troféu do Boto
+    this.itemsTotal = CONFIG.items.length + 2;
+  }
+
+  /**
+   * Aplica multiplicadores de dificuldade (spawn delay, rareia pickups no Difícil).
+   * Spawn/loot thinning só uma vez por mundo; `thinPickups: false` no Continuar.
+   */
+  applyDifficulty(diffId, opts = {}) {
+    this.diff = getDifficulty(diffId);
+    if (!this._diffSpawnScaled) {
+      const mul = this.diff.spawnDelayMul ?? 1;
+      for (const p of this.pendingEnemies || []) {
+        p.at *= mul;
+      }
+      this.pendingEnemies?.sort((a, b) => a.at - b.at);
+      this._diffSpawnScaled = true;
+    }
+
+    const thin = opts.thinPickups !== false;
+    const loot = this.diff.loot ?? 1;
+    if (thin && !this._diffLootThinned && loot < 1) {
+      for (const it of this.items || []) {
+        if (it.countsForWin || it.collected) continue;
+        if (Math.random() > loot) this.collectItem(it);
+      }
+      this._diffLootThinned = true;
+    }
   }
 
   nearestItem(playerPos, maxDist) {
@@ -1144,6 +1179,14 @@ export class World {
         return createSlenderMesh();
       case "chuck":
         return createChuckMesh();
+      case "panda":
+        return createPandaMesh(this.tex, { scale: cfg.scale || 1.4 });
+      case "saci":
+        return createSaciMesh();
+      case "trex":
+        return createTrexMesh({ scale: cfg.scale || 1.8 });
+      case "boto":
+        return createBotoMesh();
       default:
         return createBearMesh(this.tex, {
           scale: cfg.scale || 1,
@@ -1157,9 +1200,13 @@ export class World {
   spawnEnemyNow(type) {
     const cfg = CONFIG.enemies[type];
     if (!cfg) return null;
-    const home = spawnPointFar(this, cfg.spawnMin || 48);
+    const home = cfg.spawnOnIce
+      ? spawnPointOnIce(this)
+      : spawnPointFar(this, cfg.spawnMin || 48);
     const mesh = this._meshForEnemy(cfg);
-    mesh.position.set(home.x, this.groundHeight(home.x, home.z), home.z);
+    const gy = this.groundHeight(home.x, home.z);
+    // Boto começa submerso e emerge
+    mesh.position.set(home.x, cfg.ai === "boto" ? gy - 1.2 : gy, home.z);
     this.scene.add(mesh);
     const enemy = new Enemy(type, mesh, home, this);
     enemy.netId = this._nextNetId++;
@@ -1196,12 +1243,12 @@ export class World {
       dropPos.y = this.groundHeight(dropPos.x, dropPos.z);
       if (enemy.cfg.dropsTrophy) {
         this.spawnGroundLoot({
-          name: "Troféu do Urso Alfa",
-          color: 0xffd75a,
+          name: enemy.cfg.trophyName || "Troféu do Urso Alfa",
+          color: enemy.cfg.trophyColor ?? 0xffd75a,
           pos: dropPos,
           countsForWin: true,
           discovered: true,
-          saveId: "win:trophy",
+          saveId: enemy.cfg.trophySaveId || "win:trophy",
         });
       }
       // loot de armas/munição
@@ -1430,10 +1477,12 @@ export class World {
   /** Sorteia drops de arma/munição do inimigo e espalha no chão. */
   rollEnemyDrops(enemy, basePos) {
     const table = enemy.cfg.drops || [];
+    const lootMul = this.diff?.loot ?? 1;
     const got = [];
     let i = 0;
     for (const row of table) {
-      if (Math.random() > (row.chance ?? 1)) continue;
+      const chance = Math.min(1, (row.chance ?? 1) * lootMul);
+      if (Math.random() > chance) continue;
       const ang = Math.random() * Math.PI * 2;
       const r = 1.4 + i * 0.7;
       const pos = new THREE.Vector3(

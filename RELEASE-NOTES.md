@@ -2,6 +2,12 @@
 
 Changelog jogável do que entrou desde sábado até hoje. No jogo: botão **N** (ao lado do `?` no PC; nos botões touch no celular) ou **O que mudou** no menu pausa.
 
+## Dificuldade e chefs
+- Picker **Fácil / Médio / Difícil** depois da skin (Médio = balance padrão)
+- Multiplicadores de loot, HP/dano inimigo, dano das armas e frio
+- Chefs novos: **Panda violento**, **Saci-pererê**, **T-Rex gatling**, **Boto-cor-de-rosa** (último, no lago)
+- Vitória exige também o **Troféu do Boto** (além do urso alfa)
+
 ## Personagens
 - 5 rostos: **Natan**, **Jhonatan**, **Jorge Bolado**, **Caio**, **Lorenzo**
 - Escolha obrigatória com preview 3D (arraste para girar)

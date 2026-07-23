@@ -170,6 +170,27 @@
     </div>
 
     <!-- Continuar expedição salva -->
+    <div id="difficulty-picker" class="difficulty-picker" hidden aria-hidden="true">
+      <div class="difficulty-picker__panel" role="dialog" aria-labelledby="difficulty-title">
+        <h2 id="difficulty-title" class="difficulty-picker__title">Dificuldade</h2>
+        <p class="difficulty-picker__sub">Médio é o balance padrão. Você pode mudar em cada nova expedição.</p>
+        <div class="difficulty-picker__grid">
+          <button type="button" class="difficulty-card" data-difficulty="easy">
+            <span class="difficulty-card__name">Fácil</span>
+            <span class="difficulty-card__blurb">Mais loot · inimigos frágeis · frio brando</span>
+          </button>
+          <button type="button" class="difficulty-card difficulty-card--mid" data-difficulty="medium">
+            <span class="difficulty-card__name">Médio</span>
+            <span class="difficulty-card__blurb">Balance padrão do jogo</span>
+          </button>
+          <button type="button" class="difficulty-card" data-difficulty="hard">
+            <span class="difficulty-card__name">Difícil</span>
+            <span class="difficulty-card__blurb">Poucos drops · inimigos brutais · frio cruel</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
     <div id="continue-menu" class="continue-menu" hidden aria-hidden="true">
       <div class="continue-menu__panel">
         <h2 class="continue-menu__title">Expedição salva</h2>
@@ -251,6 +272,9 @@
         <h2 id="release-title">Novidades</h2>
         <p class="rank-overlay__sub">19–23 jul 2026 · o que entrou desde sábado</p>
         <ul class="help-overlay__list">
+          <li><strong>Dificuldade</strong> Fácil / Médio / Difícil (depois da skin) — muda loot, inimigos, dano e frio</li>
+          <li>Quatro chefs novos: <strong>Panda</strong>, <strong>Saci</strong>, <strong>T-Rex gatling</strong> e <strong>Boto-cor-de-rosa</strong> (troféu final no lago)</li>
+          <li>Vitória: itens do baú + troféu do urso alfa + <strong>Troféu do Boto</strong></li>
           <li><strong>5 personagens</strong> com rostos: Natan, Jhonatan, Jorge Bolado, Caio e Lorenzo — escolha obrigatória com preview 3D girável</li>
           <li><strong>Ordem aleatória</strong> dos cards a cada abertura do picker</li>
           <li>Rosto só na <strong>frente</strong> da cabeça; em 3ª pessoa use o botão <strong>Ver skin</strong> ou <kbd>Alt</kbd> + setas para orbitar e ver o personagem</li>
@@ -300,7 +324,9 @@
           <dt>Morri e perdi tudo?</dt>
           <dd>O que você carregava cai no chão perto do local da morte. O que já estava no <strong>baú</strong> fica seguro.</dd>
           <dt>Como entro no ranking?</dt>
-          <dd>Deposite todos os itens (incluindo o Troféu), vença e envie o nome. A lista Top 10 abre com <kbd>T</kbd> a qualquer momento. Tempos vão para o ranking online da HostGator (também no GitHub Pages).</dd>
+          <dd>Deposite todos os itens (incluindo o Troféu do Urso e o Troféu do Boto), vença e envie o nome. A lista Top 10 abre com <kbd>T</kbd> a qualquer momento. Tempos vão para o ranking online da HostGator (também no GitHub Pages).</dd>
+          <dt>O que muda na dificuldade?</dt>
+          <dd><strong>Fácil</strong> mais loot e frio brando; <strong>Médio</strong> é o padrão; <strong>Difícil</strong> inimigos fortes, pouco loot e frio cruel. Escolha depois da skin.</dd>
           <dt>O minimapa gira?</dt>
           <dd>Sim — a frente do personagem é sempre para cima no mapa. A seta branca fica no centro.</dd>
           <dt>Perdi o progresso ao fechar?</dt>
@@ -311,6 +337,6 @@
     </div>
   </div>
 
-  <script type="module" src="src/js/main.js?v=gh26"></script>
+  <script type="module" src="src/js/main.js?v=gh27"></script>
 </body>
 </html>

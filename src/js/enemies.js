@@ -250,6 +250,193 @@ export function createSlenderMesh() {
   return g;
 }
 
+/** Panda violento: urso preto/branco tank. */
+export function createPandaMesh(tex, { scale = 1.4 } = {}) {
+  const white = new THREE.MeshStandardMaterial({
+    color: 0xf2f2f0,
+    roughness: 1,
+    map: tex?.fur || null,
+  });
+  const black = new THREE.MeshStandardMaterial({
+    color: 0x1a1a1c,
+    roughness: 1,
+    map: tex?.fur || null,
+  });
+  const g = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.SphereGeometry(0.65, 14, 12), white);
+  body.scale.set(1.2, 1.05, 1.7);
+  body.position.y = 1.0;
+  const belly = new THREE.Mesh(new THREE.SphereGeometry(0.42, 10, 8), white);
+  belly.position.set(0, 0.95, 0.55);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.38, 12, 10), white);
+  head.position.set(0, 1.45, 1.05);
+  const patchL = new THREE.Mesh(new THREE.SphereGeometry(0.14, 8, 6), black);
+  patchL.position.set(-0.18, 1.5, 1.28);
+  const patchR = new THREE.Mesh(new THREE.SphereGeometry(0.14, 8, 6), black);
+  patchR.position.set(0.18, 1.5, 1.28);
+  const snout = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.16, 0.24), black);
+  snout.position.set(0, 1.35, 1.38);
+  const earGeo = new THREE.SphereGeometry(0.12, 8, 6);
+  const earL = new THREE.Mesh(earGeo, black);
+  earL.position.set(-0.28, 1.78, 0.95);
+  const earR = new THREE.Mesh(earGeo, black);
+  earR.position.set(0.28, 1.78, 0.95);
+  g.add(body, belly, head, patchL, patchR, snout, earL, earR);
+  const legs = [];
+  const legGeo = new THREE.CylinderGeometry(0.16, 0.18, 0.9, 8);
+  for (const [dx, dz] of [
+    [-0.38, 0.55],
+    [0.38, 0.55],
+    [-0.38, -0.55],
+    [0.38, -0.55],
+  ]) {
+    const leg = new THREE.Mesh(legGeo, black);
+    leg.position.set(dx, 0.45, dz);
+    legs.push(leg);
+    g.add(leg);
+  }
+  g.scale.setScalar(scale);
+  g.userData.legs = legs;
+  g.traverse((m) => {
+    if (m.isMesh) {
+      m.castShadow = true;
+      m.receiveShadow = true;
+    }
+  });
+  return g;
+}
+
+/** Saci-pererê: um pé, gorro vermelho, pipe. */
+export function createSaciMesh() {
+  const skin = new THREE.MeshStandardMaterial({ color: 0x3a2218, roughness: 0.95 });
+  const red = new THREE.MeshStandardMaterial({ color: 0xc42828, roughness: 0.85 });
+  const white = new THREE.MeshStandardMaterial({ color: 0xe8e0d0, roughness: 0.9 });
+  const pipe = new THREE.MeshStandardMaterial({ color: 0x4a3020, roughness: 0.7 });
+  const g = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.2, 0.55, 8), white);
+  body.position.y = 0.75;
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.2, 10, 8), skin);
+  head.position.y = 1.18;
+  const hat = new THREE.Mesh(new THREE.ConeGeometry(0.28, 0.45, 8), red);
+  hat.position.y = 1.48;
+  const brim = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.32, 0.04, 10), red);
+  brim.position.y = 1.28;
+  const armGeo = new THREE.CylinderGeometry(0.04, 0.05, 0.35, 6);
+  const armL = new THREE.Mesh(armGeo, skin);
+  armL.position.set(-0.22, 0.85, 0);
+  armL.rotation.z = 0.55;
+  const armR = new THREE.Mesh(armGeo, skin);
+  armR.position.set(0.22, 0.85, 0.05);
+  armR.rotation.z = -0.4;
+  const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.025, 0.22, 5), pipe);
+  stem.rotation.z = Math.PI / 2;
+  stem.position.set(0.18, 1.12, 0.18);
+  const bowl = new THREE.Mesh(new THREE.SphereGeometry(0.05, 6, 5), pipe);
+  bowl.position.set(0.28, 1.12, 0.18);
+  // um pé só
+  const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.07, 0.45, 6), white);
+  leg.position.set(0, 0.28, 0);
+  const foot = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.06, 0.2), skin);
+  foot.position.set(0, 0.06, 0.04);
+  g.add(body, head, hat, brim, armL, armR, stem, bowl, leg, foot);
+  g.userData.legs = [leg];
+  g.userData.arms = [armL, armR];
+  g.traverse((m) => {
+    if (m.isMesh) {
+      m.castShadow = true;
+      m.receiveShadow = true;
+    }
+  });
+  return g;
+}
+
+/** T-Rex com “gatling” no ombro. */
+export function createTrexMesh({ scale = 1.8 } = {}) {
+  const hide = new THREE.MeshStandardMaterial({ color: 0x4a6a3a, roughness: 0.95 });
+  const dark = new THREE.MeshStandardMaterial({ color: 0x2a3a22, roughness: 1 });
+  const metal = new THREE.MeshStandardMaterial({ color: 0x5a5a58, roughness: 0.35, metalness: 0.7 });
+  const g = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.85, 1.5), hide);
+  body.position.set(0, 1.35, 0);
+  const belly = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.5, 1.1), dark);
+  belly.position.set(0, 1.05, 0.1);
+  const neck = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.55, 0.55), hide);
+  neck.position.set(0, 1.85, 0.75);
+  const head = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.45, 0.85), hide);
+  head.position.set(0, 2.15, 1.25);
+  const jaw = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.18, 0.6), dark);
+  jaw.position.set(0, 1.9, 1.35);
+  const tail = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.3, 1.4), hide);
+  tail.position.set(0, 1.2, -1.2);
+  tail.rotation.x = 0.25;
+  const legGeo = new THREE.CylinderGeometry(0.16, 0.2, 1.1, 7);
+  const legL = new THREE.Mesh(legGeo, dark);
+  legL.position.set(-0.28, 0.55, 0.15);
+  const legR = new THREE.Mesh(legGeo, dark);
+  legR.position.set(0.28, 0.55, 0.15);
+  const armGeo = new THREE.CylinderGeometry(0.05, 0.06, 0.35, 5);
+  const armL = new THREE.Mesh(armGeo, hide);
+  armL.position.set(-0.45, 1.45, 0.55);
+  armL.rotation.z = 0.8;
+  const armR = new THREE.Mesh(armGeo, hide);
+  armR.position.set(0.45, 1.45, 0.55);
+  armR.rotation.z = -0.8;
+  // gatling no ombro direito
+  const gun = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.12, 0.7, 8), metal);
+  gun.rotation.x = Math.PI / 2;
+  gun.position.set(0.55, 1.7, 0.85);
+  const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.05, 0.45, 6), metal);
+  barrel.rotation.x = Math.PI / 2;
+  barrel.position.set(0.55, 1.7, 1.35);
+  g.add(body, belly, neck, head, jaw, tail, legL, legR, armL, armR, gun, barrel);
+  g.scale.setScalar(scale);
+  g.userData.legs = [legL, legR];
+  g.userData.gun = gun;
+  g.traverse((m) => {
+    if (m.isMesh) {
+      m.castShadow = true;
+      m.receiveShadow = true;
+    }
+  });
+  return g;
+}
+
+/** Boto-cor-de-rosa: golfinho low-poly. */
+export function createBotoMesh() {
+  const pink = new THREE.MeshStandardMaterial({ color: 0xe878a8, roughness: 0.55, metalness: 0.15 });
+  const dark = new THREE.MeshStandardMaterial({ color: 0xc05080, roughness: 0.7 });
+  const g = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.SphereGeometry(0.55, 14, 12), pink);
+  body.scale.set(0.85, 0.75, 1.9);
+  body.position.y = 0.7;
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.32, 12, 10), pink);
+  head.scale.set(0.9, 0.85, 1.35);
+  head.position.set(0, 0.78, 1.05);
+  const snout = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.12, 0.55, 8), pink);
+  snout.rotation.x = Math.PI / 2;
+  snout.position.set(0, 0.7, 1.55);
+  const fin = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.45, 0.35), dark);
+  fin.position.set(0, 1.15, 0.1);
+  const tail = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.08, 0.35), dark);
+  tail.position.set(0, 0.65, -1.15);
+  const flipL = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.08, 0.25), dark);
+  flipL.position.set(-0.45, 0.55, 0.35);
+  flipL.rotation.z = 0.35;
+  const flipR = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.08, 0.25), dark);
+  flipR.position.set(0.45, 0.55, 0.35);
+  flipR.rotation.z = -0.35;
+  g.add(body, head, snout, fin, tail, flipL, flipR);
+  g.userData.legs = [];
+  g.userData.fins = [flipL, flipR, fin];
+  g.traverse((m) => {
+    if (m.isMesh) {
+      m.castShadow = true;
+      m.receiveShadow = true;
+    }
+  });
+  return g;
+}
+
 /** Chuck: boneco pequeno de macacão com faca. */
 export function createChuckMesh() {
   const overall = new THREE.MeshStandardMaterial({ color: 0x2c5aa8, roughness: 0.95 });
@@ -311,8 +498,9 @@ export class Enemy {
     this.cfg = cfg;
     this.mesh = mesh;
     this.world = world;
-    this.hp = cfg.hp;
-    this.maxHp = cfg.hp;
+    const hpMul = world.diff?.enemy ?? 1;
+    this.hp = Math.round(cfg.hp * hpMul);
+    this.maxHp = this.hp;
     this.state = "wander";
     this.home = home.clone();
     this.target = home.clone();
@@ -327,6 +515,9 @@ export class Enemy {
     this.chargeTimer = cfg.chargeInterval || 0;
     this.charging = 0;
     this.teleportTimer = 3;
+    this.burstLeft = 0;
+    this.burstCd = 0;
+    this.emergeT = cfg.ai === "boto" ? 0 : 1;
     this.lurePos = null;
     this.lureTimer = 0;
     this.rivalTarget = null;
@@ -378,13 +569,14 @@ export class Enemy {
     }
   }
 
-  /** Dano atual (lobisomem bate mais forte à noite). */
+  /** Dano atual (lobisomem bate mais forte à noite; escala com dificuldade). */
   get damageNow() {
-    const base = this.cfg.damage;
+    const mul = this.world.diff?.enemy ?? 1;
+    let base = this.cfg.damage * mul;
     if (this.cfg.nightDamageMul) {
-      return Math.round(base * (1 + (this.cfg.nightDamageMul - 1) * this.night));
+      base *= 1 + (this.cfg.nightDamageMul - 1) * this.night;
     }
-    return base;
+    return Math.round(base);
   }
 
   get label() {
@@ -462,6 +654,18 @@ export class Enemy {
     }
     if (ai === "slender") {
       this.updateSlender(dt, elapsed, playerPos, dist, hooks);
+      return;
+    }
+    if (ai === "saci") {
+      this.updateSaci(dt, elapsed, playerPos, dist, speedMul, hooks);
+      return;
+    }
+    if (ai === "gunner") {
+      this.updateGunner(dt, elapsed, playerPos, dist, speedMul, hooks);
+      return;
+    }
+    if (ai === "boto") {
+      this.updateBoto(dt, elapsed, playerPos, dist, speedMul, hooks);
       return;
     }
     if (ai === "charger") {
@@ -564,6 +768,182 @@ export class Enemy {
       }
     }
 
+    if (dist < cfg.attackRange && this.attackCd <= 0) {
+      this.attackCd = cfg.attackCooldown;
+      const dir = new THREE.Vector3().subVectors(playerPos, m.position).setY(0).normalize();
+      hooks.onAttack?.(this.damageNow, dir, this);
+    }
+  }
+
+  /** Saci: rápido + teleporte curto (dia e noite). */
+  updateSaci(dt, elapsed, playerPos, dist, speedMul, hooks) {
+    const cfg = this.cfg;
+    const m = this.mesh;
+    const arms = m.userData.arms || [];
+    for (let i = 0; i < arms.length; i++) {
+      arms[i].rotation.x = Math.sin(elapsed * 10 + i) * 0.4;
+    }
+
+    if (this.state === "wander") {
+      if (dist < cfg.aggroRange) {
+        this.state = "chase";
+        if (!this.growled) {
+          this.growled = true;
+          hooks.onEvent?.("growl", this);
+        }
+      } else {
+        this.wanderTimer -= dt;
+        if (this.wanderTimer <= 0) {
+          this.wanderTimer = 1.2 + Math.random() * 2;
+          const a = Math.random() * Math.PI * 2;
+          const r = 5 + Math.random() * 10;
+          this.target.set(this.home.x + Math.cos(a) * r, 0, this.home.z + Math.sin(a) * r);
+        }
+        this.moveToward(this.target, cfg.wanderSpeed * speedMul, dt, elapsed);
+      }
+      return;
+    }
+
+    if (dist > cfg.aggroRange * 2.4) {
+      this.state = "wander";
+      this.growled = false;
+      return;
+    }
+
+    this.teleportTimer -= dt;
+    if (this.teleportTimer <= 0 && dist > cfg.attackRange * 1.2) {
+      this.teleportTimer =
+        (cfg.teleportMin || 2.5) + Math.random() * ((cfg.teleportMax || 4.5) - (cfg.teleportMin || 2.5));
+      const a = Math.random() * Math.PI * 2;
+      const r = 2.5 + Math.random() * 3.5;
+      const nx = playerPos.x + Math.cos(a) * r;
+      const nz = playerPos.z + Math.sin(a) * r;
+      m.position.set(nx, this.world.groundHeight(nx, nz), nz);
+      hooks.onEvent?.("teleport", this);
+    } else if (dist > cfg.attackRange * 0.9) {
+      this.moveToward(playerPos, cfg.chaseSpeed * speedMul, dt, elapsed);
+    }
+
+    if (dist < cfg.attackRange && this.attackCd <= 0) {
+      this.attackCd = cfg.attackCooldown;
+      const dir = new THREE.Vector3().subVectors(playerPos, m.position).setY(0).normalize();
+      hooks.onAttack?.(this.damageNow, dir, this);
+    }
+  }
+
+  /** T-Rex: aproxima e dispara rajadas hitscan. */
+  updateGunner(dt, elapsed, playerPos, dist, speedMul, hooks) {
+    const cfg = this.cfg;
+    const m = this.mesh;
+    const gun = m.userData.gun;
+    if (gun) gun.rotation.z = elapsed * 14;
+
+    if (this.state === "wander") {
+      if (dist < cfg.aggroRange) {
+        this.state = "chase";
+        if (!this.growled) {
+          this.growled = true;
+          hooks.onEvent?.("growl", this);
+        }
+      } else {
+        this.wanderTimer -= dt;
+        if (this.wanderTimer <= 0) {
+          this.wanderTimer = 2 + Math.random() * 3;
+          const a = Math.random() * Math.PI * 2;
+          const r = 6 + Math.random() * 12;
+          this.target.set(this.home.x + Math.cos(a) * r, 0, this.home.z + Math.sin(a) * r);
+        }
+        this.moveToward(this.target, cfg.wanderSpeed * speedMul, dt, elapsed);
+      }
+      return;
+    }
+
+    if (dist > cfg.aggroRange * 2.2) {
+      this.state = "wander";
+      this.growled = false;
+      return;
+    }
+
+    const gunRange = cfg.gunRange || 24;
+    const prefer = gunRange * 0.55;
+    if (dist > prefer) {
+      this.moveToward(playerPos, cfg.chaseSpeed * speedMul, dt, elapsed);
+    } else if (dist < cfg.attackRange * 1.2) {
+      const away = new THREE.Vector3().subVectors(m.position, playerPos).setY(0).normalize();
+      this.moveToward(m.position.clone().addScaledVector(away, 4), cfg.chaseSpeed * 0.7 * speedMul, dt, elapsed);
+    } else {
+      m.rotation.y = Math.atan2(playerPos.x - m.position.x, playerPos.z - m.position.z);
+      m.position.y = this.world.groundHeight(m.position.x, m.position.z);
+    }
+
+    this.burstCd -= dt;
+    if (this.burstLeft <= 0 && this.burstCd <= 0 && dist < gunRange) {
+      this.burstLeft = cfg.burstSize || 5;
+      this.burstCd = cfg.burstGap || 1.35;
+    }
+    if (this.burstLeft > 0 && this.attackCd <= 0 && dist < gunRange) {
+      this.attackCd = cfg.attackCooldown;
+      this.burstLeft -= 1;
+      const origin = m.position.clone();
+      origin.y += 1.6 * (cfg.scale || 1);
+      const dir = new THREE.Vector3().subVectors(playerPos, origin);
+      dir.y += 0.9;
+      dir.normalize();
+      // espalhamento leve
+      dir.x += (Math.random() - 0.5) * 0.08;
+      dir.y += (Math.random() - 0.5) * 0.04;
+      dir.z += (Math.random() - 0.5) * 0.08;
+      dir.normalize();
+      this.world._spawnTracer?.(origin, dir, Math.min(dist + 2, gunRange));
+      hooks.onAttack?.(this.damageNow, dir, this);
+      hooks.onEvent?.("gunfire", this);
+    }
+  }
+
+  /** Boto: emerge do gelo e persegue no lago / terra. */
+  updateBoto(dt, elapsed, playerPos, dist, speedMul, hooks) {
+    const cfg = this.cfg;
+    const m = this.mesh;
+    const fins = m.userData.fins || [];
+    for (let i = 0; i < fins.length; i++) {
+      fins[i].rotation.z = Math.sin(elapsed * 6 + i) * 0.25;
+    }
+
+    if (this.emergeT < 1) {
+      this.emergeT = Math.min(1, this.emergeT + dt * 0.45);
+      const gh = this.world.groundHeight(m.position.x, m.position.z);
+      m.position.y = gh - 1.2 * (1 - this.emergeT);
+      m.rotation.y = Math.atan2(playerPos.x - m.position.x, playerPos.z - m.position.z);
+      if (this.emergeT < 1) return;
+      if (!this.growled) {
+        this.growled = true;
+        hooks.onEvent?.("growl", this);
+      }
+    }
+
+    if (this.state === "wander") {
+      if (dist < cfg.aggroRange) this.state = "chase";
+      else {
+        this.wanderTimer -= dt;
+        if (this.wanderTimer <= 0) {
+          this.wanderTimer = 2 + Math.random() * 3;
+          const a = Math.random() * Math.PI * 2;
+          const r = 4 + Math.random() * 10;
+          this.target.set(this.home.x + Math.cos(a) * r, 0, this.home.z + Math.sin(a) * r);
+        }
+        this.moveToward(this.target, cfg.wanderSpeed * speedMul, dt, elapsed);
+      }
+      return;
+    }
+
+    if (dist > cfg.aggroRange * 2.5) {
+      this.state = "wander";
+      this.growled = false;
+      return;
+    }
+    if (dist > cfg.attackRange * 0.85) {
+      this.moveToward(playerPos, cfg.chaseSpeed * speedMul, dt, elapsed);
+    }
     if (dist < cfg.attackRange && this.attackCd <= 0) {
       this.attackCd = cfg.attackCooldown;
       const dir = new THREE.Vector3().subVectors(playerPos, m.position).setY(0).normalize();
@@ -741,4 +1121,24 @@ export function spawnPointFar(world, minDistFromOrigin = 35) {
     }
   }
   return new THREE.Vector3(world.bounds * 0.55, 0, world.bounds * 0.55);
+}
+
+/** Ponto no lago congelado (altura natural abaixo do nível da água). */
+export function spawnPointOnIce(world) {
+  for (let tries = 0; tries < 80; tries++) {
+    const a = Math.random() * Math.PI * 2;
+    const r = 8 + Math.random() * (world.bounds * 0.55);
+    const x = Math.cos(a) * r;
+    const z = Math.sin(a) * r;
+    if (world.isOnIce(x, z)) {
+      return new THREE.Vector3(x, 0, z);
+    }
+  }
+  // fallback: varre em grade perto da origem
+  for (let x = -40; x <= 40; x += 4) {
+    for (let z = -40; z <= 40; z += 4) {
+      if (world.isOnIce(x, z)) return new THREE.Vector3(x, 0, z);
+    }
+  }
+  return new THREE.Vector3(12, 0, -18);
 }

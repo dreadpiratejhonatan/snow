@@ -74,6 +74,7 @@ export function captureGameState(game) {
     itemsCollected,
     speedrunMs: game.speedrun?.ms ?? 0,
     speedrunStarted: !!game.speedrun?.started,
+    difficulty: game.difficultyId || "medium",
   };
 }
 
@@ -81,6 +82,8 @@ export function captureGameState(game) {
 export function applyGameState(game, data) {
   if (!data) return false;
   const s = CONFIG.survival;
+  if (data.difficulty) game.setDifficulty?.(data.difficulty, { thinPickups: false });
+  else game.setDifficulty?.(game.difficultyId || "medium", { thinPickups: false });
   game.dayTime = data.dayTime ?? game.dayTime;
   game.health = data.health ?? game.health;
   game.warmth = data.warmth ?? game.warmth;
