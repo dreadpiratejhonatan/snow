@@ -83,9 +83,9 @@ export class Player {
     const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.055, 0.14, 8), skin);
     neck.position.y = 1.68;
 
-    // Cabeça cubo: rosto na frente (+Z) e nas costas (−Z).
-    // Em 3ª pessoa a câmera fica atrás — sem textura no −Z o jogador só via cubo branco.
-    const headMats = [skin, skin, skin, skin, face, face];
+    // Cabeça cubo: rosto SÓ na frente (+Z). Costas = pele (3ª pessoa vê a nuca, não o rosto).
+    // mesh.rotation.y = yaw+π faz +Z local apontar na direção do olhar.
+    const headMats = [skin, skin, skin, skin, face, skin];
     const head = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.3, 0.28), headMats);
     head.position.y = 1.88;
     this.headMesh = head;
