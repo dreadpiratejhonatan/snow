@@ -51,7 +51,6 @@ const PROC_TRACKS = [
     density: 0.72,
     bright: 0.08,
     length: 36,
-    main: true,
   },
   {
     id: "key-soft",
@@ -220,7 +219,8 @@ export class MusicPlayer {
     if (!ctx || !master || this.ready) return;
 
     this.bus = ctx.createGain();
-    this.bus.gain.value = 0.58; // trilha principal mais presente sob o vento
+    // Baixo com presença (Minecraft / Vintage Story) — não some, não grita
+    this.bus.gain.value = 0.52;
     this.bus.connect(master);
 
     // camada de tensão (combate) — some por cima da exploração
@@ -229,19 +229,12 @@ export class MusicPlayer {
     this.combatBus.connect(master);
     this.setupCombatLayer(ctx);
 
-    // 1) Começa JÁ com trilha procedural (faixa principal Minecraft primeiro).
+    // 1) Playlist procedural aleatória (embaralha a cada entrada)
     this.mode = "proc";
     this.setupProcGraph(ctx);
     const proc = freshPlaylist(PROC_TRACKS, "id");
     this.playlist = proc.list;
-    // Garante a faixa principal (Planície Quiet) como primeira da sessão
-    const mainIdx = this.playlist.findIndex((t) => t.main);
-    this.index = mainIdx >= 0 ? mainIdx : proc.start;
-    if (mainIdx > 0) {
-      const [main] = this.playlist.splice(mainIdx, 1);
-      this.playlist.unshift(main);
-      this.index = 0;
-    }
+    this.index = proc.start;
     this.beginProcTrack(this.playlist[this.index]);
     this.ready = true;
     this.onTrack?.(this.playlist[this.index]?.name || "Trilha");
@@ -431,7 +424,7 @@ export class MusicPlayer {
     this.padFilter.frequency.value = 520;
     this.padFilter.Q.value = 0.4;
     this.padGain = ctx.createGain();
-    this.padGain.gain.value = 0.42;
+    this.padGain.gain.value = 0.32; // fundo sob o piano
     this.padFilter.connect(this.padGain).connect(this.bus);
 
     this.padOsc = [0, 1, 2, 3].map((i) => {
@@ -440,7 +433,7 @@ export class MusicPlayer {
       o.type = i % 2 === 0 ? "sine" : "triangle";
       o.frequency.value = 110;
       const g = ctx.createGain();
-      g.gain.value = i === 0 ? 0.07 : 0.034;
+      g.gain.value = i === 0 ? 0.055 : 0.028;
       o.connect(g).connect(this.padFilter);
       o.start();
       return { o, g };
@@ -490,7 +483,7 @@ export class MusicPlayer {
       this.padOsc[i].o.frequency.setValueAtTime(cur, t);
       this.padOsc[i].o.frequency.exponentialRampToValueAtTime(Math.max(40, f), t + 2.5);
       this.padOsc[i].o.type = "sine";
-      const vol = i === 0 ? 0.12 : i === 1 ? 0.08 : 0.05;
+      const vol = i === 0 ? 0.09 : i === 1 ? 0.06 : 0.038;
       this.padOsc[i].g.gain.setTargetAtTime(vol, t, 1.2);
     }
   }
@@ -533,11 +526,11 @@ export class MusicPlayer {
     const dur = Math.max(1.1, beats * this.beat * 1.35);
     const t0 = ctx.currentTime;
 
-    // "piano" Minecraft: ataque lento, release longo, leve detune
+    // "piano" Minecraft: suave, emocional, audível sob o vento
     const voices = [
-      ["sine", 0.26, 0.12, 1],
-      ["triangle", 0.11, 0.16, 1.003],
-      ["sine", 0.05, 0.22, 0.997],
+      ["sine", 0.22, 0.12, 1],
+      ["triangle", 0.095, 0.16, 1.003],
+      ["sine", 0.045, 0.22, 0.997],
     ];
     for (const [type, vol, attack, ratio] of voices) {
       const osc = ctx.createOscillator();
@@ -585,8 +578,8 @@ export class MusicPlayer {
     this._moodBlend += (want - this._moodBlend) * Math.min(1, dt * 1.8);
 
     if (this.bus) {
-      // exploração bem audível (clima Minecraft); combate abaixa um pouco
-      const exploreVol = (0.62 - this._moodBlend * 0.14) * dangerMul;
+      // baixo com presença; combate abaixa um pouco
+      const exploreVol = (0.52 - this._moodBlend * 0.12) * dangerMul;
       this.bus.gain.value += (exploreVol - this.bus.gain.value) * Math.min(1, dt * 2);
     }
     if (this.combatBus) {
@@ -598,7 +591,7 @@ export class MusicPlayer {
       this._combatPad.frequency.setTargetAtTime(f, ctx.currentTime, 0.3);
     }
     if (this.fileAudio && !this.fileAudio.paused) {
-      this.fileAudio.volume = (0.42 - this._moodBlend * 0.12) * dangerMul;
+      this.fileAudio.volume = (0.48 - this._moodBlend * 0.1) * dangerMul;
     }
 
     // pulso de tensão no combate
