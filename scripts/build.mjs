@@ -54,7 +54,7 @@ fs.mkdirSync(path.join(DIST, "styles"), { recursive: true });
 fs.copyFileSync("src/styles/styles.css", path.join(DIST, "styles", "styles.css"));
 
 execSync(
-  "npx --yes esbuild src/js/main.js --bundle --format=esm --outfile=dist/game.js --minify --legal-comments=none",
+  "npx esbuild src/js/main.js --bundle --format=esm --outfile=dist/game.js --minify --legal-comments=none",
   { stdio: "inherit" }
 );
 
@@ -158,12 +158,17 @@ fs.writeFileSync(
 );
 
 const zipPath = path.join("release", "snow.zip");
-if (fs.existsSync(zipPath)) fs.unlinkSync(zipPath);
-execSync(
-  `powershell -Command "Compress-Archive -Path '${HOST.replace(/\\/g, "/")}/*' -DestinationPath '${zipPath.replace(/\\/g, "/")}' -Force"`,
-  { stdio: "inherit" }
-);
+if (process.platform === "win32") {
+  if (fs.existsSync(zipPath)) fs.unlinkSync(zipPath);
+  execSync(
+    `powershell -Command "Compress-Archive -Path '${HOST.replace(/\\/g, "/")}/*' -DestinationPath '${zipPath.replace(/\\/g, "/")}' -Force"`,
+    { stdio: "inherit" }
+  );
+} else {
+  // GitHub Actions / Linux: dist/ já basta para Pages; zip HostGator é opcional
+  console.log("Skip release/snow.zip (PowerShell só no Windows)");
+}
 
 const sizeMb = (fs.statSync(path.join(DIST, "game.js")).size / (1024 * 1024)).toFixed(2);
 console.log(`BUILD OK — game.js ${sizeMb} MB`);
-console.log(`HostGator: ${HOST}/  e  release/snow.zip`);
+console.log(`HostGator: ${HOST}/` + (process.platform === "win32" ? "  e  release/snow.zip" : ""));

@@ -21,6 +21,7 @@
     "three": "^0.185.1"
   },
   "devDependencies": {
+    "esbuild": "^0.25.5",
     "puppeteer-core": "^25.3.0",
     "serve": "^14.2.6"
   }
