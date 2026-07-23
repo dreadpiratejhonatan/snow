@@ -8,7 +8,7 @@ import { execSync } from "node:child_process";
 process.chdir(path.dirname(path.dirname(fileURLToPath(import.meta.url))));
 const DIST = "dist";
 const HOST = path.join("release", "hostgator-snow");
-const CACHE = "gh31";
+const CACHE = "gh32";
 
 /**
  * Copia data/ para o destino.
@@ -71,6 +71,7 @@ fs.writeFileSync(path.join(DIST, "index.html"), html);
 for (const splash of [
   "splash_screen.png",
   "splash_screen.jpeg",
+  "sc1.jpeg",
   "sc2.jpeg",
   "sc3.jpeg",
   "sc4.jpeg",
@@ -129,6 +130,7 @@ fs.copyFileSync("src/styles/styles.css", path.join(HOST, "src", "styles", "style
 for (const splash of [
   "splash_screen.png",
   "splash_screen.jpeg",
+  "sc1.jpeg",
   "sc2.jpeg",
   "sc3.jpeg",
   "sc4.jpeg",

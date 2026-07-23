@@ -9,7 +9,7 @@ Com jogadores no ranking, **nunca apague** `data/leaderboard.json` no servidor.
 1. Entre em `public_html/snow/`
 2. **Backup:** baixe `data/leaderboard.json` para o PC
 3. **Deixe a pasta** `data/` **intacta**
-4. Apague apenas: `index.html`, `src/`, `api/`, `music/`, `faces/`, `splash_screen.*`, `sc2.jpeg`, `sc3.jpeg`, `sc4.jpeg`
+4. Apague apenas: `index.html`, `src/`, `api/`, `music/`, `faces/`, `splash_screen.*`, `sc1.jpeg`…`sc4.jpeg`
 5. Extraia o `snow.zip` novo ali
 6. Se o zip trouxe `data/` sem `leaderboard.json`, está correto — o PHP cria o arquivo se faltar; o ranking antigo permanece
 7. Se por engano sobrescreveu o JSON, restaure o backup do passo 2

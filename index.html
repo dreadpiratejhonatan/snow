@@ -24,18 +24,18 @@
 </head>
 <body>
   <div id="app">
-    <!-- Launcher / splash — carrossel (1920×1080, contain). Adicione sc3.jpeg / sc4.jpeg se quiser. -->
+    <!-- Launcher / splash — carrossel sc1…sc4 (contain). Fallback: splash_screen. -->
     <div id="splash" class="splash" aria-hidden="false">
       <div class="splash__stage">
         <div id="splash-track" class="splash__track">
           <img
             class="splash__slide is-active"
-            src="splash_screen.png"
+            src="sc1.jpeg"
             alt="Neve Selvagem"
             width="1920"
             height="1080"
             decoding="async"
-            data-splash-src="splash_screen.png"
+            data-splash-src="sc1.jpeg"
           />
           <img
             class="splash__slide"
@@ -54,7 +54,6 @@
             height="1080"
             decoding="async"
             data-splash-src="sc3.jpeg"
-            hidden
           />
           <img
             class="splash__slide"
@@ -64,6 +63,15 @@
             height="1080"
             decoding="async"
             data-splash-src="sc4.jpeg"
+          />
+          <img
+            class="splash__slide"
+            src="splash_screen.png"
+            alt="Neve Selvagem"
+            width="1920"
+            height="1080"
+            decoding="async"
+            data-splash-src="splash_screen.png"
             hidden
           />
         </div>
@@ -400,6 +408,6 @@
     </div>
   </div>
 
-  <script type="module" src="src/js/main.js?v=gh31"></script>
+  <script type="module" src="src/js/main.js?v=gh32"></script>
 </body>
 </html>
