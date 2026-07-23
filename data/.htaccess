@@ -1,0 +1,2 @@
+# Impede download direto do JSON / arquivos de rate-limit
+Require all denied

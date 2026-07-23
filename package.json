@@ -1,0 +1,27 @@
+{
+  "name": "neve-selvagem",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Sobrevivência 3D na neve no navegador — explore, colete itens, enfrente o urso e abasteça a base",
+  "scripts": {
+    "setup": "npm install",
+    "start": "serve -l tcp://127.0.0.1:5173",
+    "start:win": "powershell -ExecutionPolicy Bypass -File scripts/start.ps1",
+    "dev": "npm run start",
+    "build": "node scripts/build.mjs",
+    "preview": "serve dist -l tcp://127.0.0.1:5180",
+    "package:win": "npm run build",
+    "pages:preview": "npm run build && npm run preview",
+    "github:setup": "powershell -ExecutionPolicy Bypass -File scripts/github-setup.ps1",
+    "test:smoke": "node tests/smoke-test.mjs",
+    "test:browser": "node tests/browser-test.mjs"
+  },
+  "dependencies": {
+    "three": "^0.185.1"
+  },
+  "devDependencies": {
+    "puppeteer-core": "^25.3.0",
+    "serve": "^14.2.6"
+  }
+}

@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="description" content="Neve Selvagem: sobrevivência 3D na neve no navegador. Colete itens, arme-se, enfrente lobos e o urso alfa, use armadilhas e dispute o ranking de tempo." />
+  <meta name="theme-color" content="#1a1f2e" />
+  <title>Neve Selvagem — sobrevivência 3D no navegador</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>❄️</text></svg>" />
+  <link rel="stylesheet" href="src/styles/styles.css" />
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "/node_modules/three/build/three.module.js",
+      "three/addons/": "/node_modules/three/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+<body>
+  <div id="app">
+    <!-- Launcher / splash (arte 1920×1080, contain, sem esticar) -->
+    <div id="splash" class="splash" aria-hidden="false">
+      <img
+        id="splash-img"
+        class="splash__img"
+        src="splash_screen.png"
+        alt="Sobrevivência na Neve Geométrica"
+        width="1920"
+        height="1080"
+        decoding="async"
+      />
+      <aside class="dedication dedication--splash" aria-label="Dedicatórias">
+        <p class="dedication__kicker">Este jogo é dedicado a</p>
+        <div class="dedication__row">
+          <div class="dedication__card">
+            <span class="dedication__name">CAIO</span>
+            <span class="dedication__role">Primeiro a testar</span>
+          </div>
+          <div class="dedication__sep" aria-hidden="true"></div>
+          <div class="dedication__card">
+            <span class="dedication__name">JORGE</span>
+            <span class="dedication__role">Primeiro a zerar</span>
+          </div>
+        </div>
+      </aside>
+      <p class="splash__skip">Clique ou toque para continuar</p>
+    </div>
+
+    <canvas id="game-canvas" tabindex="0"></canvas>
+
+    <div id="hud" class="hud" hidden>
+      <div class="hud__crosshair" aria-hidden="true">
+        <span></span><span></span><span></span><span></span>
+      </div>
+
+      <div class="hud__status">
+        <div class="hud__bar">
+          <span class="hud__bar-label">❤</span>
+          <div class="hud__bar-track"><div id="health-fill" class="hud__bar-fill hud__bar-fill--health"></div></div>
+        </div>
+        <div class="hud__bar">
+          <span class="hud__bar-label">🔥</span>
+          <div class="hud__bar-track"><div id="warmth-fill" class="hud__bar-fill hud__bar-fill--warmth"></div></div>
+        </div>
+        <div id="items-info" class="hud__items">🎒 0 · 📦 0/10</div>
+      </div>
+
+      <!-- Inventário de armas: clique ou teclas 1–9/0 para equipar -->
+      <div id="inv-bar" class="inv-bar" role="toolbar" aria-label="Inventário de armas">
+        <div class="inv-bar__title">Armas <span class="inv-bar__hint">I / B abre · clique ou 1-9/0 equipa</span></div>
+        <div id="inv-slots" class="inv-bar__slots"></div>
+        <div id="inv-detail" class="inv-bar__detail">✊ Punhos — dano 12</div>
+      </div>
+
+      <canvas id="minimap" class="hud__minimap" width="180" height="180"></canvas>
+
+      <div id="bear-info" class="hud__bear" hidden>
+        <span id="enemy-label" class="hud__bar-label">Urso</span>
+        <div class="hud__bar-track"><div id="bear-fill" class="hud__bar-fill hud__bar-fill--bear"></div></div>
+      </div>
+
+      <div id="camera-mode" class="hud__camera">1ª pessoa</div>
+      <div id="speedrun-timer" class="hud__timer">00:00.00</div>
+      <div id="ghost-timer" class="hud__ghost" hidden>
+        <div id="ghost-label" class="hud__ghost-label">Recorde Top 1</div>
+        <div id="ghost-countdown" class="hud__ghost-count">--:--.--</div>
+      </div>
+      <div id="time-of-day" class="hud__time">🌞 08:00</div>
+
+      <div id="click-hint" class="hud__hint">Clique para capturar o mouse</div>
+      <div id="interact-hint" class="hud__interact" hidden></div>
+      <div id="trap-info" class="hud__traps">Armadilha: ▸☢1 · 🥩1 · 🧱0 · [G] tipo · [F] colocar</div>
+      <div id="hud-msg" class="hud__msg"></div>
+      <div id="damage-flash" class="hud__flash"></div>
+
+      <div id="tutorial-banner" class="tutorial-banner" hidden>
+        <p id="tutorial-hint" class="tutorial-banner__hint">Tutorial</p>
+        <button type="button" id="tutorial-skip" class="tutorial-banner__skip">Pular tutorial</button>
+      </div>
+
+      <button type="button" id="btn-help-hud" class="hud__help-btn" title="Ajuda (H)" aria-label="Abrir ajuda">?</button>
+
+      <div class="hud__bottom">
+        <div class="hud__controls">WASD · 1-9/0 arma · R recarga · I inventário · E pegar · G/F armadilha · C craft · H ajuda</div>
+      </div>
+    </div>
+
+    <!-- Controles touch (visíveis só no celular) -->
+    <div id="touch-controls" class="touch" hidden>
+      <div id="touch-look" class="touch__look"></div>
+      <div id="touch-stick" class="touch__stick" aria-label="Mover">
+        <div id="touch-knob" class="touch__knob"></div>
+      </div>
+      <div class="touch__actions">
+        <button type="button" id="btn-pause" class="touch-btn touch-btn--small">Ⅱ</button>
+        <button type="button" id="btn-help" class="touch-btn touch-btn--small">?</button>
+        <button type="button" id="btn-camera" class="touch-btn touch-btn--small">👁</button>
+        <button type="button" id="btn-inv" class="touch-btn touch-btn--small">🎒</button>
+        <button type="button" id="btn-weapon" class="touch-btn touch-btn--small">⚔</button>
+        <button type="button" id="btn-trap-cycle" class="touch-btn touch-btn--small">Trap</button>
+        <button type="button" id="btn-trap-place" class="touch-btn touch-btn--small">F</button>
+        <button type="button" id="btn-sprint" class="touch-btn">🏃</button>
+        <button type="button" id="btn-interact" class="touch-btn">◉</button>
+        <button type="button" id="btn-jump" class="touch-btn touch-btn--big">⤒</button>
+        <button type="button" id="btn-attack" class="touch-btn touch-btn--big touch-btn--attack">⚔</button>
+      </div>
+    </div>
+
+    <div id="boot-error" class="boot-error" hidden></div>
+
+    <!-- Continuar expedição salva -->
+    <div id="continue-menu" class="continue-menu" hidden aria-hidden="true">
+      <div class="continue-menu__panel">
+        <h2 class="continue-menu__title">Expedição salva</h2>
+        <p id="continue-summary" class="continue-menu__summary">Há um progresso guardado neste aparelho.</p>
+        <button id="btn-continue-game" type="button" class="menu__btn">Continuar</button>
+        <button id="btn-new-game" type="button" class="menu__btn menu__btn--ghost">Novo jogo</button>
+      </div>
+    </div>
+
+    <!-- Escolha de skin (1º acesso / pause) -->
+    <div id="skin-picker" class="skin-picker" hidden aria-hidden="true">
+      <div class="skin-picker__panel">
+        <h2 class="skin-picker__title">Escolha sua skin</h2>
+        <p class="skin-picker__sub">Mesmo agente, visual diferente. Pode trocar depois no pause.</p>
+        <div id="skin-grid" class="skin-picker__grid"></div>
+        <button id="skin-confirm" type="button" class="menu__btn">Jogar com esta</button>
+      </div>
+    </div>
+
+    <div id="overlay" class="overlay" hidden>
+      <div class="overlay__panel">
+        <h2 id="overlay-title">Pausado</h2>
+        <p id="overlay-msg">Pressione o botão para continuar.</p>
+        <div id="win-panel" class="win-panel" hidden>
+          <aside class="dedication dedication--win" aria-label="Dedicatórias">
+            <p class="dedication__kicker">Lendas da neve</p>
+            <div class="dedication__row">
+              <div class="dedication__card">
+                <span class="dedication__name">CAIO</span>
+                <span class="dedication__role">Primeiro a testar</span>
+              </div>
+              <div class="dedication__sep" aria-hidden="true"></div>
+              <div class="dedication__card dedication__card--hero">
+                <span class="dedication__name">JORGE</span>
+                <span class="dedication__role">Primeiro a zerar o jogo</span>
+              </div>
+            </div>
+          </aside>
+          <p id="win-time" class="win-panel__time"></p>
+          <label class="win-panel__label" for="player-name">Seu nome no ranking</label>
+          <input id="player-name" class="win-panel__input" type="text" maxlength="16" placeholder="Sobrevivente" autocomplete="nickname" />
+          <button id="btn-submit-score" type="button" class="menu__btn">Enviar tempo</button>
+          <p id="score-status" class="win-panel__status"></p>
+          <h3 class="win-panel__board-title">Melhores tempos</h3>
+          <ol id="leaderboard-list" class="win-panel__list"></ol>
+        </div>
+        <aside class="dedication dedication--pause" id="dedication-pause" aria-label="Dedicatórias">
+          <p class="dedication__line">
+            Dedicado a <strong>CAIO</strong> <span class="dedication__muted">(1º a testar)</span>
+            · <strong>JORGE</strong> <span class="dedication__muted">(1º a zerar)</span>
+          </p>
+        </aside>
+        <button id="btn-resume" type="button" class="menu__btn">Continuar</button>
+        <button id="btn-help-pause" type="button" class="menu__btn menu__btn--ghost">Ajuda / FAQ</button>
+        <button id="btn-skin" type="button" class="menu__btn menu__btn--ghost">Trocar skin</button>
+        <button id="btn-restart" type="button" class="menu__btn menu__btn--ghost">Reiniciar</button>
+      </div>
+    </div>
+
+    <!-- Ajuda / FAQ (H ou botão ?) — reduz dúvidas de novos jogadores -->
+    <div id="help-overlay" class="help-overlay" hidden aria-hidden="true">
+      <div class="help-overlay__panel" role="dialog" aria-labelledby="help-title">
+        <h2 id="help-title">Ajuda — Neve Selvagem</h2>
+        <aside class="dedication dedication--help" aria-label="Dedicatórias">
+          <p class="dedication__kicker">Dedicado a</p>
+          <div class="dedication__row">
+            <div class="dedication__card">
+              <span class="dedication__name">CAIO</span>
+              <span class="dedication__role">Primeiro a testar</span>
+            </div>
+            <div class="dedication__sep" aria-hidden="true"></div>
+            <div class="dedication__card">
+              <span class="dedication__name">JORGE</span>
+              <span class="dedication__role">Primeiro a zerar</span>
+            </div>
+          </div>
+        </aside>
+        <h3 class="help-overlay__h">Controles</h3>
+        <ul class="help-overlay__list">
+          <li><kbd>WASD</kbd> mover · <kbd>Shift</kbd> correr · <kbd>Espaço</kbd> pular</li>
+          <li><kbd>E</kbd> pegar item / depositar no baú</li>
+          <li><kbd>I</kbd> inventário · <kbd>1–9</kbd>/<kbd>0</kbd> trocar arma</li>
+          <li><kbd>G</kbd> tipo de armadilha · <kbd>F</kbd> colocar (perto da fogueira)</li>
+          <li><kbd>V</kbd> / <kbd>Tab</kbd> 1ª / 3ª pessoa · clique atacar</li>
+          <li><kbd>H</kbd> esta ajuda · <kbd>Esc</kbd> pausar (ou pular tutorial)</li>
+        </ul>
+        <h3 class="help-overlay__h">Perguntas frequentes</h3>
+        <dl class="help-overlay__faq">
+          <dt>Peguei flechas e não vi o arco</dt>
+          <dd>Flechas liberam o <strong>Arco</strong>. Abra o inventário (<kbd>I</kbd>) — o slot deixa de ser 🔒.</dd>
+          <dt>Arma sumiu / personagem branco na neve</dt>
+          <dd>Em 1ª pessoa a arma fica na câmera; use <kbd>V</kbd> para 3ª pessoa. Skin Ártico é clara — troque no pause.</dd>
+          <dt>Morri e perdi tudo?</dt>
+          <dd>O que você carregava cai no chão perto do local da morte. O que já estava no <strong>baú</strong> fica seguro.</dd>
+          <dt>Como entro no ranking?</dt>
+          <dd>Deposite todos os itens (incluindo o Troféu), vença e envie o nome. No GitHub Pages o ranking fica só neste navegador; ranking compartilhado é na HostGator.</dd>
+          <dt>O minimapa gira?</dt>
+          <dd>Sim — a frente do personagem é sempre para cima no mapa. A seta branca fica no centro.</dd>
+          <dt>Perdi o progresso ao fechar?</dt>
+          <dd>O jogo auto-salva. Na próxima vez escolha <strong>Continuar</strong>. Revólver/escopeta/AK: <kbd>R</kbd> recarrega. Cerca: <kbd>C</kbd> na fogueira (gasta 1 da mochila).</dd>
+        </dl>
+        <button id="btn-help-close" type="button" class="menu__btn">Fechar (H / Esc)</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="src/js/main.js?v=gh1"></script>
+</body>
+</html>
