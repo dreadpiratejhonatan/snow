@@ -962,17 +962,25 @@ export class Enemy {
       this.burstLeft -= 1;
       const origin = m.position.clone();
       origin.y += 1.6 * (cfg.scale || 1);
-      const dir = new THREE.Vector3().subVectors(playerPos, origin);
-      dir.y += 0.9;
+      // mira no peito/olhos do jogador (LOS real)
+      const aimAt = playerPos.clone();
+      aimAt.y += 1.15;
+      const toPlayer = new THREE.Vector3().subVectors(aimAt, origin);
+      const range3 = Math.min(toPlayer.length(), gunRange);
+      const dir = toPlayer.normalize();
+      // espalhamento leve (só visual / chance de “errar” o LOS limpo)
+      dir.x += (Math.random() - 0.5) * 0.06;
+      dir.y += (Math.random() - 0.5) * 0.03;
+      dir.z += (Math.random() - 0.5) * 0.06;
       dir.normalize();
-      // espalhamento leve
-      dir.x += (Math.random() - 0.5) * 0.08;
-      dir.y += (Math.random() - 0.5) * 0.04;
-      dir.z += (Math.random() - 0.5) * 0.08;
-      dir.normalize();
-      this.world._spawnTracer?.(origin, dir, Math.min(dist + 2, gunRange));
-      hooks.onAttack?.(this.damageNow, dir, this);
+
+      const cover = this.world.rayHitsCover?.(origin, dir, range3);
+      const tracerLen = cover ? cover.dist : Math.min(range3 + 1.5, gunRange);
+      this.world._spawnTracer?.(origin, dir, tracerLen);
       hooks.onEvent?.("gunfire", this);
+      // Árvore/pedra/obstáculo = cobertura: traçador para no obstáculo, sem dano
+      if (cover) return;
+      hooks.onAttack?.(this.damageNow, dir, this);
     }
   }
 

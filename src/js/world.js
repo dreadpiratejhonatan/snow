@@ -258,7 +258,17 @@ export class World {
     g.userData.phase = Math.random() * Math.PI * 2;
     this.scene.add(g);
     this.trees.push(g);
-    this.colliders.push({ x, z, y: h, r: 0.35 * s, top: h + 4, climbable: false });
+    // r = tronco (movimento); coverR maior = copa/tronco bloqueiam tiros
+    this.colliders.push({
+      x,
+      z,
+      y: h,
+      r: 0.35 * s,
+      coverR: Math.max(0.75, 0.95 * s),
+      top: h + trunkH * s + 3.2,
+      climbable: false,
+      cover: true,
+    });
   }
 
   scatterTrees() {
@@ -298,8 +308,10 @@ export class World {
         z,
         y: h,
         r: Math.max(0.45, r * 0.72),
+        coverR: Math.max(0.55, r * 0.9),
         top,
         climbable: true,
+        cover: true,
       });
     }
   }
@@ -1654,7 +1666,71 @@ export class World {
   }
 
   /**
+   * Raio vs cilindros de cobertura (árvores, pedras, cabana, cercas…).
+   * Bloqueia tiros se o impacto em Y estiver abaixo do topo do obstáculo.
+   * @returns {{ dist: number, collider: object } | null}
+   */
+  rayHitsCover(origin, dir, maxDist) {
+    if (!origin || !dir || !(maxDist > 0)) return null;
+    const dx = dir.x;
+    const dz = dir.z;
+    const a = dx * dx + dz * dz;
+    if (a < 1e-8) return null;
+
+    let bestT = maxDist;
+    let best = null;
+    const ox = origin.x;
+    const oy = origin.y;
+    const oz = origin.z;
+
+    for (const c of this.colliders) {
+      if (!c) continue;
+      const cr = c.coverR ?? c.r;
+      if (!(cr >= 0.25)) continue;
+      const top = c.top ?? (c.y || 0) + 3;
+      const bottom = (c.y ?? 0) - 0.6;
+      const fx = ox - c.x;
+      const fz = oz - c.z;
+      const b = 2 * (fx * dx + fz * dz);
+      const cc = fx * fx + fz * fz - cr * cr;
+      const disc = b * b - 4 * a * cc;
+      if (disc < 0) continue;
+      const sqrtD = Math.sqrt(disc);
+      const inv = 0.5 / a;
+      const tNear = (-b - sqrtD) * inv;
+      const tFar = (-b + sqrtD) * inv;
+      for (const t of [tNear, tFar]) {
+        if (t < 0.2 || t >= bestT) continue;
+        const yHit = oy + dir.y * t;
+        if (yHit > top + 0.12) continue; // por cima da pedra/árvore
+        if (yHit < bottom) continue;
+        bestT = t;
+        best = c;
+      }
+    }
+    return best ? { dist: bestT, collider: best } : null;
+  }
+
+  /** Ponto dentro de um cilindro de cobertura? */
+  pointInCover(pos) {
+    if (!pos) return null;
+    for (const c of this.colliders) {
+      if (!c) continue;
+      const cr = c.coverR ?? c.r;
+      if (!(cr >= 0.25)) continue;
+      const top = c.top ?? (c.y || 0) + 3;
+      if (pos.y > top + 0.12) continue;
+      if (pos.y < (c.y ?? 0) - 0.6) continue;
+      const dx = pos.x - c.x;
+      const dz = pos.z - c.z;
+      if (dx * dx + dz * dz <= cr * cr) return c;
+    }
+    return null;
+  }
+
+  /**
    * Tiro instantâneo (raycast simplificado): inimigo mais próximo ao longo do raio.
+   * Obstáculos (árvore/pedra/etc.) bloqueiam antes do alvo.
    * @returns {{ enemy, dist } | null}
    */
   hitscan(origin, dir, dmg, maxDist = 50, opts = {}) {
@@ -1675,7 +1751,10 @@ export class World {
         best = e;
       }
     }
-    this._spawnTracer(origin, dir, best ? bestT : Math.min(maxDist, 40));
+    const cover = this.rayHitsCover(origin, dir, best ? bestT : Math.min(maxDist, 40));
+    const tracerDist = cover ? cover.dist : best ? bestT : Math.min(maxDist, 40);
+    this._spawnTracer(origin, dir, tracerDist);
+    if (cover && (!best || cover.dist < bestT - 0.05)) return null;
     if (!best) return null;
     this._applyDamage(best, dmg, { ...opts, from: origin });
     return { enemy: best, dist: bestT };
@@ -1759,11 +1838,36 @@ export class World {
       }
       if (p.resting) continue;
 
+      const prev = p.mesh.position.clone();
       p.vel.y -= gravity * dt * (p.kind === "grenade" ? 1.3 : 0.55);
       p.mesh.position.addScaledVector(p.vel, dt);
       if (p.kind !== "grenade") {
         const dirN = p.vel.clone().normalize();
         p.mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dirN);
+      }
+
+      // cobertura: flecha/granada param em árvore/pedra
+      {
+        const travel = new THREE.Vector3().subVectors(p.mesh.position, prev);
+        const travelLen = travel.length();
+        if (travelLen > 1e-4) {
+          const tdir = travel.clone().multiplyScalar(1 / travelLen);
+          const coverHit = this.rayHitsCover(prev, tdir, travelLen + 0.05);
+          if (coverHit || this.pointInCover(p.mesh.position)) {
+            const stopDist = coverHit ? coverHit.dist : 0;
+            if (coverHit) p.mesh.position.copy(prev).addScaledVector(tdir, Math.max(0.05, stopDist - 0.05));
+            if (p.kind === "grenade") {
+              this.explodeAt(p.mesh.position.clone(), p.damage, p.explodeRadius || 5);
+              this.scene.remove(p.mesh);
+              this.projectiles.splice(i, 1);
+              continue;
+            }
+            p.resting = true;
+            p.ttl = Math.min(p.ttl, 2.5);
+            p.vel.set(0, 0, 0);
+            continue;
+          }
+        }
       }
 
       // impacto em inimigo (só flechas — granada explode pelo fuse)
@@ -2238,9 +2342,11 @@ export class World {
         z,
         y,
         r: cfg.radius || 1.1,
+        coverR: (cfg.radius || 1.1) * 1.05,
         top: y + 1.4,
         climbable: false,
         temporary: true,
+        cover: true,
       };
       this.colliders.push(col);
       trap.collider = col;
