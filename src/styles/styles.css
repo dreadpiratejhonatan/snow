@@ -983,6 +983,10 @@ kbd {
   border-radius: 10px;
   background: linear-gradient(180deg, #4a9eae, #2a6f7e);
   color: #fff;
+  text-align: center;
+  text-decoration: none;
+  font: inherit;
+  cursor: pointer;
   font-family: var(--hud-font);
   font-size: 1rem;
   font-weight: 700;
@@ -1704,6 +1708,10 @@ body.is-touch .inv-bar__hint {
   font-size: 0.86rem;
   color: #a8b8c6;
   line-height: 1.4;
+}
+
+.help-overlay__faq a {
+  color: var(--accent);
 }
 
 .help-overlay kbd {

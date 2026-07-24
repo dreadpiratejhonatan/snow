@@ -8,3 +8,6 @@ faces/_preview.png
 *.log
 .env
 .env.*
+data/tickets-admin.key
+data/tickets-rate.json
+data/tickets.json

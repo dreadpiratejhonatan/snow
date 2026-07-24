@@ -8,14 +8,16 @@ import { execSync } from "node:child_process";
 process.chdir(path.dirname(path.dirname(fileURLToPath(import.meta.url))));
 const DIST = "dist";
 const HOST = path.join("release", "hostgator-snow");
-const CACHE = "gh35";
+const CACHE = "gh36";
+
+/** Arquivos de dados vivos no servidor — nunca clobber no pacote HostGator. */
+const PRESERVE_DATA = new Set(["leaderboard.json", "tickets.json", "tickets-rate.json", "tickets-admin.key"]);
 
 /**
  * Copia data/ para o destino.
- * omitLeaderboard: true no pacote HostGator — o zip NÃO leva leaderboard.json
- * (upload não pode apagar o ranking do servidor).
+ * omitLiveData: true no pacote HostGator — zip NÃO leva ranking/tickets vivos.
  */
-function copyDataDir(destRoot, { omitLeaderboard = false } = {}) {
+function copyDataDir(destRoot, { omitLiveData = false } = {}) {
   const srcDir = "data";
   const destDir = path.join(destRoot, "data");
   fs.mkdirSync(destDir, { recursive: true });
@@ -24,10 +26,10 @@ function copyDataDir(destRoot, { omitLeaderboard = false } = {}) {
       const from = path.join(srcDir, name);
       const to = path.join(destDir, name);
       if (!fs.statSync(from).isFile()) continue;
-      if (name === "leaderboard.json") {
-        if (omitLeaderboard) continue;
+      if (PRESERVE_DATA.has(name)) {
+        if (omitLiveData) continue;
         if (fs.existsSync(to)) {
-          console.log(`PRESERVE ranking: ${to}`);
+          console.log(`PRESERVE data: ${to}`);
           continue;
         }
       }
@@ -38,13 +40,17 @@ function copyDataDir(destRoot, { omitLeaderboard = false } = {}) {
     path.join(destDir, "leaderboard.example.json"),
     JSON.stringify({ entries: [] }, null, 2) + "\n"
   );
+  fs.writeFileSync(
+    path.join(destDir, "tickets.example.json"),
+    JSON.stringify({ tickets: [] }, null, 2) + "\n"
+  );
   const lb = path.join(destDir, "leaderboard.json");
-  if (!omitLeaderboard && !fs.existsSync(lb)) {
+  if (!omitLiveData && !fs.existsSync(lb)) {
     fs.writeFileSync(lb, JSON.stringify({ entries: [] }, null, 2) + "\n");
     console.log(`SEED ranking vazio: ${lb}`);
   }
-  if (omitLeaderboard) {
-    console.log("HostGator package: data/ sem leaderboard.json (ranking do servidor intacto)");
+  if (omitLiveData) {
+    console.log("HostGator package: data/ sem leaderboard/tickets vivos (servidor intacto)");
   }
 }
 
@@ -88,6 +94,9 @@ if (fs.existsSync("faces")) {
 if (fs.existsSync("music")) {
   fs.cpSync("music", path.join(DIST, "music"), { recursive: true });
 }
+if (fs.existsSync("tickets")) {
+  fs.cpSync("tickets", path.join(DIST, "tickets"), { recursive: true });
+}
 if (fs.existsSync("api")) {
   fs.cpSync("api", path.join(DIST, "api"), { recursive: true });
 }
@@ -118,6 +127,7 @@ fs.writeFileSync(
     "Ranking online: chama a API PHP da HostGator (CORS).",
     "Tecla T abre a lista Top 10. Fallback: localStorage.",
     "Co-op 2P: signaling em api/signal.php (HostGator) + WebRTC P2P.",
+    "Tickets: /tickets/ → api/tickets.php (HostGator).",
     "",
   ].join("\n")
 );
@@ -146,10 +156,13 @@ if (fs.existsSync("faces")) {
 if (fs.existsSync("music")) {
   fs.cpSync("music", path.join(HOST, "music"), { recursive: true });
 }
+if (fs.existsSync("tickets")) {
+  fs.cpSync("tickets", path.join(HOST, "tickets"), { recursive: true });
+}
 if (fs.existsSync("api")) {
   fs.cpSync("api", path.join(HOST, "api"), { recursive: true });
 }
-copyDataDir(HOST, { omitLeaderboard: true });
+copyDataDir(HOST, { omitLiveData: true });
 const roomsHost = path.join(HOST, "data", "rooms");
 fs.mkdirSync(roomsHost, { recursive: true });
 if (fs.existsSync("data/rooms/.htaccess")) {
@@ -168,23 +181,25 @@ fs.writeFileSync(path.join(HOST, "index.html"), hostHtml);
 fs.writeFileSync(
   path.join(HOST, "LEIA-ME.txt"),
   [
-    "Neve Selvagem — upload HostGator (PRESERVA O RANKING)",
+    "Neve Selvagem — upload HostGator (PRESERVA O RANKING + TICKETS)",
     "",
     "*** NAO APAGUE a pasta data/ no servidor ***",
-    "*** NAO sobrescreva data/leaderboard.json ***",
+    "*** NAO sobrescreva data/leaderboard.json nem data/tickets.json ***",
     "",
     "1. No cPanel, abra public_html/snow",
-    "2. BACKUP: baixe data/leaderboard.json para o PC",
-    "3. Apague SOMENTE: index.html, src/, api/, music/, faces/, splash_screen.*",
+    "2. BACKUP: baixe data/leaderboard.json (e tickets.json se existir)",
+    "3. Apague SOMENTE: index.html, src/, api/, music/, faces/, tickets/, splash_screen.*",
     "   (deixe data/ intacta)",
-    "4. Upload deste pacote (index.html + splash + faces/ + src/ + api/ + music/)",
-    "   Se o zip trouxer data/, nao substitua leaderboard.json existente",
+    "4. Upload deste pacote (+ pasta tickets/)",
+    "   Se o zip trouxer data/, nao substitua leaderboard.json / tickets.json",
     "5. Permissao data/ e data/rooms/ = 755 ou 775",
-    "6. Site + Ctrl+F5 (cache ?v=" + CACHE + ")",
+    "6. Tickets admin: crie data/tickets-admin.key (1 linha = senha) — nao publique a senha",
+    "7. Site + Ctrl+F5 (cache ?v=" + CACHE + ")",
     "",
     "Ajuda in-game: tecla H ou botao ?",
     "Ranking: api/leaderboard.php -> data/leaderboard.json",
-    "Co-op: api/signal.php -> data/rooms/ (ver docs/COOP.md)",
+    "Co-op: api/signal.php -> data/rooms/",
+    "Tickets: /tickets/ -> api/tickets.php -> data/tickets.json",
     "Guia completo: DEPLOY-SEGURO.md no repositorio",
     "",
   ].join("\n")

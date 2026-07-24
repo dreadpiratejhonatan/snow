@@ -1,22 +1,24 @@
 # Deploy seguro — Neve Selvagem
 
-Com jogadores no ranking, **nunca apague** `data/leaderboard.json` no servidor.
+Com jogadores no ranking / tickets, **nunca apague** `data/leaderboard.json` nem `data/tickets.json` no servidor.
 
-## Método recomendado (PRESERVA O RANKING)
+## Método recomendado (PRESERVA RANKING + TICKETS)
 
 ### Via cPanel File Manager
 
 1. Entre em `public_html/snow/`
-2. **Backup:** baixe `data/leaderboard.json` para o PC
+2. **Backup:** baixe `data/leaderboard.json` e `data/tickets.json` (se existir) para o PC
 3. **Deixe a pasta** `data/` **intacta**
-4. Apague apenas: `index.html`, `src/`, `api/`, `music/`, `faces/`, `splash_screen.*`, `sc1.jpeg`…`sc4.jpeg`
+4. Apague apenas: `index.html`, `src/`, `api/`, `music/`, `faces/`, `tickets/`, `splash_screen.*`, `sc1.jpeg`…`sc4.jpeg`
 5. Extraia o `snow.zip` novo ali
-6. Se o zip trouxe `data/` sem `leaderboard.json`, está correto — o PHP cria o arquivo se faltar; o ranking antigo permanece
+6. Se o zip trouxe `data/` sem `leaderboard.json` / `tickets.json`, está correto — o PHP cria se faltar
 7. Se por engano sobrescreveu o JSON, restaure o backup do passo 2
 8. Permissões da pasta `data/`: **755** ou **775**
-9. Abra o site e force **Ctrl+F5** (cache `?v=gh33` ou superior)
-10. Teste ranking: zerar → digitar nome → Enviar → deve dizer **ranking online** → tecla **T** mostra a lista → F5 mantém
-11. Co-op: confirme `api/signal.php` e pasta `data/rooms/` (755/775). POST `{"action":"ping"}` deve devolver `ok`. Guia: `docs/COOP.md`
+9. **Tickets admin:** crie `data/tickets-admin.key` com **uma linha** = senha secreta (não versionar). Sem isso, mudar status falha de propósito.
+10. Abra o site e force **Ctrl+F5** (cache `?v=gh36` ou superior)
+11. Teste ranking: zerar → digitar nome → Enviar → tecla **T**
+12. Co-op: `api/signal.php` + `data/rooms/`. Guia: `docs/COOP.md`
+13. Tickets: abra `/snow/tickets/` → envie um bug de teste → na seção Moderar, use a senha do `.key`
 
 
 
@@ -24,8 +26,8 @@ Com jogadores no ranking, **nunca apague** `data/leaderboard.json` no servidor.
 
 - Pasta: `release/hostgator-snow/`
 - Zip: `release/snow.zip`
-- **Não** sobe `data/leaderboard.json` do zip (só `leaderboard.example.json`)
-- Inclui `api/signal.php` para salas co-op
+- **Não** sobe `data/leaderboard.json` / `tickets.json` do zip (só `*.example.json`)
+- Inclui `api/signal.php` (co-op) e `api/tickets.php` + pasta `tickets/`
 
 
 
@@ -42,9 +44,10 @@ Com jogadores no ranking, **nunca apague** `data/leaderboard.json` no servidor.
 
 ## O que o build faz
 
-- `release/hostgator-snow/data/` **não leva** `leaderboard.json` (só `leaderboard.example.json`)
-- Assim o upload do zip não clobber o ranking em produção
+- `release/hostgator-snow/data/` **não leva** ranking/tickets vivos (só examples)
+- Assim o upload do zip não clobber ranking/tickets em produção
 - Dev local (`dist/`) pode ter seed vazio se ainda não existir arquivo
+- Senha de tickets: `data/tickets-admin.key` só no servidor (fora do git)
 
 
 
