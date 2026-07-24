@@ -14,7 +14,7 @@ function ensureContext() {
   if (!ctx) {
     ctx = new (window.AudioContext || window.webkitAudioContext)();
     master = ctx.createGain();
-    master.gain.value = 0.55;
+    master.gain.value = 0.6;
     master.connect(ctx.destination);
 
     const len = ctx.sampleRate * 2;
@@ -35,7 +35,20 @@ function ensureContext() {
     delay.connect(damp).connect(feedback).connect(delay);
     delay.connect(master);
   }
-  if (ctx.state === "suspended") ctx.resume();
+  return ctx;
+}
+
+async function resumeContext() {
+  const c = ensureContext();
+  if (!c) return null;
+  if (c.state === "suspended") {
+    try {
+      await c.resume();
+    } catch {
+      /* autoplay ainda bloqueado */
+    }
+  }
+  return c;
 }
 
 export class Ambience {
@@ -57,16 +70,32 @@ export class Ambience {
     this.onTrackChange = null; // (nome) => void — preenchido pelo Game
   }
 
-  // precisa ser chamado a partir de um gesto do usuário (clique/toque)
-  start() {
+  /**
+   * Precisa ser chamado a partir de um gesto real (click/touch).
+   * Eventos sintéticos (CustomEvent) NÃO desbloqueiam o AudioContext.
+   * @returns {Promise<boolean>}
+   */
+  async start() {
+    if (this._starting) return this._starting;
+    this._starting = this._startInner().finally(() => {
+      this._starting = null;
+    });
+    return this._starting;
+  }
+
+  async _startInner() {
     try {
-      ensureContext();
+      await resumeContext();
     } catch {
-      return; // áudio é opcional
+      return false;
     }
-    if (!ctx) return;
-    if (ctx.state === "suspended") ctx.resume();
-    if (this.started) return;
+    if (!ctx) return false;
+    // Ainda suspenso = gesto inválido / autoplay bloqueado — tenta de novo no próximo clique
+    if (ctx.state === "suspended") return false;
+    if (this.started) {
+      if (this.musicOn && !this.music) this.startMusic();
+      return true;
+    }
     this.started = true;
 
     // camada grave do vento: ruído passa-baixa contínuo
@@ -77,7 +106,7 @@ export class Ambience {
     lowFilter.type = "lowpass";
     lowFilter.frequency.value = 240;
     this.windLow = ctx.createGain();
-    this.windLow.gain.value = 0.016; // trilha sobressai no celular
+    this.windLow.gain.value = 0.014; // trilha sobressai no celular
     low.connect(lowFilter).connect(this.windLow).connect(master);
     low.start();
 
@@ -90,7 +119,7 @@ export class Ambience {
     this.whistleFilter.frequency.value = 760;
     this.whistleFilter.Q.value = 7;
     this.windHigh = ctx.createGain();
-    this.windHigh.gain.value = 0.005;
+    this.windHigh.gain.value = 0.004;
     high.connect(this.whistleFilter).connect(this.windHigh).connect(master);
     high.start();
 
@@ -102,6 +131,7 @@ export class Ambience {
     lfo.start();
 
     this.startMusic();
+    return true;
   }
 
   startMusic() {

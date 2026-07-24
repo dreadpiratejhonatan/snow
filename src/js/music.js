@@ -48,8 +48,8 @@ const PROC_TRACKS = [
     scale: [261.63, 293.66, 329.63, 392.0, 440.0, 523.25],
     pad: [130.81, 164.81, 196.0, 261.63],
     beat: 1.35,
-    density: 0.82,
-    bright: 0.08,
+    density: 0.9,
+    bright: 0.1,
     length: 36,
   },
   {
@@ -57,9 +57,9 @@ const PROC_TRACKS = [
     name: "Chave na Neve",
     scale: [220.0, 246.94, 261.63, 293.66, 329.63, 369.99],
     pad: [110.0, 146.83, 174.61, 220.0],
-    beat: 1.4,
-    density: 0.78,
-    bright: 0.06,
+    beat: 1.25,
+    density: 0.88,
+    bright: 0.08,
     length: 28,
   },
   {
@@ -67,9 +67,9 @@ const PROC_TRACKS = [
     name: "Haggström Quiet",
     scale: [196.0, 220.0, 246.94, 293.66, 329.63, 392.0],
     pad: [98.0, 123.47, 146.83, 196.0],
-    beat: 1.2,
-    density: 0.8,
-    bright: 0.1,
+    beat: 1.1,
+    density: 0.9,
+    bright: 0.12,
     length: 30,
   },
   {
@@ -77,9 +77,9 @@ const PROC_TRACKS = [
     name: "Ratos Vivos",
     scale: [174.61, 196.0, 220.0, 261.63, 293.66, 349.23],
     pad: [87.31, 130.81, 174.61, 220.0],
-    beat: 1.45,
-    density: 0.76,
-    bright: 0.08,
+    beat: 1.3,
+    density: 0.86,
+    bright: 0.1,
     length: 26,
   },
   {
@@ -87,9 +87,9 @@ const PROC_TRACKS = [
     name: "Mãos Molhadas",
     scale: [146.83, 174.61, 196.0, 220.0, 261.63, 293.66],
     pad: [73.42, 110.0, 146.83, 185.0],
-    beat: 1.5,
-    density: 0.75,
-    bright: 0.05,
+    beat: 1.35,
+    density: 0.85,
+    bright: 0.07,
     length: 28,
   },
   {
@@ -97,9 +97,9 @@ const PROC_TRACKS = [
     name: "Canção do Subwoofer",
     scale: [130.81, 155.56, 174.61, 196.0, 233.08, 261.63],
     pad: [65.41, 98.0, 130.81, 164.81],
-    beat: 1.55,
-    density: 0.75,
-    bright: 0.04,
+    beat: 1.4,
+    density: 0.85,
+    bright: 0.06,
     length: 30,
   },
   {
@@ -107,9 +107,9 @@ const PROC_TRACKS = [
     name: "Ratos em Vênus",
     scale: [246.94, 277.18, 293.66, 349.23, 392.0, 440.0],
     pad: [123.47, 155.56, 185.0, 246.94],
-    beat: 1.3,
-    density: 0.78,
-    bright: 0.12,
+    beat: 1.15,
+    density: 0.88,
+    bright: 0.14,
     length: 28,
   },
 ];
@@ -218,10 +218,17 @@ export class MusicPlayer {
     const master = this.getMaster();
     if (!ctx || !master || this.ready) return;
 
-    if (ctx.state === "suspended") ctx.resume();
+    if (ctx.state === "suspended") {
+      try {
+        await ctx.resume();
+      } catch {
+        /* ainda bloqueado */
+      }
+    }
+    if (ctx.state === "suspended") return;
     this.bus = ctx.createGain();
-    // Presente o bastante para ouvir no celular (ainda suave)
-    this.bus.gain.value = 0.65;
+    // Presente o bastante para ouvir no celular / notebook com volume médio
+    this.bus.gain.value = 0.82;
     this.bus.connect(master);
 
     // camada de tensão (combate) — some por cima da exploração
@@ -418,7 +425,7 @@ export class MusicPlayer {
     this.padFilter.frequency.value = 520;
     this.padFilter.Q.value = 0.4;
     this.padGain = ctx.createGain();
-    this.padGain.gain.value = 0.4;
+    this.padGain.gain.value = 0.55;
     this.padFilter.connect(this.padGain).connect(this.bus);
 
     this.padOsc = [0, 1, 2, 3].map((i) => {
@@ -427,7 +434,7 @@ export class MusicPlayer {
       o.type = i % 2 === 0 ? "sine" : "triangle";
       o.frequency.value = 110;
       const g = ctx.createGain();
-      g.gain.value = i === 0 ? 0.08 : 0.04;
+      g.gain.value = i === 0 ? 0.12 : 0.065;
       o.connect(g).connect(this.padFilter);
       o.start();
       return { o, g };
@@ -463,9 +470,11 @@ export class MusicPlayer {
     this.retunePad(track.pad);
     this.fillPhrase();
     // Primeira nota quase imediata (antes parecia “sem música”)
-    this.timer = 0.12;
+    this.timer = 0.08;
     this.playNote(2, 4);
     this.notesLeftInTrack = Math.max(0, this.notesLeftInTrack - 1);
+    // segunda nota logo em seguida — presença clara no boot
+    this.queue.unshift([4, 3], [0, 4]);
     this.onTrack?.(track.name);
   }
 
@@ -478,10 +487,10 @@ export class MusicPlayer {
       this.padOsc[i].o.frequency.cancelScheduledValues(t);
       const cur = Math.max(40, this.padOsc[i].o.frequency.value || f);
       this.padOsc[i].o.frequency.setValueAtTime(cur, t);
-      this.padOsc[i].o.frequency.exponentialRampToValueAtTime(Math.max(40, f), t + 2.5);
+      this.padOsc[i].o.frequency.exponentialRampToValueAtTime(Math.max(40, f), t + 1.8);
       this.padOsc[i].o.type = "sine";
-      const vol = i === 0 ? 0.11 : i === 1 ? 0.07 : 0.045;
-      this.padOsc[i].g.gain.setTargetAtTime(vol, t, 1.2);
+      const vol = i === 0 ? 0.15 : i === 1 ? 0.1 : 0.065;
+      this.padOsc[i].g.gain.setTargetAtTime(vol, t, 0.8);
     }
   }
 
@@ -509,8 +518,8 @@ export class MusicPlayer {
         this.queue.push([deg, 2 + randInt(2)]);
       }
     }
-    // respiração longa entre frases
-    this.queue.push([-1, 4 + randInt(5)]);
+    // respiração curta entre frases (antes era longo demais → “sem música”)
+    this.queue.push([-1, 2 + randInt(3)]);
   }
 
   playNote(degree, beats) {
@@ -525,9 +534,9 @@ export class MusicPlayer {
 
     // "piano" Minecraft: suave, emocional, audível sob o vento
     const voices = [
-      ["sine", 0.28, 0.1, 1],
-      ["triangle", 0.12, 0.14, 1.003],
-      ["sine", 0.06, 0.2, 0.997],
+      ["sine", 0.36, 0.08, 1],
+      ["triangle", 0.16, 0.12, 1.003],
+      ["sine", 0.09, 0.18, 0.997],
     ];
     for (const [type, vol, attack, ratio] of voices) {
       const osc = ctx.createOscillator();
@@ -575,7 +584,7 @@ export class MusicPlayer {
     this._moodBlend += (want - this._moodBlend) * Math.min(1, dt * 1.8);
 
     if (this.bus) {
-      const exploreVol = (0.65 - this._moodBlend * 0.12) * dangerMul;
+      const exploreVol = (0.82 - this._moodBlend * 0.12) * dangerMul;
       this.bus.gain.value += (exploreVol - this.bus.gain.value) * Math.min(1, dt * 2);
     }
     if (this.combatBus) {
@@ -602,7 +611,7 @@ export class MusicPlayer {
     // silêncio entre faixas — curto para a trilha não “sumir”
     if (this.silence > 0 || this._pendingNext) {
       if (this._pendingNext && this.silence <= 0) {
-        this.silence = this.mood === "combat" ? 0.3 + Math.random() * 0.5 : 1.2 + Math.random() * 1.8;
+        this.silence = this.mood === "combat" ? 0.25 + Math.random() * 0.4 : 0.6 + Math.random() * 0.9;
       }
       this._pendingNext = false;
       this.silence -= dt * (this.mood === "combat" ? 2.2 : 1);
@@ -619,12 +628,12 @@ export class MusicPlayer {
 
     if (!this.queue.length) {
       if (this.notesLeftInTrack <= 0) {
-        this.silence = this.mood === "combat" ? 0.4 + Math.random() * 0.8 : 1.5 + Math.random() * 2.2;
+        this.silence = this.mood === "combat" ? 0.3 + Math.random() * 0.5 : 0.7 + Math.random() * 1.0;
         return;
       }
       this.fillPhrase();
       if (!this.queue.length) {
-        this.silence = this.mood === "combat" ? 0.35 : 1.2 + Math.random() * 1.5;
+        this.silence = this.mood === "combat" ? 0.3 : 0.55 + Math.random() * 0.8;
         return;
       }
     }

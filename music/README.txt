@@ -5,6 +5,8 @@ Por direitos autorais, a OST oficial (C418 / Lena Raine) NÃO vem no jogo.
 Sem arquivos aqui, o jogo toca faixas procedurais lentas e calmas
 (estilo exploração Minecraft — NÃO chiptune/Terraria).
 
+O browser só libera áudio após um clique/toque (skin ou dificuldade).
+
 Para usar arquivos reais, coloque os .mp3 AQUI e liste em:
 
   music/manifest.json

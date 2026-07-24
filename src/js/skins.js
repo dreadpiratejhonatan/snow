@@ -107,7 +107,11 @@ export function applySkinToPlayer(player, id) {
  * Escolha obrigatória de personagem (5 rostos).
  * @param {{ force?: boolean }} opts force=true sempre abre (boot / pause)
  */
-export function runSkinPicker({ force = true } = {}) {
+/**
+ * @param {{ force?: boolean, onGesture?: () => void }} [opts]
+ * onGesture: chamar no click/touch real (desbloqueia AudioContext).
+ */
+export function runSkinPicker({ force = true, onGesture } = {}) {
   const el = document.getElementById("skin-picker");
   const grid = document.getElementById("skin-grid");
   const btn = document.getElementById("skin-confirm");
@@ -167,18 +171,36 @@ export function runSkinPicker({ force = true } = {}) {
   render();
 
   return new Promise((resolve) => {
+    let gestured = false;
+    const fireGesture = () => {
+      if (gestured) return;
+      gestured = true;
+      try {
+        onGesture?.();
+      } catch {
+        /* áudio opcional */
+      }
+      window.dispatchEvent(new Event("neve-user-gesture"));
+    };
+
     const finish = (id) => {
       preview?.dispose();
       el.hidden = true;
       el.setAttribute("aria-hidden", "true");
       el.removeEventListener("click", onClick);
-      window.dispatchEvent(new Event("neve-user-gesture"));
+      el.removeEventListener("pointerdown", onPointerDown);
       resolve(resolveSkinId(id));
+    };
+
+    // pointerdown mantém o stack de gesto do browser (melhor que só CustomEvent)
+    const onPointerDown = (e) => {
+      if (e.target.closest?.("[data-skin-id], #skin-confirm")) fireGesture();
     };
 
     const onClick = (e) => {
       const card = e.target.closest("[data-skin-id]");
       if (card) {
+        fireGesture();
         selected = card.dataset.skinId;
         render();
         preview?.setSkin(selected);
@@ -194,10 +216,12 @@ export function runSkinPicker({ force = true } = {}) {
           if (hint) hint.textContent = "Escolha um dos 5 personagens antes de continuar.";
           return;
         }
+        fireGesture();
         saveSkinId(selected);
         finish(selected);
       }
     };
+    el.addEventListener("pointerdown", onPointerDown);
     el.addEventListener("click", onClick);
   });
 }

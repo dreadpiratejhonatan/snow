@@ -39,9 +39,10 @@ export function getDifficulty(id) {
 
 /**
  * Overlay #difficulty-picker — depois da skin, antes do co-op.
+ * @param {{ onGesture?: () => void }} [opts]
  * @returns {Promise<"easy"|"medium"|"hard">}
  */
-export function runDifficultyPicker() {
+export function runDifficultyPicker({ onGesture } = {}) {
   const el = document.getElementById("difficulty-picker");
   if (!el) return Promise.resolve("medium");
 
@@ -53,16 +54,31 @@ export function runDifficultyPicker() {
       el.hidden = true;
       el.setAttribute("aria-hidden", "true");
       el.removeEventListener("click", onClick);
-      window.dispatchEvent(new Event("neve-user-gesture"));
+      el.removeEventListener("pointerdown", onPointerDown);
       resolve(getDifficulty(id).id);
+    };
+
+    const fireGesture = () => {
+      try {
+        onGesture?.();
+      } catch {
+        /* áudio opcional */
+      }
+      window.dispatchEvent(new Event("neve-user-gesture"));
+    };
+
+    const onPointerDown = (e) => {
+      if (e.target.closest?.("[data-difficulty]")) fireGesture();
     };
 
     const onClick = (e) => {
       const btn = e.target.closest?.("[data-difficulty]");
       if (!btn) return;
+      fireGesture();
       finish(btn.getAttribute("data-difficulty"));
     };
 
+    el.addEventListener("pointerdown", onPointerDown);
     el.addEventListener("click", onClick);
   });
 }

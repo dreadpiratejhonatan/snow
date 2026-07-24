@@ -351,6 +351,7 @@
           <li>Rosto só na <strong>frente</strong> da cabeça; em 3ª pessoa use o botão <strong>Ver skin</strong> ou <kbd>Alt</kbd> + setas para orbitar e ver o personagem</li>
           <li>Barra de armas (<kbd>B</kbd>) mostra e esconde de verdade (com ✕)</li>
           <li>Ranking online (<kbd>T</kbd>) via HostGator — tempos falsos filtrados</li>
+          <li><strong>Trilha</strong> desbloqueia no clique da skin/dificuldade (mais alta, menos “buracos”)</li>
           <li><strong>Co-op</strong> 2 jogadores mais estável (rejoin, ICE, retries; precisa HostGator com <code>api/signal.php</code>)</li>
           <li>Jogo no <strong>GitHub Pages</strong> + guia de deploy seguro na HostGator (preserva o ranking)</li>
         </ul>
@@ -402,6 +403,8 @@
           <dd>Sim — a frente do personagem é sempre para cima no mapa. A seta branca fica no centro.</dd>
           <dt>Perdi o progresso ao fechar?</dt>
           <dd>O jogo auto-salva. Na próxima vez escolha <strong>Continuar</strong>. Revólver/escopeta/AK: <kbd>R</kbd> recarrega. Cerca: <kbd>C</kbd> na fogueira (gasta 1 da mochila).</dd>
+          <dt>Não ouço a trilha / música?</dt>
+          <dd>A trilha é <strong>gerada no browser</strong> (WebAudio) — não vem OST de arquivo por direitos autorais. Toque/clique num personagem ou na dificuldade para liberar o áudio. OST própria: coloque mp3s em <code>music/</code> e liste em <code>music/manifest.json</code>.</dd>
           <dt>Co-op não cria sala / “sinalização offline”?</dt>
           <dd>O co-op precisa da <strong>HostGator online</strong> (`api/signal.php`). Se falhar ao criar sala, é a sinalização — não o jogo no Pages. Peça ao admin subir o zip com a pasta <code>api/</code> e <code>data/rooms/</code> gravável.</dd>
           <dt>Criou a sala mas o amigo não conecta?</dt>
@@ -412,6 +415,6 @@
     </div>
   </div>
 
-  <script type="module" src="src/js/main.js?v=gh33"></script>
+  <script type="module" src="src/js/main.js?v=gh34"></script>
 </body>
 </html>

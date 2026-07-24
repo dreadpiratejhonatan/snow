@@ -101,24 +101,37 @@ class Game {
       this.cameraMode = "third";
     }
     this.loadLeaderboardChallenge();
+    this._looping = false;
     // splash → depois inicia HUD / gameplay
     this.boot();
+  }
+
+  /** Um único rAF — começa cedo para a trilha tickar nos menus. */
+  ensureLoop() {
+    if (this._looping) return;
+    this._looping = true;
+    this.clock.start();
+    this.loop();
   }
 
   async boot() {
     this.state = "splash";
     this.hud.hide();
     this.setTouchUiVisible(false);
+    this.ensureLoop();
     await runSplash({ minMs: 4200, maxMs: 10000, fadeMs: 800 });
     this.state = "skin";
     // Sempre exige escolher um dos 5 personagens (rosto visível + preview girável)
-    const skinId = await runSkinPicker({ force: true });
+    const unlockAudio = () => {
+      void this.ambience.start();
+    };
+    const skinId = await runSkinPicker({ force: true, onGesture: unlockAudio });
     applySkinToPlayer(this.player, skinId);
     // Começa em 3ª pessoa para ver o personagem; mouse gira a câmera
     if (!this.input.mobile) this.setCameraMode("third");
 
     this.state = "difficulty";
-    const diffId = await runDifficultyPicker();
+    const diffId = await runDifficultyPicker({ onGesture: unlockAudio });
     this.setDifficulty(diffId);
 
     const coopChoice = await this.promptCoopMenu();
@@ -484,7 +497,10 @@ class Game {
   async openSkinPickerFromPause() {
     if (this.state !== "paused") return;
     this.overlay.hidden = true;
-    const skinId = await runSkinPicker({ force: true });
+    const skinId = await runSkinPicker({
+      force: true,
+      onGesture: () => void this.ambience.start(),
+    });
     applySkinToPlayer(this.player, skinId);
     this.hud.showMsg(`Skin: ${CONFIG.skins[skinId]?.name || skinId}`, 2200);
     this.overlay.hidden = false;
@@ -1312,10 +1328,10 @@ class Game {
       },
       { passive: false }
     );
-    window.addEventListener("neve-user-gesture", () => this.ambience.start(), { once: true });
+    window.addEventListener("neve-user-gesture", () => void this.ambience.start(), { once: true });
     document.getElementById("skin-confirm")?.addEventListener(
-      "click",
-      () => this.ambience.start(),
+      "pointerdown",
+      () => void this.ambience.start(),
       { once: true }
     );
 
@@ -1382,7 +1398,7 @@ class Game {
     window.addEventListener(
       "touchstart",
       () => {
-        this.ambience.start();
+        void this.ambience.start();
         if (this.input.mobile) this.input.locked = true;
         this.speedrun.start();
       },
@@ -1391,7 +1407,7 @@ class Game {
   }
 
   requestPointerLock() {
-    this.ambience.start(); // gesto do usuário: pode iniciar o áudio + trilha
+    void this.ambience.start(); // gesto do usuário: pode iniciar o áudio + trilha
     if (this.input.mobile) {
       this.input.locked = true;
       return;
@@ -1449,8 +1465,7 @@ class Game {
     // Cronômetro começa ao entrar na partida (Novo jogo / Continuar), sem exigir clique no canvas
     if (this.speedrun.started) this.speedrun.resume();
     else this.speedrun.start();
-    this.clock.start();
-    this.loop();
+    this.ensureLoop();
   }
 
   pause() {
@@ -1505,6 +1520,14 @@ class Game {
 
   update(dt) {
     if (this.state !== "playing") {
+      // Trilha continua nos menus (skin/dificuldade/co-op) após o gesto
+      if (this.ambience?.started) {
+        this.ambience.updateMusic(dt, {
+          bearChasing: false,
+          bearDist: 999,
+          lowHealth: false,
+        });
+      }
       this.input.endFrame();
       return;
     }
