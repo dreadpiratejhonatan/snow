@@ -227,7 +227,10 @@ class Game {
     const showFriends = () => {
       if (stepMode) stepMode.hidden = true;
       if (stepFriends) stepFriends.hidden = false;
-      if (status) status.textContent = "Crie a sala ou cole o código do amigo.";
+      if (status) {
+        status.textContent =
+          "Crie a sala ou cole o código. Co-op usa a HostGator para sinalizar — se falhar ao criar, é o servidor, não o jogo.";
+      }
       if (joinBlock) joinBlock.hidden = false;
       requestAnimationFrame(() => this.focusCoopCodeInput());
     };
@@ -379,7 +382,11 @@ class Game {
       }
       const timer = setTimeout(() => {
         room.close("timeout");
-        reject(new Error("Tempo esgotado aguardando conexão P2P."));
+        reject(
+          new Error(
+            "Tempo esgotado no P2P. Mesma rede Wi‑Fi ajuda; se um estiver em dados móveis, troque para Wi‑Fi."
+          )
+        );
       }, timeoutMs);
       const prevOpen = room.onOpen;
       const prevClose = room.onClose;
@@ -391,7 +398,11 @@ class Game {
       room.onClose = (why) => {
         clearTimeout(timer);
         prevClose?.(why);
-        reject(new Error(`Conexão fechada (${why})`));
+        const hint =
+          why === "failed" || why === "timeout"
+            ? " NAT/firewall — mesma Wi‑Fi ajuda."
+            : "";
+        reject(new Error(`Conexão fechada (${why}).${hint}`));
       };
     });
   }

@@ -1,8 +1,8 @@
 <?php
 /**
  * Signaling WebRTC para co-op 2P — NÃO simula o jogo.
- * Ações JSON: create | join | publish | poll
- * Rooms: data/rooms/{CODE}.json (TTL 10 min)
+ * Ações JSON: ping | create | join | publish | poll
+ * Rooms: data/rooms/{CODE}.json (TTL 30 min)
  */
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
@@ -16,7 +16,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 $dataDir = dirname(__DIR__) . '/data';
 $roomsDir = $dataDir . '/rooms';
-$ttlSec = 600;
+$ttlSec = 1800; // 30 min
+$iceCap = 200;
 
 if (!is_dir($dataDir)) mkdir($dataDir, 0755, true);
 if (!is_dir($roomsDir)) mkdir($roomsDir, 0755, true);
@@ -56,6 +57,7 @@ function write_room($path, $data) {
   fflush($fp);
   flock($fp, LOCK_UN);
   fclose($fp);
+  @touch($path);
   return true;
 }
 
@@ -71,6 +73,61 @@ function make_code($roomsDir) {
   return null;
 }
 
+/** Entradas ICE: [{id, cand}, ...] — id monotônico. */
+function append_ice(&$list, $incoming, &$nextId, $cap) {
+  if (!is_array($incoming)) return;
+  if (!is_array($list)) $list = [];
+  if ($nextId < 1) $nextId = 1;
+  foreach ($incoming as $cand) {
+    if (!$cand) continue;
+    // já no formato {id,cand}?
+    if (is_array($cand) && isset($cand['cand'])) {
+      $list[] = ['id' => $nextId++, 'cand' => $cand['cand']];
+    } else {
+      $list[] = ['id' => $nextId++, 'cand' => $cand];
+    }
+  }
+  if (count($list) > $cap) {
+    $list = array_values(array_slice($list, -$cap));
+  }
+}
+
+function ice_since($list, $sinceId) {
+  $out = [];
+  $last = (int)$sinceId;
+  foreach ($list ?: [] as $i => $entry) {
+    if (is_array($entry) && isset($entry['id'], $entry['cand'])) {
+      $id = (int)$entry['id'];
+      if ($id > $sinceId) {
+        $out[] = $entry['cand'];
+        if ($id > $last) $last = $id;
+      }
+    } else {
+      // legado: índice 0-based → id = index+1
+      $id = $i + 1;
+      if ($id > $sinceId) {
+        $out[] = $entry;
+        if ($id > $last) $last = $id;
+      }
+    }
+  }
+  return [$out, $last];
+}
+
+function last_ice_id($list) {
+  $last = 0;
+  foreach ($list ?: [] as $i => $entry) {
+    if (is_array($entry) && isset($entry['id'])) {
+      $id = (int)$entry['id'];
+      if ($id > $last) $last = $id;
+    } else {
+      $id = $i + 1;
+      if ($id > $last) $last = $id;
+    }
+  }
+  return $last;
+}
+
 cleanup_rooms($roomsDir, $ttlSec);
 
 $body = [];
@@ -79,6 +136,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   if (!is_array($body)) $body = [];
 }
 $action = $body['action'] ?? ($_GET['action'] ?? '');
+
+if ($action === 'ping') {
+  echo json_encode([
+    'ok' => true,
+    'ping' => true,
+    'time' => time(),
+    'roomsWritable' => is_writable($roomsDir),
+  ]);
+  exit;
+}
 
 if ($action === 'create') {
   $code = make_code($roomsDir);
@@ -98,10 +165,12 @@ if ($action === 'create') {
     'answer' => null,
     'hostIce' => [],
     'guestIce' => [],
+    'hostIceNextId' => 1,
+    'guestIceNextId' => 1,
   ];
   if (!write_room($roomsDir . '/' . $code . '.json', $room)) {
     http_response_code(500);
-    echo json_encode(['error' => 'Falha ao gravar sala']);
+    echo json_encode(['error' => 'Falha ao gravar sala — verifique permissões de data/rooms/']);
     exit;
   }
   echo json_encode(['ok' => true, 'code' => $code, 'seed' => $seed, 'role' => 'host']);
@@ -116,10 +185,16 @@ if ($action === 'join') {
     echo json_encode(['error' => 'Sala não encontrada ou expirou']);
     exit;
   }
-  if (!empty($room['guestJoined'])) {
+  // Rejoin: guest marcado mas handshake incompleto (sem answer) → permite nova entrada
+  if (!empty($room['guestJoined']) && !empty($room['answer'])) {
     http_response_code(409);
-    echo json_encode(['error' => 'Sala já tem 2 jogadores']);
+    echo json_encode(['error' => 'Sala já tem 2 jogadores — peça ao host criar sala nova']);
     exit;
+  }
+  if (!empty($room['guestJoined']) && empty($room['answer'])) {
+    $room['guestIce'] = [];
+    $room['guestIceNextId'] = 1;
+    $room['answer'] = null;
   }
   $room['guestJoined'] = true;
   write_room($path, $room);
@@ -144,13 +219,17 @@ if ($action === 'publish') {
   if ($role === 'host') {
     if (isset($body['offer'])) $room['offer'] = $body['offer'];
     if (isset($body['ice']) && is_array($body['ice'])) {
-      $room['hostIce'] = array_slice(array_merge($room['hostIce'] ?? [], $body['ice']), -40);
+      $next = (int)($room['hostIceNextId'] ?? 1);
+      append_ice($room['hostIce'], $body['ice'], $next, $iceCap);
+      $room['hostIceNextId'] = $next;
     }
     $room['hostReady'] = true;
   } elseif ($role === 'guest') {
     if (isset($body['answer'])) $room['answer'] = $body['answer'];
     if (isset($body['ice']) && is_array($body['ice'])) {
-      $room['guestIce'] = array_slice(array_merge($room['guestIce'] ?? [], $body['ice']), -40);
+      $next = (int)($room['guestIceNextId'] ?? 1);
+      append_ice($room['guestIce'], $body['ice'], $next, $iceCap);
+      $room['guestIceNextId'] = $next;
     }
   } else {
     http_response_code(400);
@@ -170,11 +249,21 @@ if ($action === 'poll') {
     echo json_encode(['error' => 'Sala não encontrada']);
     exit;
   }
-  $role = $body['role'] ?? ($_GET['role'] ?? '');
+  // Renova TTL enquanto há handshake ativo
+  @touch($path);
+
   $sinceHost = (int)($body['sinceHostIce'] ?? ($_GET['sinceHostIce'] ?? 0));
   $sinceGuest = (int)($body['sinceGuestIce'] ?? ($_GET['sinceGuestIce'] ?? 0));
-  $hostIce = array_slice($room['hostIce'] ?? [], $sinceHost);
-  $guestIce = array_slice($room['guestIce'] ?? [], $sinceGuest);
+  list($hostIce, $hostLast) = ice_since($room['hostIce'] ?? [], $sinceHost);
+  list($guestIce, $guestLast) = ice_since($room['guestIce'] ?? [], $sinceGuest);
+  if ($hostLast < $sinceHost) $hostLast = $sinceHost;
+  if ($guestLast < $sinceGuest) $guestLast = $sinceGuest;
+  // lastId absoluto na sala (cliente pode avançar mesmo sem novos)
+  $hostAbs = last_ice_id($room['hostIce'] ?? []);
+  $guestAbs = last_ice_id($room['guestIce'] ?? []);
+  if ($hostAbs > $hostLast) $hostLast = $hostAbs;
+  if ($guestAbs > $guestLast) $guestLast = $guestAbs;
+
   echo json_encode([
     'ok' => true,
     'code' => $room['code'],
@@ -185,11 +274,13 @@ if ($action === 'poll') {
     'answer' => $room['answer'],
     'hostIce' => $hostIce,
     'guestIce' => $guestIce,
-    'hostIceTotal' => count($room['hostIce'] ?? []),
-    'guestIceTotal' => count($room['guestIce'] ?? []),
+    'hostIceTotal' => $hostAbs,
+    'guestIceTotal' => $guestAbs,
+    'hostIceLastId' => $hostAbs,
+    'guestIceLastId' => $guestAbs,
   ], JSON_UNESCAPED_UNICODE);
   exit;
 }
 
 http_response_code(400);
-echo json_encode(['error' => 'Ação inválida. Use create|join|publish|poll']);
+echo json_encode(['error' => 'Ação inválida. Use ping|create|join|publish|poll']);

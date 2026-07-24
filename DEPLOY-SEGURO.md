@@ -14,9 +14,9 @@ Com jogadores no ranking, **nunca apague** `data/leaderboard.json` no servidor.
 6. Se o zip trouxe `data/` sem `leaderboard.json`, está correto — o PHP cria o arquivo se faltar; o ranking antigo permanece
 7. Se por engano sobrescreveu o JSON, restaure o backup do passo 2
 8. Permissões da pasta `data/`: **755** ou **775**
-9. Abra o site e force **Ctrl+F5** (cache `?v=gh6` ou superior)
+9. Abra o site e force **Ctrl+F5** (cache `?v=gh33` ou superior)
 10. Teste ranking: zerar → digitar nome → Enviar → deve dizer **ranking online** → tecla **T** mostra a lista → F5 mantém
-11. Co-op: confirme `api/signal.php` e pasta `data/rooms/` (755/775). Guia: `docs/COOP.md`
+11. Co-op: confirme `api/signal.php` e pasta `data/rooms/` (755/775). POST `{"action":"ping"}` deve devolver `ok`. Guia: `docs/COOP.md`
 
 
 

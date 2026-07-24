@@ -351,7 +351,7 @@
           <li>Rosto só na <strong>frente</strong> da cabeça; em 3ª pessoa use o botão <strong>Ver skin</strong> ou <kbd>Alt</kbd> + setas para orbitar e ver o personagem</li>
           <li>Barra de armas (<kbd>B</kbd>) mostra e esconde de verdade (com ✕)</li>
           <li>Ranking online (<kbd>T</kbd>) via HostGator — tempos falsos filtrados</li>
-          <li><strong>Co-op</strong> 2 jogadores (WebRTC + sinalização na HostGator)</li>
+          <li><strong>Co-op</strong> 2 jogadores mais estável (rejoin, ICE, retries; precisa HostGator com <code>api/signal.php</code>)</li>
           <li>Jogo no <strong>GitHub Pages</strong> + guia de deploy seguro na HostGator (preserva o ranking)</li>
         </ul>
         <button id="btn-release-close" type="button" class="menu__btn">Fechar (Esc)</button>
@@ -402,12 +402,16 @@
           <dd>Sim — a frente do personagem é sempre para cima no mapa. A seta branca fica no centro.</dd>
           <dt>Perdi o progresso ao fechar?</dt>
           <dd>O jogo auto-salva. Na próxima vez escolha <strong>Continuar</strong>. Revólver/escopeta/AK: <kbd>R</kbd> recarrega. Cerca: <kbd>C</kbd> na fogueira (gasta 1 da mochila).</dd>
+          <dt>Co-op não cria sala / “sinalização offline”?</dt>
+          <dd>O co-op precisa da <strong>HostGator online</strong> (`api/signal.php`). Se falhar ao criar sala, é a sinalização — não o jogo no Pages. Peça ao admin subir o zip com a pasta <code>api/</code> e <code>data/rooms/</code> gravável.</dd>
+          <dt>Criou a sala mas o amigo não conecta?</dt>
+          <dd>Confira o código e tente de novo (rejoin liberado se o handshake não fechou). Em redes diferentes ou CGNAT, fiquem na <strong>mesma Wi‑Fi</strong>; um no Wi‑Fi e outro só em dados móveis costuma falhar.</dd>
         </dl>
         <button id="btn-help-close" type="button" class="menu__btn">Fechar (H / Esc)</button>
       </div>
     </div>
   </div>
 
-  <script type="module" src="src/js/main.js?v=gh32"></script>
+  <script type="module" src="src/js/main.js?v=gh33"></script>
 </body>
 </html>

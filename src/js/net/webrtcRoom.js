@@ -1,4 +1,4 @@
-import { signalRequest } from "./signalApi.js";
+import { createRoom, joinRoom, publishSignal, pollRoom } from "./signalApi.js";
 
 /** STUN + TURN gratuito (openrelay) — melhora NAT sem custo extra de hosting. */
 const ICE_SERVERS = {
@@ -28,6 +28,13 @@ function sdpPayload(desc) {
   return { type: desc.type, sdp: desc.sdp };
 }
 
+function iceCursor(data, side, prev) {
+  if (side === "host") {
+    return data.hostIceLastId ?? data.hostIceTotal ?? prev;
+  }
+  return data.guestIceLastId ?? data.guestIceTotal ?? prev;
+}
+
 /**
  * Sala WebRTC 2P com signaling via PHP (poll).
  */
@@ -49,7 +56,7 @@ export class WebRtcRoom {
     this.onOpen = null;
     this.onMessage = null;
     this.onClose = null;
-    this.onCode = null; // (code) quando a sala é criada
+    this.onCode = null;
   }
 
   _status(msg) {
@@ -57,7 +64,7 @@ export class WebRtcRoom {
   }
 
   async create(seed) {
-    const data = await signalRequest("create", { seed });
+    const data = await createRoom(seed);
     this.role = "host";
     this.code = data.code;
     this.seed = data.seed;
@@ -69,7 +76,7 @@ export class WebRtcRoom {
   }
 
   async join(code) {
-    const data = await signalRequest("join", { code: String(code || "").trim().toUpperCase() });
+    const data = await joinRoom(code);
     this.role = "guest";
     this.code = data.code;
     this.seed = data.seed;
@@ -84,11 +91,9 @@ export class WebRtcRoom {
     this.pc.onicecandidate = (ev) => {
       if (!ev.candidate || this._closed) return;
       const cand = ev.candidate.toJSON();
-      signalRequest("publish", {
-        code: this.code,
-        role: this.role,
-        ice: [cand],
-      }).catch((e) => console.warn("ice publish", e));
+      publishSignal(this.code, this.role, { ice: [cand] }).catch((e) =>
+        console.warn("ice publish", e)
+      );
     };
     this.pc.oniceconnectionstatechange = () => {
       const st = this.pc?.iceConnectionState;
@@ -96,7 +101,9 @@ export class WebRtcRoom {
         this._status(`Rede P2P: ${st}`);
       }
       if (st === "failed") {
-        this._status("Falha P2P (NAT). Tente outro Wi‑Fi/4G ou os dois no mesmo Wi‑Fi.");
+        this._status(
+          "Falha P2P (NAT/firewall). Mesma rede Wi‑Fi ajuda; evite um no Wi‑Fi e outro só em dados móveis."
+        );
       }
     };
     this.pc.onconnectionstatechange = () => {
@@ -109,9 +116,7 @@ export class WebRtcRoom {
       this._bindChannel(this.channel);
       const offer = await this.pc.createOffer();
       await this.pc.setLocalDescription(offer);
-      await signalRequest("publish", {
-        code: this.code,
-        role: "host",
+      await publishSignal(this.code, "host", {
         offer: sdpPayload(this.pc.localDescription),
       });
       this._status(`Código ${this.code} — aguardando amigo clicar em Entrar…`);
@@ -191,12 +196,7 @@ export class WebRtcRoom {
   }
 
   async _pollOnce() {
-    const data = await signalRequest("poll", {
-      code: this.code,
-      role: this.role,
-      sinceHostIce: this._hostIceSeen,
-      sinceGuestIce: this._guestIceSeen,
-    });
+    const data = await pollRoom(this.code, this._hostIceSeen, this._guestIceSeen);
 
     if (this.role === "host") {
       if (data.guestJoined && !this._guestJoined) {
@@ -210,7 +210,7 @@ export class WebRtcRoom {
         this._status("Handshake OK — abrindo canal…");
       }
       await this._addIce(data.guestIce);
-      this._guestIceSeen = data.guestIceTotal ?? this._guestIceSeen;
+      this._guestIceSeen = iceCursor(data, "guest", this._guestIceSeen);
     } else {
       if (data.offer && !this.pc.currentRemoteDescription) {
         await this.pc.setRemoteDescription(data.offer);
@@ -218,15 +218,13 @@ export class WebRtcRoom {
         await this._flushPendingIce();
         const answer = await this.pc.createAnswer();
         await this.pc.setLocalDescription(answer);
-        await signalRequest("publish", {
-          code: this.code,
-          role: "guest",
+        await publishSignal(this.code, "guest", {
           answer: sdpPayload(this.pc.localDescription),
         });
         this._status("Resposta enviada — abrindo canal…");
       }
       await this._addIce(data.hostIce);
-      this._hostIceSeen = data.hostIceTotal ?? this._hostIceSeen;
+      this._hostIceSeen = iceCursor(data, "host", this._hostIceSeen);
     }
   }
 
