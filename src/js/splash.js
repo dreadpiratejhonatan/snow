@@ -1,10 +1,20 @@
 /**
  * Splash / launcher: carrossel de artes (contain), auto-avança, fade para o jogo.
+ * Ordem e slide inicial são aleatórios entre as imagens que carregarem.
  * Clique/toque/tecla após 1s pula o restante.
- * Slides: splash_screen.png, sc2.jpeg, e sc3/sc4 se existirem no servidor.
  */
 
 const SLIDE_MS = 2800;
+
+function shuffleInPlace(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const tmp = arr[i];
+    arr[i] = arr[j];
+    arr[j] = tmp;
+  }
+  return arr;
+}
 
 function probeSlide(img) {
   return new Promise((resolve) => {
@@ -142,6 +152,9 @@ export function runSplash({
       if (!slides.length && legacy) {
         slides = [legacy];
       }
+
+      // Cada visita: ordem aleatória entre as artes disponíveis
+      shuffleInPlace(slides);
 
       buildDots();
       showSlide(0);
