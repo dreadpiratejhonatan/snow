@@ -190,6 +190,13 @@ export class Input {
     }
   }
 
+  /** Scroll acumulado (só com pointer lock). Positivo = para baixo. */
+  consumeWheel() {
+    const w = this.wheelDelta;
+    this.wheelDelta = 0;
+    return w;
+  }
+
   consumeClicks() {
     const clicks = {
       left: this.leftClicked,

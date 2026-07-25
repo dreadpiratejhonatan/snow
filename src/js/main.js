@@ -745,6 +745,15 @@ class Game {
     return true;
   }
 
+  /** Próxima/anterior arma desbloqueada (touch, scroll). */
+  cycleWeapon(dir = 1) {
+    this.weapons.cycle(dir);
+    this.player.setHeldWeapon(this.weapons.current.id);
+    this.refreshInventoryUI();
+    this.hud.showMsg(`Equipado: ${this.weapons.current.name}`, 1600);
+    this.tutorial?.notify("equip");
+  }
+
   refreshInventoryUI() {
     this.hud.renderInventory(this.weapons.slots());
   }
@@ -1589,12 +1598,10 @@ class Game {
     }
     if (this.input._tapWeapon) {
       this.input._tapWeapon = false;
-      this.weapons.cycle(1);
-      this.player.setHeldWeapon(this.weapons.current.id);
-      this.refreshInventoryUI();
-      this.hud.showMsg(`Equipado: ${this.weapons.current.name}`, 1600);
-      this.tutorial?.notify("equip");
+      this.cycleWeapon(1);
     }
+    const wheel = this.input.consumeWheel();
+    if (wheel) this.cycleWeapon(Math.sign(wheel));
     if (this.input.wasPressed("KeyG") || this.input._tapTrapCycle) {
       this.input._tapTrapCycle = false;
       this.cycleTrap();
