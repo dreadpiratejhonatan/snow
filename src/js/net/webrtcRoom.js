@@ -42,7 +42,7 @@ const ICE_SERVERS = {
 };
 
 /** Após o guest entrar, se o DataChannel não abrir, usa relay HTTPS. */
-const FAILOVER_MS = 10000;
+const FAILOVER_MS = 8000;
 const RELAY_FLUSH_MS = 140;
 const POLL_WEBRTC_MS = 600;
 const POLL_RELAY_MS = 180;
@@ -189,11 +189,13 @@ export class WebRtcRoom {
     };
     ch.onclose = () => {
       if (this._httpReady || this._closed) return;
-      if (this._openFired && this.transport === "webrtc") {
-        this._maybeFailover("channel-closed");
-        return;
+      // Em handshake ou após P2P cair: tenta relay em vez de matar a sala
+      this._maybeFailover("channel-closed");
+      if (!this._httpReady && !this._closed) {
+        // Host ainda sem guest — só espera; senão encerra
+        if (this.role === "host" && !this._guestJoined) return;
+        this.close("channel-closed");
       }
-      this.close("channel-closed");
     };
     ch.onerror = () => {
       if (this._httpReady || this._closed) return;
@@ -323,6 +325,7 @@ export class WebRtcRoom {
   _stopPoll() {
     if (this._pollTimer) clearTimeout(this._pollTimer);
     this._pollTimer = null;
+    this._polling = false;
   }
 
   async _pollOnce() {
@@ -368,11 +371,19 @@ export class WebRtcRoom {
       this._hostIceSeen = iceCursor(data, "host", this._hostIceSeen);
     }
 
+    // Só avança o cursor se entregou (ou não há msgs). Sem onMessage, re-poll
+    // devolve as mesmas — evita perder hello/snap antes do CoopSession.
     const relayMsgs = data.relayMsgs || [];
-    for (const entry of relayMsgs) {
-      if (entry?.m) this.onMessage?.(entry.m);
-    }
-    if (typeof data.relayLastId === "number" && data.relayLastId > this._relaySeen) {
+    if (relayMsgs.length) {
+      if (this.onMessage) {
+        for (const entry of relayMsgs) {
+          if (entry?.m) this.onMessage(entry.m);
+        }
+        if (typeof data.relayLastId === "number" && data.relayLastId > this._relaySeen) {
+          this._relaySeen = data.relayLastId;
+        }
+      }
+    } else if (typeof data.relayLastId === "number" && data.relayLastId > this._relaySeen) {
       this._relaySeen = data.relayLastId;
     }
   }
