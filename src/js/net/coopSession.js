@@ -121,12 +121,21 @@ export class CoopSession {
       g.deposited = Math.max(g.deposited, msg.deposited ?? 0);
       g.hud.setItems(g.carried, g.deposited, g.world.itemsTotal);
       g.hud.showMsg(`${this.partnerName} depositou no baú (${g.deposited}/${g.world.itemsTotal})`, 2800);
-      if (this.isHost && g.deposited >= g.world.itemsTotal && !g.ended) g.win();
-    } else if (msg.kind === "pickup" && msg.saveId && this.isGuest) {
+      if (this.isHost && !g.ended) g.checkWin?.();
+    } else if (msg.kind === "pickup" && msg.saveId) {
       const it = g.world.items?.find((i) => i.saveId === msg.saveId && !i.collected);
       if (it) {
         g.world.collectItem(it);
         g.hud.showMsg(`${this.partnerName} pegou ${it.name}`, 2200);
+      }
+    } else if (msg.kind === "hit" && this.isHost && msg.id != null) {
+      const id = msg.id;
+      const dmg = Math.max(1, Math.min(200, Number(msg.dmg) || 0));
+      let ent =
+        (g.world.enemies || []).find((e) => e.netId === id) ||
+        this._remoteNetEnemies.get(id);
+      if (ent?.alive) {
+        g.world._applyDamage(ent, dmg, { fromHost: true });
       }
     } else if (msg.kind === "win" && this.isGuest && !g.ended) {
       g.win();

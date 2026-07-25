@@ -132,7 +132,9 @@ class Game {
 
     this.state = "difficulty";
     const diffId = await runDifficultyPicker({ onGesture: unlockAudio });
-    this.setDifficulty(diffId);
+    // Guarda escolha; só aplica no mundo depois de Continuar/Novo (evita corromper save)
+    this.difficultyId = getDifficulty(diffId).id;
+    this.difficulty = getDifficulty(this.difficultyId);
 
     const coopChoice = await this.promptCoopMenu();
     let resumeSave = null;
@@ -159,15 +161,31 @@ class Game {
     this.refreshTrapUI();
     if (resumeSave) {
       this.tutorial.skip();
+      const seed = (resumeSave.seed >>> 0) || this.world.seed;
+      applySkinToPlayer(this.player, loadSkinId() || "natan");
+      this.recreateWorld(seed, true, {
+        difficulty: resumeSave.difficulty || this.difficultyId,
+        thinPickups: false,
+      });
+      applySkinToPlayer(this.player, loadSkinId() || "natan");
       applyGameState(this, resumeSave);
       this.hud.showMsg("Expedição restaurada. Progresso auto-salva.", 4000);
     } else if (this.coop) {
       this.tutorial.skip();
     } else {
-      // nova run: garante dificuldade no mundo (co-op recria o mundo depois)
       this.setDifficulty(this.difficultyId || diffId);
     }
+    this.bindWorldCombatHooks();
     this.start();
+  }
+
+  /** Guest co-op: dano local vira evento para o host aplicar. */
+  bindWorldCombatHooks() {
+    if (!this.world) return;
+    this.world.onDeferredHit = (netId, dmg) => {
+      if (netId == null || !this.coop?.isGuest) return;
+      this.coop.broadcastEvent("hit", { id: netId, dmg });
+    };
   }
 
   /** Multiplicadores de dificuldade no Game + World (runtime). */
@@ -429,7 +447,7 @@ class Game {
   }
 
   /** Recria mundo/player com seed (co-op guest/host alinhados). */
-  recreateWorld(seed, authority = true) {
+  recreateWorld(seed, authority = true, diffOpts = null) {
     const preserve = new Set([
       this.camera,
       this.hemi,
@@ -449,7 +467,14 @@ class Game {
     this.player = new Player(this.camera, this.scene, this.world, this.world.getSpawn());
     this.setCameraMode(this.cameraMode);
     this.initSurvival();
-    if (this.difficultyId) this.setDifficulty(this.difficultyId);
+    if (diffOpts) {
+      this.setDifficulty(diffOpts.difficulty || this.difficultyId, {
+        thinPickups: diffOpts.thinPickups !== false,
+      });
+    } else if (this.difficultyId) {
+      this.setDifficulty(this.difficultyId);
+    }
+    this.bindWorldCombatHooks();
   }
 
   /** Menu Continuar / Novo jogo. */
@@ -485,9 +510,18 @@ class Game {
 
   persistSave() {
     if (this.coop) return; // co-op não usa save mid-run local
-    if (this.state !== "playing" && this.state !== "paused") return;
-    if (this.ended) return;
+    // playing / paused / dead (pós-queda com loot no chão)
+    if (this.state !== "playing" && this.state !== "paused" && this.state !== "dead") return;
     writeMidRunSave(captureGameState(this));
+  }
+
+  /** Vitória: baú + craft na base (cerca) conta como suprimento investido. */
+  winProgress() {
+    return (this.deposited || 0) + (this.baseCrafted || 0);
+  }
+
+  checkWin() {
+    if (this.winProgress() >= this.world.itemsTotal) this.win();
   }
 
   async openSkinPickerFromPause() {
@@ -603,6 +637,7 @@ class Game {
     this.warmth = s.maxWarmth;
     this.carried = 0;
     this.deposited = 0;
+    this.baseCrafted = 0;
     this.attackCd = 0;
     this.ended = false;
     this._coldWarned = false;
@@ -697,13 +732,19 @@ class Game {
       return;
     }
     this.carried--;
+    // Conta para a vitória (suprimento investido na base) — evita soft-lock
+    this.baseCrafted = (this.baseCrafted || 0) + 1;
     this.traps.add("fence", 1);
     this.traps.selected = "fence";
     this.hud.setItems(this.carried, this.deposited, this.world.itemsTotal);
     this.refreshTrapUI();
     this.persistSave();
-    this.hud.showMsg("Craft: 1 cerca improvisada. Coloque com F perto da fogueira.", 3600);
+    this.hud.showMsg(
+      `Craft: 1 cerca (${this.winProgress()}/${this.world.itemsTotal} no progresso). Coloque com F.`,
+      3600
+    );
     this.tutorial?.notify("trap");
+    this.checkWin();
   }
 
   tryPlaceTrap() {
@@ -1822,10 +1863,10 @@ class Game {
         this.persistSave();
         this.coop?.broadcastEvent("deposit", { deposited: this.deposited });
         this.hud.showMsg(
-          `Baú: ${this.deposited}/${this.world.itemsTotal} guardados (só o baú conta na vitória)`,
+          `Baú: ${this.deposited} + craft ${this.baseCrafted || 0} = ${this.winProgress()}/${this.world.itemsTotal}`,
           3200
         );
-        if (this.deposited >= this.world.itemsTotal) this.win();
+        this.checkWin();
       }
       this.hud.setItems(this.carried, this.deposited, this.world.itemsTotal);
     }

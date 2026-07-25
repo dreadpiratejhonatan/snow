@@ -164,14 +164,17 @@ if ($method === 'POST') {
   if (!is_array($body)) $body = [];
   $action = $body['action'] ?? '';
 
-  if ($action === 'create') {
-    $ip = client_ip();
-    if (create_rate_limited($rateFile, $ip, $createMax, $createWindowSec)) {
-      http_response_code(429);
-      echo json_encode(['error' => 'Muitos envios. Aguarde alguns minutos.']);
+  if ($action === 'adminCheck') {
+    if (!admin_key_ok($dataDir, $body['adminKey'] ?? '')) {
+      http_response_code(403);
+      echo json_encode(['error' => 'Senha de admin inválida ou não configurada no servidor.']);
       exit;
     }
+    echo json_encode(['ok' => true, 'admin' => true]);
+    exit;
+  }
 
+  if ($action === 'create') {
     $type = strtolower(trim((string)($body['type'] ?? '')));
     $title = strip_text($body['title'] ?? '');
     $text = strip_text($body['body'] ?? '');
@@ -190,6 +193,13 @@ if ($method === 'POST') {
     if (mb_strlen($text) < 10 || mb_strlen($text) > 2000) {
       http_response_code(400);
       echo json_encode(['error' => 'Descrição: entre 10 e 2000 caracteres.']);
+      exit;
+    }
+
+    $ip = client_ip();
+    if (create_rate_limited($rateFile, $ip, $createMax, $createWindowSec)) {
+      http_response_code(429);
+      echo json_encode(['error' => 'Muitos envios. Aguarde alguns minutos.']);
       exit;
     }
 

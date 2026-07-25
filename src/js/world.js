@@ -134,7 +134,11 @@ export class World {
   }
 
   isOnIce(x, z) {
-    return this.getHeight(x, z) < this.waterLevel;
+    if (this.getHeight(x, z) >= this.waterLevel) return false;
+    // Verão / gelo quase invisível: água sem física de gelo
+    const iceOp = this.season?.iceOpacity;
+    if (typeof iceOp === "number" && iceOp < 0.35) return false;
+    return true;
   }
 
   getSlope(x, z) {
@@ -1285,9 +1289,11 @@ export class World {
     const thin = opts.thinPickups !== false;
     const loot = this.diff.loot ?? 1;
     if (thin && !this._diffLootThinned && loot < 1) {
+      // RNG seedado — host/guest Hard ficam alinhados no co-op
+      const rng = createRng((this.seed ^ 0x9e3779b9) >>> 0);
       for (const it of this.items || []) {
         if (it.countsForWin || it.collected) continue;
-        if (Math.random() > loot) this.collectItem(it, { instant: true });
+        if (rng() > loot) this.collectItem(it, { instant: true });
       }
       this._diffLootThinned = true;
     }
@@ -1625,6 +1631,11 @@ export class World {
 
   /** Dano + morte/drops compartilhado por melee, tiros e explosões. */
   _applyDamage(enemy, dmg, opts = {}) {
+    // Guest co-op: host aplica o dano real (snap atualiza HP)
+    if (!this.authority && !opts.fromHost) {
+      this.onDeferredHit?.(enemy.netId, dmg);
+      return { deferred: true, enemy };
+    }
     const from =
       opts.from ||
       opts.pos ||
@@ -1873,8 +1884,11 @@ export class World {
       p.vel.y -= gravity * dt * (p.kind === "grenade" ? 1.3 : 0.55);
       p.mesh.position.addScaledVector(p.vel, dt);
       if (p.kind !== "grenade") {
-        const dirN = p.vel.clone().normalize();
-        p.mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dirN);
+        const spd = p.vel.length();
+        if (spd > 1e-3) {
+          const dirN = p.vel.clone().multiplyScalar(1 / spd);
+          p.mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dirN);
+        }
       }
 
       // cobertura: flecha/granada param em árvore/pedra

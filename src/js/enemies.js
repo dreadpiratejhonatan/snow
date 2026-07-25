@@ -1154,7 +1154,7 @@ export class Enemy {
     if (dist < cfg.attackRange && this.attackCd <= 0) {
       this.attackCd = cfg.attackCooldown;
       const dir = new THREE.Vector3().subVectors(playerPos, m.position).setY(0).normalize();
-      hooks.onAttack?.(cfg.damage, dir, this);
+      hooks.onAttack?.(this.damageNow, dir, this);
     }
   }
 

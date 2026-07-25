@@ -151,10 +151,10 @@ export class WebRtcRoom {
       }
     };
     this.pc.onconnectionstatechange = () => {
-      if (this._httpReady || this._closed) return;
+      if (this._httpReady || this._closed || this._restarting) return;
       const st = this.pc?.connectionState;
-      if (st === "failed") {
-        this._maybeFailover("conn-failed");
+      if (st === "failed" || st === "disconnected") {
+        this._maybeFailover("conn-" + st);
       } else if (st === "closed" && !this._httpReady && !this.isOpen) {
         this.close("closed");
       }
@@ -188,7 +188,7 @@ export class WebRtcRoom {
       this._fireOpen();
     };
     ch.onclose = () => {
-      if (this._httpReady || this._closed) return;
+      if (this._httpReady || this._closed || this._restarting) return;
       // Em handshake ou após P2P cair: tenta relay em vez de matar a sala
       this._maybeFailover("channel-closed");
       if (!this._httpReady && !this._closed) {
@@ -198,7 +198,7 @@ export class WebRtcRoom {
       }
     };
     ch.onerror = () => {
-      if (this._httpReady || this._closed) return;
+      if (this._httpReady || this._closed || this._restarting) return;
       this._maybeFailover("channel-error");
     };
     ch.onmessage = (ev) => {
@@ -341,6 +341,10 @@ export class WebRtcRoom {
       this._enableHttpRelay("peer-relay");
     }
 
+    if (this.role === "host" && !this._httpReady && data.needsHostRestart) {
+      await this._restartHostPeer();
+    }
+
     if (this.role === "host" && !this._httpReady) {
       if (data.guestJoined && !this._guestJoined) {
         this._guestJoined = true;
@@ -413,10 +417,49 @@ export class WebRtcRoom {
       this._outQueue = this._outQueue.filter((m) => m.t !== t);
     }
     this._outQueue.push(obj);
-    if (this._outQueue.length > 12) {
-      this._outQueue = this._outQueue.slice(-12);
+    if (this._outQueue.length > 16) {
+      // Mantém eventos/hello; descarta poses/snaps antigos
+      const events = this._outQueue.filter((m) => m.t === "event" || m.t === "hello");
+      const rest = this._outQueue.filter((m) => m.t !== "event" && m.t !== "hello");
+      this._outQueue = [...rest.slice(-(16 - Math.min(events.length, 8))), ...events.slice(-8)];
     }
     this._scheduleFlush();
+  }
+
+  /** Guest reconectou: novo offer (PC limpo). */
+  async _restartHostPeer() {
+    if (this._closed || this._httpReady || this._restarting) return;
+    this._restarting = true;
+    this._status("Amigo reconectou — reiniciando P2P…");
+    this._guestJoined = true;
+    this._remoteReady = false;
+    this._pendingIce = [];
+    this._hostIceSeen = 0;
+    this._guestIceSeen = 0;
+    this._openFired = false;
+    this.transport = null;
+    try {
+      this.channel?.close();
+    } catch {
+      /* ignore */
+    }
+    try {
+      this.pc?.close();
+    } catch {
+      /* ignore */
+    }
+    this.channel = null;
+    this.pc = null;
+    try {
+      await this._setupPeer();
+      this._armFailover();
+      if (!this._polling) this._startPoll();
+    } catch (e) {
+      console.warn("host restart", e);
+      this._maybeFailover("restart-fail");
+    } finally {
+      this._restarting = false;
+    }
   }
 
   _scheduleFlush() {

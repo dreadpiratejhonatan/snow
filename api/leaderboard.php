@@ -93,6 +93,29 @@ function write_board($file, $data) {
   return true;
 }
 
+/** POST atômico: lê + filtra + append sob LOCK_EX. */
+function append_entry_locked($file, $entry, $minTimeMs, $maxTimeMs, $maxEntries) {
+  $fp = fopen($file, 'c+');
+  if (!$fp) return false;
+  flock($fp, LOCK_EX);
+  $raw = stream_get_contents($fp);
+  $data = json_decode($raw ?: '{}', true);
+  if (!is_array($data) || !isset($data['entries']) || !is_array($data['entries'])) {
+    $data = ['entries' => []];
+  }
+  $data['entries'] = filter_entries($data['entries'], $minTimeMs, $maxTimeMs);
+  $data['entries'][] = $entry;
+  $data['entries'] = filter_entries($data['entries'], $minTimeMs, $maxTimeMs);
+  $data['entries'] = array_slice($data['entries'], 0, $maxEntries);
+  ftruncate($fp, 0);
+  rewind($fp);
+  fwrite($fp, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+  fflush($fp);
+  flock($fp, LOCK_UN);
+  fclose($fp);
+  return $data;
+}
+
 function rate_limited($dataDir) {
   $ip = $_SERVER['REMOTE_ADDR'] ?? '0';
   $safe = preg_replace('/[^a-zA-Z0-9_.-]/', '_', $ip);
@@ -121,12 +144,6 @@ if ($method === 'GET') {
 }
 
 if ($method === 'POST') {
-  if (rate_limited($dataDir)) {
-    http_response_code(429);
-    echo json_encode(['error' => 'Aguarde alguns segundos antes de enviar de novo.']);
-    exit;
-  }
-
   $body = json_decode(file_get_contents('php://input') ?: '{}', true);
   if (!is_array($body)) $body = [];
 
@@ -146,17 +163,19 @@ if ($method === 'POST') {
     exit;
   }
 
-  [, $data] = read_board($file);
-  $data['entries'] = filter_entries($data['entries'], $minTimeMs, $maxTimeMs);
-  $data['entries'][] = [
+  if (rate_limited($dataDir)) {
+    http_response_code(429);
+    echo json_encode(['error' => 'Aguarde alguns segundos antes de enviar de novo.']);
+    exit;
+  }
+
+  $data = append_entry_locked($file, [
     'name' => $name,
     'timeMs' => $timeMs,
     'at' => gmdate('c'),
-  ];
-  $data['entries'] = filter_entries($data['entries'], $minTimeMs, $maxTimeMs);
-  $data['entries'] = array_slice($data['entries'], 0, $maxEntries);
+  ], $minTimeMs, $maxTimeMs, $maxEntries);
 
-  if (!write_board($file, $data)) {
+  if (!$data) {
     http_response_code(500);
     echo json_encode(['error' => 'Falha ao gravar.']);
     exit;

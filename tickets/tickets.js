@@ -276,19 +276,41 @@ function bindUi() {
     } catch {
       /* ignore */
     }
-    if (keyInput.value) applyAdminMode(true);
+    // Não libera UI sem validar no servidor
+    applyAdminMode(false);
   }
 
-  $("btn-admin-unlock")?.addEventListener("click", () => {
+  $("btn-admin-unlock")?.addEventListener("click", async () => {
     const key = keyInput?.value?.trim() || "";
-    try {
-      if (key) sessionStorage.setItem(ADMIN_STORE, key);
-      else sessionStorage.removeItem(ADMIN_STORE);
-    } catch {
-      /* ignore */
+    if (!key) {
+      try {
+        sessionStorage.removeItem(ADMIN_STORE);
+      } catch {
+        /* ignore */
+      }
+      applyAdminMode(false);
+      setMsg($("admin-status"), "Moderação desligada.");
+      return;
     }
-    applyAdminMode(!!key);
-    setMsg($("admin-status"), key ? "Moderação ligada nesta sessão." : "Moderação desligada.");
+    setMsg($("admin-status"), "Validando senha…");
+    try {
+      await apiPost({ action: "adminCheck", adminKey: key });
+      try {
+        sessionStorage.setItem(ADMIN_STORE, key);
+      } catch {
+        /* ignore */
+      }
+      applyAdminMode(true);
+      setMsg($("admin-status"), "Moderação ligada nesta sessão.");
+    } catch (err) {
+      try {
+        sessionStorage.removeItem(ADMIN_STORE);
+      } catch {
+        /* ignore */
+      }
+      applyAdminMode(false);
+      setMsg($("admin-status"), err.message || "Senha inválida", true);
+    }
   });
 
   $("board")?.addEventListener("click", (e) => {

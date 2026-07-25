@@ -96,7 +96,9 @@ export async function pingSignal() {
 }
 
 export async function createRoom(seed) {
-  return signalRequest({ action: "create", seed: seed >>> 0 || undefined });
+  const body = { action: "create" };
+  if (seed != null && seed !== "") body.seed = seed >>> 0;
+  return signalRequest(body);
 }
 
 export async function joinRoom(code) {

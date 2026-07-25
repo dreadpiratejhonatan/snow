@@ -67,6 +67,38 @@ function write_room($path, $data) {
   return true;
 }
 
+/**
+ * Read-modify-write atômico (LOCK_EX durante todo o callback).
+ * $fn(&$room) → payload de sucesso, ou ['__error' => [code, msg]].
+ */
+function mutate_room($path, $fn) {
+  if (!$path || !file_exists($path)) return ['__error' => [404, 'Sala não encontrada']];
+  $fp = fopen($path, 'c+');
+  if (!$fp) return ['__error' => [500, 'Falha ao abrir sala']];
+  flock($fp, LOCK_EX);
+  $raw = stream_get_contents($fp);
+  $room = json_decode($raw ?: '', true);
+  if (!is_array($room)) {
+    flock($fp, LOCK_UN);
+    fclose($fp);
+    return ['__error' => [500, 'Sala corrompida']];
+  }
+  $out = $fn($room);
+  if (is_array($out) && isset($out['__error'])) {
+    flock($fp, LOCK_UN);
+    fclose($fp);
+    return $out;
+  }
+  ftruncate($fp, 0);
+  rewind($fp);
+  fwrite($fp, json_encode($room, JSON_UNESCAPED_UNICODE));
+  fflush($fp);
+  flock($fp, LOCK_UN);
+  fclose($fp);
+  @touch($path);
+  return $out;
+}
+
 function make_code($roomsDir) {
   $alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   for ($t = 0; $t < 20; $t++) {
@@ -206,6 +238,7 @@ if ($action === 'create') {
     'relayMode' => false,
     'relay' => [],
     'relayNextId' => 1,
+    'needsHostRestart' => false,
   ];
   if (!write_room($roomsDir . '/' . $code . '.json', $room)) {
     http_response_code(500);
@@ -218,110 +251,137 @@ if ($action === 'create') {
 
 if ($action === 'join') {
   $path = room_path($roomsDir, $body['code'] ?? '');
-  $room = read_room($path);
-  if (!$room) {
+  if (!$path || !file_exists($path)) {
     http_response_code(404);
     echo json_encode(['error' => 'Sala não encontrada ou expirou']);
     exit;
   }
-  // Rejoin: guest marcado mas handshake incompleto (sem answer) → permite nova entrada
-  if (!empty($room['guestJoined']) && !empty($room['answer'])) {
-    http_response_code(409);
-    echo json_encode(['error' => 'Sala já tem 2 jogadores — peça ao host criar sala nova']);
+  $out = mutate_room($path, function (&$room) {
+    // Rejoin / replace guest: limpa handshake e pede restart do host
+    if (!empty($room['guestJoined'])) {
+      $room['guestIce'] = [];
+      $room['guestIceNextId'] = 1;
+      $room['answer'] = null;
+      $room['relay'] = [];
+      $room['relayNextId'] = 1;
+      $room['relayMode'] = false;
+      $room['needsHostRestart'] = true;
+      // Novo offer do host após restart — limpa ICE antigo do host
+      $room['hostIce'] = [];
+      $room['hostIceNextId'] = 1;
+    }
+    $room['guestJoined'] = true;
+    return [
+      'ok' => true,
+      'code' => $room['code'],
+      'seed' => $room['seed'],
+      'role' => 'guest',
+    ];
+  });
+  if (isset($out['__error'])) {
+    http_response_code($out['__error'][0]);
+    echo json_encode(['error' => $out['__error'][1]]);
     exit;
   }
-  if (!empty($room['guestJoined']) && empty($room['answer'])) {
-    $room['guestIce'] = [];
-    $room['guestIceNextId'] = 1;
-    $room['answer'] = null;
-    $room['relay'] = [];
-    $room['relayNextId'] = 1;
-    $room['relayMode'] = false;
-  }
-  $room['guestJoined'] = true;
-  write_room($path, $room);
-  echo json_encode([
-    'ok' => true,
-    'code' => $room['code'],
-    'seed' => $room['seed'],
-    'role' => 'guest',
-  ]);
+  echo json_encode($out);
   exit;
 }
 
 if ($action === 'publish') {
   $path = room_path($roomsDir, $body['code'] ?? '');
-  $room = read_room($path);
-  if (!$room) {
-    http_response_code(404);
-    echo json_encode(['error' => 'Sala não encontrada']);
-    exit;
-  }
   $role = $body['role'] ?? '';
-  if ($role === 'host') {
-    if (isset($body['offer'])) $room['offer'] = $body['offer'];
-    if (isset($body['ice']) && is_array($body['ice'])) {
-      $next = (int)($room['hostIceNextId'] ?? 1);
-      append_ice($room['hostIce'], $body['ice'], $next, $iceCap);
-      $room['hostIceNextId'] = $next;
+  $iceCapLocal = $iceCap;
+  $out = mutate_room($path, function (&$room) use ($body, $role, $iceCapLocal) {
+    if ($role === 'host') {
+      if (isset($body['offer'])) {
+        $room['offer'] = $body['offer'];
+        $room['needsHostRestart'] = false;
+      }
+      if (isset($body['ice']) && is_array($body['ice'])) {
+        $next = (int)($room['hostIceNextId'] ?? 1);
+        append_ice($room['hostIce'], $body['ice'], $next, $iceCapLocal);
+        $room['hostIceNextId'] = $next;
+      }
+      $room['hostReady'] = true;
+    } elseif ($role === 'guest') {
+      if (isset($body['answer'])) $room['answer'] = $body['answer'];
+      if (isset($body['ice']) && is_array($body['ice'])) {
+        $next = (int)($room['guestIceNextId'] ?? 1);
+        append_ice($room['guestIce'], $body['ice'], $next, $iceCapLocal);
+        $room['guestIceNextId'] = $next;
+      }
+    } else {
+      return ['__error' => [400, 'role inválido']];
     }
-    $room['hostReady'] = true;
-  } elseif ($role === 'guest') {
-    if (isset($body['answer'])) $room['answer'] = $body['answer'];
-    if (isset($body['ice']) && is_array($body['ice'])) {
-      $next = (int)($room['guestIceNextId'] ?? 1);
-      append_ice($room['guestIce'], $body['ice'], $next, $iceCap);
-      $room['guestIceNextId'] = $next;
+    if (!empty($body['relayMode'])) {
+      $room['relayMode'] = true;
     }
-  } else {
-    http_response_code(400);
-    echo json_encode(['error' => 'role inválido']);
+    return ['ok' => true];
+  });
+  if (isset($out['__error'])) {
+    http_response_code($out['__error'][0]);
+    echo json_encode(['error' => $out['__error'][1]]);
     exit;
   }
-  if (!empty($body['relayMode'])) {
-    $room['relayMode'] = true;
-  }
-  write_room($path, $room);
-  echo json_encode(['ok' => true]);
+  echo json_encode($out);
   exit;
 }
 
 if ($action === 'relay') {
   $path = room_path($roomsDir, $body['code'] ?? '');
-  $room = read_room($path);
-  if (!$room) {
-    http_response_code(404);
-    echo json_encode(['error' => 'Sala não encontrada']);
-    exit;
-  }
   $role = $body['role'] ?? '';
-  if ($role !== 'host' && $role !== 'guest') {
-    http_response_code(400);
-    echo json_encode(['error' => 'role inválido']);
+  $relayCapL = $relayCap;
+  $relayBatchMaxL = $relayBatchMax;
+  $relayMsgMaxBytesL = $relayMsgMaxBytes;
+  $out = mutate_room($path, function (&$room) use ($body, $role, $relayCapL, $relayBatchMaxL, $relayMsgMaxBytesL) {
+    if ($role !== 'host' && $role !== 'guest') {
+      return ['__error' => [400, 'role inválido']];
+    }
+    $messages = $body['messages'] ?? [];
+    if (!is_array($messages)) $messages = [];
+    if (count($messages) > $relayBatchMaxL) {
+      $messages = array_slice($messages, -$relayBatchMaxL);
+    }
+    $next = (int)($room['relayNextId'] ?? 1);
+    if ($next < 1) $next = 1;
+    if (!isset($room['relay']) || !is_array($room['relay'])) $room['relay'] = [];
+    foreach ($messages as $m) {
+      if (!is_array($m)) continue;
+      $enc = json_encode($m, JSON_UNESCAPED_UNICODE);
+      if ($enc === false || strlen($enc) > $relayMsgMaxBytesL) continue;
+      $room['relay'][] = ['id' => $next++, 'from' => $role, 'm' => $m];
+    }
+    $room['relayNextId'] = $next;
+    $room['relayMode'] = true;
+    // Prioriza eventos: se estourar o cap, descarta pose/snap antigos primeiro
+    if (count($room['relay']) > $relayCapL) {
+      $keep = [];
+      $events = [];
+      $rest = [];
+      foreach ($room['relay'] as $entry) {
+        $t = $entry['m']['t'] ?? '';
+        if ($t === 'event' || $t === 'hello') $events[] = $entry;
+        else $rest[] = $entry;
+      }
+      $budget = $relayCapL - count($events);
+      if ($budget < 0) {
+        $events = array_slice($events, $budget); // keep newest events
+        $budget = 0;
+      }
+      $rest = array_slice($rest, -$budget);
+      $room['relay'] = array_values(array_merge($rest, $events));
+      usort($room['relay'], function ($a, $b) {
+        return ((int)($a['id'] ?? 0)) <=> ((int)($b['id'] ?? 0));
+      });
+    }
+    return ['ok' => true, 'relayLastId' => last_relay_id($room['relay'])];
+  });
+  if (isset($out['__error'])) {
+    http_response_code($out['__error'][0]);
+    echo json_encode(['error' => $out['__error'][1]]);
     exit;
   }
-  $messages = $body['messages'] ?? [];
-  if (!is_array($messages)) $messages = [];
-  if (count($messages) > $relayBatchMax) {
-    $messages = array_slice($messages, -$relayBatchMax);
-  }
-  $next = (int)($room['relayNextId'] ?? 1);
-  if ($next < 1) $next = 1;
-  if (!isset($room['relay']) || !is_array($room['relay'])) $room['relay'] = [];
-  foreach ($messages as $m) {
-    if (!is_array($m)) continue;
-    $enc = json_encode($m, JSON_UNESCAPED_UNICODE);
-    if ($enc === false || strlen($enc) > $relayMsgMaxBytes) continue;
-    $room['relay'][] = ['id' => $next++, 'from' => $role, 'm' => $m];
-  }
-  $room['relayNextId'] = $next;
-  $room['relayMode'] = true;
-  if (count($room['relay']) > $relayCap) {
-    $room['relay'] = array_values(array_slice($room['relay'], -$relayCap));
-  }
-  write_room($path, $room);
-  @touch($path);
-  echo json_encode(['ok' => true, 'relayLastId' => last_relay_id($room['relay'])]);
+  echo json_encode($out);
   exit;
 }
 
@@ -362,6 +422,7 @@ if ($action === 'poll') {
     'guestJoined' => !empty($room['guestJoined']),
     'hostReady' => !empty($room['hostReady']),
     'relayMode' => !empty($room['relayMode']),
+    'needsHostRestart' => !empty($room['needsHostRestart']),
     'offer' => $room['offer'],
     'answer' => $room['answer'],
     'hostIce' => $hostIce,
