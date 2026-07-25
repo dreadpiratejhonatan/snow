@@ -31,6 +31,10 @@ Changelog jogável do que entrou desde sábado até hoje. No jogo: botão **N** 
 - Tecla **B** mostra/esconde a barra de armas por completo (✕ também fecha)
 - Ranking online (**T**) via HostGator; tempos falsos filtrados (mín. 2 min, nomes lixo)
 
+## Board de sugestões
+- Página `/tickets/` em cards estilo Jira (Aberto / Em progresso / Feito / Não faremos)
+- Qualquer um envia feature ou bug; a lista é pública; admin muda o status
+
 ## Multiplayer e deploy
 - Co-op 2 jogadores (WebRTC + `api/signal.php` na HostGator)
 - GitHub Pages automático no push

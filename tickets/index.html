@@ -3,33 +3,33 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Tickets — Neve Selvagem</title>
-  <meta name="description" content="Reporte bugs e sugira features para Neve Selvagem." />
+  <title>Sugestões — Neve Selvagem</title>
+  <meta name="description" content="Sugira features e veja as ideias da comunidade em cards estilo board." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Outfit:wght@400;500;600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="tickets.css?v=gh36" />
+  <link rel="stylesheet" href="tickets.css?v=gh42" />
 </head>
 <body>
   <main class="wrap">
     <header class="top">
-      <h1 class="brand">Neve Selvagem<span>Tickets — bugs e ideias</span></h1>
+      <h1 class="brand">Neve Selvagem<span>Board de sugestões</span></h1>
       <a id="link-game" class="back" href="../">← Voltar ao jogo</a>
     </header>
 
     <p class="lead">
-      Conte o que quebrou ou o que gostaria de ver. A lista é pública; o status
-      (aberto / feito) é atualizado pelo time.
+      Envie uma ideia em texto — vira um <strong>card</strong> no board (estilo Jira).
+      Todo mundo vê as sugestões dos outros; o time muda o status (Aberto → Em progresso → Feito).
     </p>
 
     <section class="panel" aria-labelledby="form-title">
-      <h2 id="form-title">Novo ticket</h2>
+      <h2 id="form-title">Nova sugestão</h2>
       <form id="ticket-form" class="form-grid">
         <div class="row">
           <label>Tipo
             <select id="field-type" name="type" required>
+              <option value="feature" selected>Sugestão / feature</option>
               <option value="bug">Bug</option>
-              <option value="feature">Sugestão / feature</option>
             </select>
           </label>
           <label>Seu nome (opcional)
@@ -37,37 +37,55 @@
           </label>
         </div>
         <label>Título
-          <input id="field-title" name="title" maxlength="80" required minlength="3" placeholder="Ex.: T-Rex atira através da pedra" />
+          <input id="field-title" name="title" maxlength="80" required minlength="3" placeholder="Ex.: Modo cooperativo com 4 jogadores" />
         </label>
         <label>Descrição
-          <textarea id="field-body" name="body" required minlength="10" maxlength="2000" placeholder="O que aconteceu, em qual aparelho/navegador, e o que esperava."></textarea>
+          <textarea id="field-body" name="body" required minlength="10" maxlength="2000" placeholder="Descreva a ideia com suas palavras — o que quer, por quê, e como imagina no jogo."></textarea>
         </label>
         <div class="actions">
-          <button id="btn-submit" type="submit" class="btn">Enviar</button>
+          <button id="btn-submit" type="submit" class="btn">Criar card</button>
           <p id="form-status" class="status-msg" aria-live="polite"></p>
         </div>
       </form>
     </section>
 
-    <section class="panel" aria-labelledby="list-title">
-      <h2 id="list-title">Lista</h2>
-      <div class="filters" role="group" aria-label="Filtros">
-        <button type="button" class="chip" data-filter="all" aria-pressed="true">Todos</button>
-        <button type="button" class="chip" data-filter="bug" aria-pressed="false">Bugs</button>
-        <button type="button" class="chip" data-filter="feature" aria-pressed="false">Features</button>
-        <button type="button" class="chip" data-filter="open" aria-pressed="false">Abertos</button>
+    <section class="panel panel--board" aria-labelledby="board-title">
+      <div class="board-head">
+        <h2 id="board-title">Board</h2>
+        <div class="filters" role="group" aria-label="Filtros">
+          <button type="button" class="chip" data-filter="all" aria-pressed="true">Todos</button>
+          <button type="button" class="chip" data-filter="feature" aria-pressed="false">Features</button>
+          <button type="button" class="chip" data-filter="bug" aria-pressed="false">Bugs</button>
+        </div>
       </div>
       <p id="list-status" class="status-msg" aria-live="polite"></p>
-      <div id="ticket-list" class="list"></div>
+      <div id="board" class="board" aria-live="polite">
+        <div class="column" data-status="open">
+          <header class="column__head"><span>Aberto</span><span class="column__count" data-count="open">0</span></header>
+          <div class="column__cards" data-col="open"></div>
+        </div>
+        <div class="column" data-status="doing">
+          <header class="column__head"><span>Em progresso</span><span class="column__count" data-count="doing">0</span></header>
+          <div class="column__cards" data-col="doing"></div>
+        </div>
+        <div class="column" data-status="done">
+          <header class="column__head"><span>Feito</span><span class="column__count" data-count="done">0</span></header>
+          <div class="column__cards" data-col="done"></div>
+        </div>
+        <div class="column" data-status="wontfix">
+          <header class="column__head"><span>Não faremos</span><span class="column__count" data-count="wontfix">0</span></header>
+          <div class="column__cards" data-col="wontfix"></div>
+        </div>
+      </div>
     </section>
 
     <section class="panel" aria-labelledby="admin-title">
       <h2 id="admin-title">Moderar (admin)</h2>
       <div class="admin-bar">
-        <p id="admin-hint" class="ticket__meta">Cole a senha só no seu PC. Não compartilhe.</p>
+        <p id="admin-hint" class="ticket__meta">Senha só no seu PC — permite mudar o status dos cards.</p>
         <div class="admin-bar__row">
           <label>Senha
-            <input id="admin-key" type="password" autocomplete="current-password" placeholder="tickets-admin.key" />
+            <input id="admin-key" type="password" autocomplete="current-password" placeholder="data/tickets-admin.key" />
           </label>
           <button type="button" id="btn-admin-unlock" class="btn btn--ghost">Ativar nesta sessão</button>
         </div>
@@ -76,10 +94,23 @@
     </section>
 
     <p class="foot">
-      Os dados ficam na HostGator (<code>api/tickets.php</code>). No GitHub Pages o formulário
-      chama o mesmo servidor.
+      Cada envio vira um ticket individual em <code>api/tickets.php</code> (HostGator).
+      Pages e o site usam o mesmo board.
     </p>
   </main>
-  <script type="module" src="tickets.js?v=gh36"></script>
+
+  <div id="card-modal" class="modal" hidden aria-hidden="true">
+    <div class="modal__backdrop" data-close></div>
+    <div class="modal__panel" role="dialog" aria-labelledby="modal-title">
+      <p id="modal-key" class="modal__key"></p>
+      <h3 id="modal-title" class="modal__title"></h3>
+      <p id="modal-meta" class="modal__meta"></p>
+      <p id="modal-body" class="modal__body"></p>
+      <div id="modal-admin" class="modal__admin ticket__admin"></div>
+      <button type="button" class="btn btn--ghost" data-close>Fechar</button>
+    </div>
+  </div>
+
+  <script type="module" src="tickets.js?v=gh42"></script>
 </body>
 </html>
