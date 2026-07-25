@@ -113,27 +113,41 @@ function mergeAndSort(a, b) {
 }
 
 /** Lê ranking remoto (PHP) e faz cache local — nunca perde o histórico do browser. */
-export async function fetchLeaderboard(limit = 10) {
+export async function fetchLeaderboard(limit = 10, opts = {}) {
   const local = readLocal();
+  const season = opts.season || "current";
   try {
-    const res = await fetchWithRetry(`${API}?limit=50`);
+    const q =
+      season === "all"
+        ? `${API}?limit=50&season=all`
+        : `${API}?limit=50`;
+    const res = await fetchWithRetry(q);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     const remote = Array.isArray(data.entries) ? data.entries : [];
     const merged = mergeAndSort(remote, local);
     writeLocal(merged);
-    return merged.slice(0, limit);
+    return {
+      entries: merged.slice(0, limit),
+      season: data.season || data.currentSeason,
+      currentSeason: data.currentSeason,
+    };
   } catch (e) {
     console.warn("Leaderboard API offline — usando cache local:", e);
-    return local.length ? local.slice(0, limit) : [];
+    return {
+      entries: local.length ? local.slice(0, limit) : [],
+      season: null,
+      currentSeason: null,
+    };
   }
 }
 
-export async function submitScore(name, timeMs) {
+export async function submitScore(name, timeMs, opts = {}) {
   const entry = {
     name: String(name || "").trim().slice(0, 16),
     timeMs: Math.round(Number(timeMs)),
     at: new Date().toISOString(),
+    daily: !!opts.daily,
   };
 
   if (!isValidLeaderboardName(entry.name)) {
@@ -155,7 +169,11 @@ export async function submitScore(name, timeMs) {
     const res = await fetchWithRetry(API, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: entry.name, timeMs: entry.timeMs }),
+      body: JSON.stringify({
+        name: entry.name,
+        timeMs: entry.timeMs,
+        daily: entry.daily,
+      }),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
@@ -179,6 +197,18 @@ export async function submitScore(name, timeMs) {
       error: err.message,
     };
   }
+}
+
+export function exportLeaderboardJson(entries, meta = {}) {
+  const blob = new Blob(
+    [JSON.stringify({ exportedAt: new Date().toISOString(), ...meta, entries }, null, 2)],
+    { type: "application/json" }
+  );
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `neve-ranking-${meta.season || "all"}.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
 }
 
 export function formatTimeMs(ms) {

@@ -13,7 +13,13 @@ import { Ambience } from "./audio.js";
 import { TouchControls, isTouchDevice } from "./touch.js";
 import { WeaponInventory } from "./weapons.js";
 import { SpeedrunTimer } from "./speedrun.js";
-import { fetchLeaderboard, submitScore, formatTimeMs, getTopEntry } from "./leaderboard.js";
+import {
+  fetchLeaderboard,
+  submitScore,
+  formatTimeMs,
+  getTopEntry,
+  exportLeaderboardJson,
+} from "./leaderboard.js";
 import { runSplash } from "./splash.js";
 import { runSkinPicker, applySkinToPlayer, loadSkinId } from "./skins.js";
 import { runDifficultyPicker, getDifficulty } from "./difficulty.js";
@@ -29,6 +35,9 @@ import {
   captureGameState,
   applyGameState,
 } from "./save.js";
+import { dailySeed, dailyLabel, isDailyMode, setDailyMode } from "./daily.js";
+import { unlockAchievement, listAchievements } from "./achievements.js";
+import { playBotoCutscene } from "./cutscene.js";
 
 // Vinheta cinematográfica suave nas bordas da tela
 const VignetteShader = {
@@ -172,10 +181,21 @@ class Game {
       this.hud.showMsg("Expedição restaurada. Progresso auto-salva.", 4000);
     } else if (this.coop) {
       this.tutorial.skip();
+    } else if (coopChoice.daily || isDailyMode()) {
+      setDailyMode(true);
+      const seed = coopChoice.seed || dailySeed();
+      this.recreateWorld(seed, true);
+      applySkinToPlayer(this.player, loadSkinId() || "natan");
+      this.tutorial.skip();
+      this.hud.showMsg(`Desafio do dia ${dailyLabel()} — seed compartilhada.`, 4500);
     } else {
+      setDailyMode(false);
       this.setDifficulty(this.difficultyId || diffId);
     }
     this.bindWorldCombatHooks();
+    this.world.onEnemySpawned = (enemy) => {
+      if (enemy?.type === "boto") playBotoCutscene(this);
+    };
     this.start();
   }
 
@@ -223,11 +243,14 @@ class Game {
     const stepMode = document.getElementById("coop-step-mode");
     const stepFriends = document.getElementById("coop-step-friends");
     const btnSolo = document.getElementById("btn-coop-solo");
+    const btnDaily = document.getElementById("btn-coop-daily");
     const btnFriends = document.getElementById("btn-coop-friends");
     const btnBack = document.getElementById("btn-coop-back");
     const btnCreate = document.getElementById("btn-coop-create");
+    const btnRehost = document.getElementById("btn-coop-rehost");
     const btnJoin = document.getElementById("btn-coop-join");
     const btnPaste = document.getElementById("btn-coop-paste");
+    const maxPlayersEl = document.getElementById("coop-max-players");
     const codeBox = document.getElementById("coop-code-box");
     const codeDisplay = document.getElementById("coop-code-display");
     const btnCopy = document.getElementById("btn-coop-copy");
@@ -254,13 +277,14 @@ class Game {
       if (btnBack) btnBack.disabled = false;
       if (btnFriends) btnFriends.disabled = false;
       if (btnSolo) btnSolo.disabled = false;
+      if (btnDaily) btnDaily.disabled = false;
     };
     const showFriends = () => {
       if (stepMode) stepMode.hidden = true;
       if (stepFriends) stepFriends.hidden = false;
       if (status) {
         status.textContent =
-          "Crie a sala ou cole o código. Se a rede bloquear P2P, o jogo usa relay HTTPS automático.";
+          "Crie a sala ou cole o código. 3 jogadores usam sync via servidor.";
       }
       if (joinBlock) joinBlock.hidden = false;
       requestAnimationFrame(() => this.focusCoopCodeInput());
@@ -275,15 +299,23 @@ class Game {
         joinBlock?.removeEventListener("pointerdown", onJoinPointer);
         btnPaste?.removeEventListener("click", onPaste);
         btnSolo?.removeEventListener("click", onSolo);
+        btnDaily?.removeEventListener("click", onDaily);
         btnFriends?.removeEventListener("click", onFriends);
         btnBack?.removeEventListener("click", onBack);
         btnCreate?.removeEventListener("click", onCreate);
+        btnRehost?.removeEventListener("click", onRehost);
         btnJoin?.removeEventListener("click", onJoin);
         btnCopy?.removeEventListener("click", onCopy);
       };
       const onSolo = () => {
+        setDailyMode(false);
         cleanup();
         resolve({ mode: "solo" });
+      };
+      const onDaily = () => {
+        setDailyMode(true);
+        cleanup();
+        resolve({ mode: "solo", daily: true, seed: dailySeed() });
       };
       const onFriends = () => showFriends();
       const onBack = () => {
@@ -295,6 +327,7 @@ class Game {
         btnJoin.disabled = true;
         if (btnPaste) btnPaste.disabled = true;
         if (btnBack) btnBack.disabled = true;
+        if (btnRehost) btnRehost.disabled = true;
         if (joinBlock) joinBlock.hidden = true;
         if (status) status.textContent = "Criando sala…";
         try {
@@ -306,10 +339,12 @@ class Game {
             if (codeBox) codeBox.hidden = false;
             if (codeDisplay) codeDisplay.textContent = code;
             if (status) {
-              status.textContent = `Código ${code} — no outro aparelho: Com um amigo → colar → Entrar.`;
+              status.textContent = `Código ${code} — no outro aparelho: Com amigos → colar → Entrar.`;
             }
           };
-          const { code, seed } = await room.create(this.world.seed);
+          const maxPlayers = Math.min(3, Math.max(2, Number(maxPlayersEl?.value) || 2));
+          const seed = isDailyMode() ? dailySeed() : this.world.seed;
+          const { code } = await room.create(seed, { maxPlayers });
           await this.waitForRoomOpen(room);
           cleanup();
           resolve({ mode: "host", room, seed, code });
@@ -319,8 +354,44 @@ class Game {
           btnJoin.disabled = false;
           if (btnPaste) btnPaste.disabled = false;
           if (btnBack) btnBack.disabled = false;
+          if (btnRehost) btnRehost.disabled = false;
           if (joinBlock) joinBlock.hidden = false;
           this.focusCoopCodeInput();
+        }
+      };
+      const onRehost = async () => {
+        const code = (codeInput?.value || codeDisplay?.textContent || "").trim().toUpperCase();
+        if (code.length < 4) {
+          if (status) status.textContent = "Informe o código da sala para reconectar o host.";
+          return;
+        }
+        let hostKey = "";
+        try {
+          hostKey = sessionStorage.getItem("neveHostKey:" + code) || "";
+        } catch {
+          /* ignore */
+        }
+        if (!hostKey) {
+          if (status) status.textContent = "hostKey não encontrada neste aparelho (só quem criou a sala).";
+          return;
+        }
+        btnCreate.disabled = true;
+        btnJoin.disabled = true;
+        if (btnRehost) btnRehost.disabled = true;
+        try {
+          const room = new WebRtcRoom();
+          room.onStatus = (m) => {
+            if (status) status.textContent = m;
+          };
+          const joined = await room.resumeHost(code, hostKey);
+          await this.waitForRoomOpen(room);
+          cleanup();
+          resolve({ mode: "host", room, seed: joined.seed, code: joined.code });
+        } catch (err) {
+          if (status) status.textContent = err.message || "Falha ao reconectar host";
+          btnCreate.disabled = false;
+          btnJoin.disabled = false;
+          if (btnRehost) btnRehost.disabled = false;
         }
       };
       const onJoin = async () => {
@@ -398,9 +469,11 @@ class Game {
       joinBlock?.addEventListener("pointerdown", onJoinPointer);
       btnPaste?.addEventListener("click", onPaste);
       btnSolo?.addEventListener("click", onSolo);
+      btnDaily?.addEventListener("click", onDaily);
       btnFriends?.addEventListener("click", onFriends);
       btnBack?.addEventListener("click", onBack);
       btnCreate?.addEventListener("click", onCreate);
+      btnRehost?.addEventListener("click", onRehost);
       btnJoin?.addEventListener("click", onJoin);
     });
   }
@@ -537,8 +610,9 @@ class Game {
   }
 
   async loadLeaderboardChallenge() {
-    const entries = await fetchLeaderboard(10);
-    this.leaderboard = entries || [];
+    const data = await fetchLeaderboard(10);
+    this.leaderboard = data.entries || [];
+    this.leaderboardSeason = data.season || data.currentSeason;
     const top = getTopEntry(this.leaderboard);
     this.speedrun.setRecord(top);
     if (top) {
@@ -645,6 +719,7 @@ class Game {
 
     this.world.onEnemyAttack = (dmg, dir, enemy) => this.onEnemyAttack(dmg, dir, enemy);
     this.world.onEnemySpawned = (enemy) => {
+      if (enemy?.type === "boto") playBotoCutscene(this);
       if (this.state !== "playing") return;
       this.hud.showMsg(`${enemy.label} surgiu na neve…`, 2800);
     };
@@ -669,6 +744,8 @@ class Game {
         }
       } else if (ev === "dead") {
         const drops = enemy?._lastDrops || [];
+        if (enemy?.type === "boto") this.toastAchievement(unlockAchievement("boto_kill"));
+        if (enemy?.type === "ptero") this.toastAchievement(unlockAchievement("ptero_kill"));
         if (enemy?.type === "bear_elite") {
           this.ambience.victory();
           this.hud.showMsg(
@@ -744,6 +821,7 @@ class Game {
       3600
     );
     this.tutorial?.notify("trap");
+    this.toastAchievement(unlockAchievement("craft_fence"));
     this.checkWin();
   }
 
@@ -923,6 +1001,11 @@ class Game {
     this.overlay.hidden = false;
   }
 
+  toastAchievement(def) {
+    if (!def) return;
+    this.hud?.showMsg(`Conquista: ${def.title} — ${def.desc}`, 4000);
+  }
+
   win() {
     if (this.ended) return;
     this.ended = true;
@@ -931,6 +1014,11 @@ class Game {
     if (this.coop?.isHost) this.coop.broadcastEvent("win", {});
     const ms = this.speedrun.stop();
     this.ambience.victory();
+    this.toastAchievement(unlockAchievement("first_win"));
+    if (this.difficultyId === "hard") this.toastAchievement(unlockAchievement("hard_win"));
+    if (isDailyMode()) this.toastAchievement(unlockAchievement("daily_win"));
+    if (this.coop) this.toastAchievement(unlockAchievement("coop_win"));
+    this.toastAchievement(unlockAchievement("full_deposit"));
     document.exitPointerLock();
     this.input.clearKeys();
     if (this.clickHint) this.clickHint.hidden = true;
@@ -959,17 +1047,32 @@ class Game {
   async refreshLeaderboardUI() {
     const winList = document.getElementById("leaderboard-list");
     const rankList = document.getElementById("rank-overlay-list");
+    const seasonLabel = document.getElementById("rank-season-label");
     if (winList) winList.innerHTML = "<li>Carregando…</li>";
     if (rankList) rankList.innerHTML = "<li>Carregando…</li>";
-    const entries = await fetchLeaderboard(10);
-    this.leaderboard = entries || [];
-    if (!entries?.length) {
-      this.fillLeaderboardList(winList, []);
-      this.fillLeaderboardList(rankList, []);
-      return;
+    const data = await fetchLeaderboard(10);
+    this.leaderboard = data.entries || [];
+    this.leaderboardSeason = data.season || data.currentSeason;
+    if (seasonLabel) {
+      seasonLabel.textContent = this.leaderboardSeason
+        ? `Temporada ${this.leaderboardSeason} · tecla T`
+        : "Ranking compartilhado · tecla T";
     }
-    this.fillLeaderboardList(winList, entries);
-    this.fillLeaderboardList(rankList, entries);
+    this.fillLeaderboardList(winList, this.leaderboard);
+    this.fillLeaderboardList(rankList, this.leaderboard);
+    this.fillAchievementsList();
+  }
+
+  fillAchievementsList() {
+    const ul = document.getElementById("achievements-list");
+    if (!ul) return;
+    const items = listAchievements();
+    ul.innerHTML = items
+      .map(
+        (a) =>
+          `<li>${a.unlocked ? "✓" : "○"} <strong>${a.title}</strong> — ${a.desc}</li>`
+      )
+      .join("");
   }
 
   async submitWinScore() {
@@ -984,7 +1087,7 @@ class Game {
       status.classList.remove("win-panel__status--ok", "win-panel__status--warn", "win-panel__status--err");
     }
     try {
-      const data = await submitScore(name, ms);
+      const data = await submitScore(name, ms, { daily: isDailyMode() });
       this.leaderboard = data.entries || [];
       this.fillLeaderboardList(document.getElementById("leaderboard-list"), this.leaderboard);
       this.fillLeaderboardList(document.getElementById("rank-overlay-list"), this.leaderboard);
@@ -1412,6 +1515,11 @@ class Game {
     document.getElementById("btn-release-close")?.addEventListener("click", () => this.closeReleaseNotes());
     document.getElementById("btn-rank-close")?.addEventListener("click", () => this.closeRank());
     document.getElementById("btn-rank-pause")?.addEventListener("click", () => this.openRank());
+    document.getElementById("btn-rank-export")?.addEventListener("click", () => {
+      exportLeaderboardJson(this.leaderboard || [], {
+        season: this.leaderboardSeason || "current",
+      });
+    });
     document.getElementById("btn-release-notes")?.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();

@@ -215,9 +215,11 @@ async function refreshList() {
 function applyAdminMode(on) {
   document.body.classList.toggle("is-admin", !!on);
   const hint = $("admin-hint");
+  const bulk = $("admin-bulk");
+  if (bulk) bulk.hidden = !on;
   if (hint) {
     hint.textContent = on
-      ? "Moderação ativa — abra um card e altere o status."
+      ? "Moderação ativa — abra um card ou use bulk nos Abertos."
       : "Senha só no seu PC — permite mudar o status dos cards.";
   }
 }
@@ -279,6 +281,32 @@ function bindUi() {
     // Não libera UI sem validar no servidor
     applyAdminMode(false);
   }
+
+  $("btn-bulk-apply")?.addEventListener("click", async () => {
+    const adminKey = $("admin-key")?.value?.trim() || "";
+    const status = $("bulk-status")?.value || "doing";
+    if (!adminKey) {
+      setMsg($("admin-status"), "Informe a senha de admin.", true);
+      return;
+    }
+    const openOnes = ticketsCache.filter((t) => t.status === "open");
+    if (!openOnes.length) {
+      setMsg($("admin-status"), "Nenhum card Aberto para bulk.");
+      return;
+    }
+    setMsg($("admin-status"), `Atualizando ${openOnes.length} card(s)…`);
+    let ok = 0;
+    for (const t of openOnes) {
+      try {
+        await apiPost({ action: "status", id: t.id, status, adminKey });
+        ok++;
+      } catch {
+        /* continue */
+      }
+    }
+    setMsg($("admin-status"), `${ok}/${openOnes.length} atualizados.`);
+    await refreshList();
+  });
 
   $("btn-admin-unlock")?.addEventListener("click", async () => {
     const key = keyInput?.value?.trim() || "";

@@ -1,45 +1,5 @@
-import { createRoom, joinRoom, publishSignal, pollRoom, relaySend } from "./signalApi.js";
-
-/**
- * STUN + TURN (UDP/TCP) + TURNS (TLS:443) — melhor chance atrás de firewall.
- * Se ainda falhar, cai no relay HTTPS via signal.php.
- */
-const ICE_SERVERS = {
-  iceServers: [
-    { urls: "stun:stun.l.google.com:19302" },
-    { urls: "stun:stun1.l.google.com:19302" },
-    {
-      urls: "turn:openrelay.metered.ca:80",
-      username: "openrelayproject",
-      credential: "openrelayproject",
-    },
-    {
-      urls: "turn:openrelay.metered.ca:80?transport=tcp",
-      username: "openrelayproject",
-      credential: "openrelayproject",
-    },
-    {
-      urls: "turn:openrelay.metered.ca:443",
-      username: "openrelayproject",
-      credential: "openrelayproject",
-    },
-    {
-      urls: "turn:openrelay.metered.ca:443?transport=tcp",
-      username: "openrelayproject",
-      credential: "openrelayproject",
-    },
-    {
-      urls: "turns:openrelay.metered.ca:443",
-      username: "openrelayproject",
-      credential: "openrelayproject",
-    },
-    {
-      urls: "turns:openrelay.metered.ca:443?transport=tcp",
-      username: "openrelayproject",
-      credential: "openrelayproject",
-    },
-  ],
-};
+import { createRoom, joinRoom, rejoinHost, publishSignal, pollRoom, relaySend } from "./signalApi.js";
+import { buildIceServers } from "./iceConfig.js";
 
 /** Após o guest entrar, se o DataChannel não abrir, usa relay HTTPS. */
 const FAILOVER_MS = 8000;
@@ -97,16 +57,32 @@ export class WebRtcRoom {
     this.onStatus?.(msg);
   }
 
-  async create(seed) {
-    const data = await createRoom(seed);
+  async create(seed, opts = {}) {
+    const data = await createRoom(seed, { maxPlayers: opts.maxPlayers || 2 });
     this.role = "host";
     this.code = data.code;
     this.seed = data.seed;
+    this.hostKey = data.hostKey || null;
+    this.maxPlayers = data.maxPlayers || 2;
+    this.slot = 0;
+    this.peerId = "host";
+    try {
+      if (this.hostKey) sessionStorage.setItem("neveHostKey:" + this.code, this.hostKey);
+    } catch {
+      /* ignore */
+    }
     this.onCode?.(this.code);
-    this._status(`Sala criada. Código ${this.code} — peça ao amigo para Entrar.`);
+    this._status(
+      this.maxPlayers >= 3
+        ? `Sala ${this.code} (até 3) — sync via servidor.`
+        : `Sala criada. Código ${this.code} — peça ao amigo para Entrar.`
+    );
     await this._setupFlow();
     this._startPoll();
-    return { code: this.code, seed: this.seed };
+    if (this.maxPlayers >= 3 || data.relayMode) {
+      this._enableHttpRelay("max3");
+    }
+    return { code: this.code, seed: this.seed, hostKey: this.hostKey };
   }
 
   async join(code) {
@@ -114,15 +90,46 @@ export class WebRtcRoom {
     this.role = "guest";
     this.code = data.code;
     this.seed = data.seed;
+    this.slot = data.slot ?? 0;
+    this.peerId = `g${this.slot}`;
+    this.maxPlayers = data.maxPlayers || 2;
     this._guestJoined = true;
     this._status(`Entrou na sala ${this.code}. Conectando…`);
     await this._setupFlow();
     this._armFailover();
     this._startPoll();
+    if (data.relayMode || this.maxPlayers >= 3) {
+      this._enableHttpRelay("max3");
+    }
+    return { code: this.code, seed: this.seed, slot: this.slot };
+  }
+
+  /** Host caiu e voltou com a mesma hostKey. */
+  async resumeHost(code, hostKey) {
+    const data = await rejoinHost(code, hostKey);
+    this.role = "host";
+    this.code = data.code;
+    this.seed = data.seed;
+    this.hostKey = data.hostKey || hostKey;
+    this.maxPlayers = data.maxPlayers || 2;
+    this.peerId = "host";
+    this._guestJoined = true;
+    this._closed = false;
+    this._httpReady = false;
+    this._openFired = false;
+    this._status(`Host reconectado na sala ${this.code}.`);
+    await this._setupFlow();
+    this._startPoll();
+    if (data.relayMode || this.maxPlayers >= 3) this._enableHttpRelay("host-rejoin");
+    else this._armFailover();
     return { code: this.code, seed: this.seed };
   }
 
   async _setupFlow() {
+    if (this.maxPlayers >= 3) {
+      this._enableHttpRelay("max3");
+      return;
+    }
     if (typeof RTCPeerConnection === "undefined") {
       this._status("WebRTC indisponível neste aparelho — usando relay HTTPS…");
       this._enableHttpRelay("no-webrtc");
@@ -132,7 +139,7 @@ export class WebRtcRoom {
   }
 
   async _setupPeer() {
-    this.pc = new RTCPeerConnection(ICE_SERVERS);
+    this.pc = new RTCPeerConnection(buildIceServers());
     this.pc.onicecandidate = (ev) => {
       if (!ev.candidate || this._closed || this._httpReady) return;
       const cand = ev.candidate.toJSON();
@@ -334,7 +341,7 @@ export class WebRtcRoom {
       this._hostIceSeen,
       this._guestIceSeen,
       this._relaySeen,
-      this.role || ""
+      this.peerId || this.role || ""
     );
 
     if (!this._httpReady && data.relayMode) {
@@ -476,7 +483,7 @@ export class WebRtcRoom {
     const batch = this._outQueue.splice(0, this._outQueue.length);
     this._flushing = true;
     try {
-      await relaySend(this.code, this.role, batch);
+      await relaySend(this.code, this.peerId || this.role, batch);
     } catch (e) {
       console.warn("relay send", e);
       // requeue latest pose/snap only

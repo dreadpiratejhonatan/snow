@@ -76,6 +76,7 @@ export function faceUrl(skin) {
 export function loadFaceTexture(url) {
   const resolved = assetUrl(url);
   if (!resolved) return Promise.resolve(null);
+  if (typeof document === "undefined") return Promise.resolve(null);
   if (faceTexCache.has(resolved)) return faceTexCache.get(resolved);
   const p = new Promise((resolve) => {
     loader.load(
@@ -103,7 +104,6 @@ export function applySkinToPlayer(player, id) {
   player.applySkin(resolveSkinId(id));
 }
 
-/**
 /**
  * Escolha obrigatória de personagem (rostos em CONFIG.skinOrder).
  * @param {{ force?: boolean, onGesture?: () => void }} [opts]

@@ -42,6 +42,10 @@ function time_is_valid($timeMs, $minTimeMs, $maxTimeMs) {
   return $t >= $minTimeMs && $t <= $maxTimeMs;
 }
 
+function current_season() {
+  return gmdate('Y-m'); // temporada mensal UTC
+}
+
 function entry_is_valid($e, $minTimeMs, $maxTimeMs) {
   if (!is_array($e)) return false;
   $name = trim((string)($e['name'] ?? ''));
@@ -49,16 +53,19 @@ function entry_is_valid($e, $minTimeMs, $maxTimeMs) {
   return time_is_valid($e['timeMs'] ?? 0, $minTimeMs, $maxTimeMs);
 }
 
-function filter_entries($entries, $minTimeMs, $maxTimeMs) {
+function filter_entries($entries, $minTimeMs, $maxTimeMs, $season = null) {
   $out = [];
   foreach ($entries as $e) {
-    if (entry_is_valid($e, $minTimeMs, $maxTimeMs)) {
-      $out[] = [
-        'name' => trim((string)$e['name']),
-        'timeMs' => (int)$e['timeMs'],
-        'at' => $e['at'] ?? gmdate('c'),
-      ];
-    }
+    if (!entry_is_valid($e, $minTimeMs, $maxTimeMs)) continue;
+    $row = [
+      'name' => trim((string)$e['name']),
+      'timeMs' => (int)$e['timeMs'],
+      'at' => $e['at'] ?? gmdate('c'),
+      'season' => $e['season'] ?? substr((string)($e['at'] ?? ''), 0, 7),
+      'daily' => !empty($e['daily']),
+    ];
+    if ($season !== null && $season !== '' && ($row['season'] ?? '') !== $season) continue;
+    $out[] = $row;
   }
   usort($out, function ($a, $b) {
     return ($a['timeMs'] ?? PHP_INT_MAX) <=> ($b['timeMs'] ?? PHP_INT_MAX);
@@ -103,10 +110,10 @@ function append_entry_locked($file, $entry, $minTimeMs, $maxTimeMs, $maxEntries)
   if (!is_array($data) || !isset($data['entries']) || !is_array($data['entries'])) {
     $data = ['entries' => []];
   }
-  $data['entries'] = filter_entries($data['entries'], $minTimeMs, $maxTimeMs);
+  $data['entries'] = filter_entries($data['entries'], $minTimeMs, $maxTimeMs, null);
   $data['entries'][] = $entry;
-  $data['entries'] = filter_entries($data['entries'], $minTimeMs, $maxTimeMs);
-  $data['entries'] = array_slice($data['entries'], 0, $maxEntries);
+  $data['entries'] = filter_entries($data['entries'], $minTimeMs, $maxTimeMs, null);
+  $data['entries'] = array_slice($data['entries'], 0, 200);
   ftruncate($fp, 0);
   rewind($fp);
   fwrite($fp, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
@@ -134,12 +141,19 @@ $method = $_SERVER['REQUEST_METHOD'];
 if ($method === 'GET') {
   [, $data] = read_board($file);
   $limit = isset($_GET['limit']) ? max(1, min(50, (int)$_GET['limit'])) : 10;
-  $entries = filter_entries($data['entries'], $minTimeMs, $maxTimeMs);
-  // Persistência lazy: se o arquivo tinha lixo (ex. 6s / ooooo), limpa no disco
-  if (count($entries) !== count($data['entries'])) {
-    write_board($file, ['entries' => array_slice($entries, 0, $maxEntries)]);
+  $season = isset($_GET['season']) ? preg_replace('/[^0-9\-]/', '', (string)$_GET['season']) : current_season();
+  if ($season === 'all') $season = null;
+  $allValid = filter_entries($data['entries'], $minTimeMs, $maxTimeMs, null);
+  $entries = filter_entries($data['entries'], $minTimeMs, $maxTimeMs, $season);
+  // Persistência lazy: limpa lixo no disco (mantém todas as temporadas válidas)
+  if (count($allValid) !== count($data['entries'])) {
+    write_board($file, ['entries' => array_slice($allValid, 0, 200)]);
   }
-  echo json_encode(['entries' => array_slice($entries, 0, $limit)], JSON_UNESCAPED_UNICODE);
+  echo json_encode([
+    'season' => $season ?? 'all',
+    'currentSeason' => current_season(),
+    'entries' => array_slice($entries, 0, $limit),
+  ], JSON_UNESCAPED_UNICODE);
   exit;
 }
 
@@ -169,10 +183,13 @@ if ($method === 'POST') {
     exit;
   }
 
+  $daily = !empty($body['daily']);
   $data = append_entry_locked($file, [
     'name' => $name,
     'timeMs' => $timeMs,
     'at' => gmdate('c'),
+    'season' => current_season(),
+    'daily' => $daily ? true : false,
   ], $minTimeMs, $maxTimeMs, $maxEntries);
 
   if (!$data) {

@@ -1,27 +1,23 @@
 # Pós–v1.0 — backlog
 
-A **v1.0 oficial** (jul/2026) já inclui vários itens que estavam planejados aqui (panda, boto, T-Rex, condição de vitória com troféu do boto, ranking estável).
+Itens pedidos após a v1.0 — status na branch `develop` (gh48+):
 
-Ideias para **depois** do corte `release/v1.0` / tag `v1.0.0`:
+## Entregue na develop
+- [x] Difícil mais punitivo (loot/munição/frio)
+- [x] Desafio do dia (seed UTC)
+- [x] Conquistas locais
+- [x] Personagens Rita e Bruno
+- [x] Pterodáctilo (IA flyer)
+- [x] Cutscene leve do Boto
+- [x] Temporada mensal no ranking + export JSON
+- [x] Tickets admin com bulk status
+- [x] Host reconnect (`hostKey` + rejoinHost)
+- [x] TURN próprio via `window.NEVE_TURN` / `NEVE_ICE_SERVERS`
+- [x] Co-op até 3 jogadores (sync via relay HTTPS)
+- [x] CI GitHub Actions (build + smokes)
 
-## Conteúdo
-- Pterodáctilo / mais fauna
-- Escassez maior de munição em Difícil (tuning fino)
-- História curta / cutscenes leves em torno do boto
-- Mais personagens ou skins cosméticas
-
-## Multiplayer
-- Reconnect se o host cair (hoje a sessão acaba)
-- 3–4 jogadores (exige redesenho de autoridade)
-- TURN dedicado próprio (além do openrelay + relay HTTPS)
-
-## Meta / comunidade
-- Moderação de tickets em painel mais rico
-- Export do ranking / temporadas de speedrun
-- Achievements locais
-
-## Técnico
-- Suite de testes browser mais ampla para co-op (2 contexts)
-- CI rodando `test:coop-relay` contra staging
-
-Ver também [`V1-OFICIAL.md`](V1-OFICIAL.md) § Limites conhecidos.
+## Ainda aberto / futuro
+- 4 jogadores com mesh P2P (hoje 3 via servidor)
+- TURN dedicado em VPS própria (só falta credenciais em produção)
+- Cutscenes cinematográficas longas
+- Mais fauna / biomas

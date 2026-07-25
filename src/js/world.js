@@ -14,6 +14,7 @@ import {
   createSaciMesh,
   createTrexMesh,
   createBotoMesh,
+  createPteroMesh,
   spawnPointFar,
   spawnPointOnIce,
 } from "./enemies.js";
@@ -1584,6 +1585,8 @@ export class World {
         return createTrexMesh({ scale: cfg.scale || 1.8 });
       case "boto":
         return createBotoMesh();
+      case "ptero":
+        return createPteroMesh();
       default:
         return createBearMesh(this.tex, {
           scale: cfg.scale || 1,

@@ -95,14 +95,23 @@ export async function pingSignal() {
   }
 }
 
-export async function createRoom(seed) {
+export async function createRoom(seed, opts = {}) {
   const body = { action: "create" };
   if (seed != null && seed !== "") body.seed = seed >>> 0;
+  if (opts.maxPlayers) body.maxPlayers = opts.maxPlayers;
   return signalRequest(body);
 }
 
 export async function joinRoom(code) {
   return signalRequest({ action: "join", code: String(code || "").trim().toUpperCase() });
+}
+
+export async function rejoinHost(code, hostKey) {
+  return signalRequest({
+    action: "rejoinHost",
+    code: String(code || "").trim().toUpperCase(),
+    hostKey: String(hostKey || ""),
+  });
 }
 
 export async function publishSignal(code, role, payload) {

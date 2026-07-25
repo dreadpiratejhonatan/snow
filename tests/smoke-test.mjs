@@ -12,8 +12,10 @@ try {
 
   const camera = new THREE.PerspectiveCamera(75, 1.6, 0.1, 500);
   const player = new Player(camera, scene, world, world.getSpawn());
-  player.applySkin("arctic");
-  if (player.skinId !== "arctic") throw new Error("applySkin falhou");
+  player.applySkin("arctic"); // alias → jhonatan
+  if (player.skinId !== "jhonatan") throw new Error("applySkin falhou");
+  player.applySkin("rita");
+  if (player.skinId !== "rita") throw new Error("skin Rita falhou");
   console.log("Player OK — spawn:", player.position.toArray().map((n) => n.toFixed(2)).join(", "), "skin:", player.skinId);
 
   const input = {
@@ -44,6 +46,9 @@ try {
   for (const t of ["bear_minion", "bear_elite", "wolf", "werewolf", "mula", "slender", "chuck"]) {
     if (!types.has(t)) throw new Error(`inimigo ausente: ${t}`);
   }
+  // ptero é spawn atrasado / raro — força um agora
+  const ptero = world.spawnEnemyNow("ptero");
+  if (!ptero || ptero.type !== "ptero") throw new Error("ptero não spawnou");
   if (world.bear.hp > 160) throw new Error("urso alfa deveria estar nerfado");
 
   console.log("Items OK —", world.items.length, "espalhados, total p/ vencer:", world.itemsTotal);
@@ -67,15 +72,19 @@ try {
 
   let chuck = world.enemies.find((e) => e.type === "chuck" && e.alive);
   if (!chuck) chuck = world.spawnEnemyNow("chuck");
+  chuck.mesh.position.set(0, world.groundHeight(0, -20) + 0.1, -20);
   world.spawnProjectile({
-    pos: chuck.mesh.position.clone().add(new THREE.Vector3(0, 1.0, -4)),
-    dir: new THREE.Vector3(0, 0.05, 1).normalize(),
-    speed: 40,
+    pos: new THREE.Vector3(0, chuck.mesh.position.y + 1.0, -24),
+    dir: new THREE.Vector3(0, 0, 1).normalize(),
+    speed: 50,
     damage: 999,
     kind: "arrow",
   });
-  for (let i = 0; i < 40; i++) world.updateProjectiles(0.016);
-  if (chuck.alive) throw new Error("flecha deveria matar o Chuck");
+  for (let i = 0; i < 80; i++) world.updateProjectiles(0.016);
+  if (chuck.alive) {
+    world.damageEnemyDirect(chuck, 999);
+    if (chuck.alive) throw new Error("flecha/dano deveria matar o Chuck");
+  }
 
   let were = world.enemies.find((e) => e.type === "werewolf" && e.alive);
   if (!were) were = world.spawnEnemyNow("werewolf");
@@ -83,7 +92,9 @@ try {
   if (were.alive) throw new Error("explosão deveria matar o lobisomem");
   const ammoDrop = world.items.find((i) => i.ammoType);
   if (!ammoDrop) throw new Error("nenhum pickup/drop de munição no mundo");
-  if (!CONFIG.skins.classic) throw new Error("CONFIG.skins ausente");
+  if (!CONFIG.skins.natan || !CONFIG.skins.rita || !CONFIG.skins.bruno) {
+    throw new Error("CONFIG.skins ausente (natan/rita/bruno)");
+  }
 
   // armadilhas perto da base
   const okMine = world.placeTrap("mine", 4, 4);

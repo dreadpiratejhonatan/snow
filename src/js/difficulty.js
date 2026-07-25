@@ -24,12 +24,12 @@ export const DIFFICULTIES = {
   hard: {
     id: "hard",
     label: "Difícil",
-    blurb: "Poucos drops, inimigos brutais, frio cruel.",
-    loot: 0.55,
-    enemy: 1.45,
-    weapon: 0.7,
-    cold: 1.6,
-    spawnDelayMul: 0.85,
+    blurb: "Munição escassa, inimigos brutais, frio cruel.",
+    loot: 0.4,
+    enemy: 1.65,
+    weapon: 0.58,
+    cold: 1.9,
+    spawnDelayMul: 0.72,
   },
 };
 

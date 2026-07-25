@@ -437,6 +437,37 @@ export function createBotoMesh() {
   return g;
 }
 
+/** Pterodáctilo low-poly (voador). */
+export function createPteroMesh() {
+  const hide = new THREE.MeshStandardMaterial({ color: 0x5a4030, roughness: 0.9 });
+  const wing = new THREE.MeshStandardMaterial({ color: 0x3a2a20, roughness: 0.95, side: THREE.DoubleSide });
+  const g = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.SphereGeometry(0.35, 10, 8), hide);
+  body.scale.set(0.7, 0.55, 1.6);
+  body.position.y = 0.4;
+  const head = new THREE.Mesh(new THREE.ConeGeometry(0.18, 0.7, 8), hide);
+  head.rotation.x = Math.PI / 2;
+  head.position.set(0, 0.5, 0.95);
+  const crest = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.35, 0.25), hide);
+  crest.position.set(0, 0.75, 0.7);
+  const wingL = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 0.7), wing);
+  wingL.position.set(-1.0, 0.5, 0);
+  wingL.rotation.y = 0.2;
+  const wingR = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 0.7), wing);
+  wingR.position.set(1.0, 0.5, 0);
+  wingR.rotation.y = -0.2;
+  g.add(body, head, crest, wingL, wingR);
+  g.userData.legs = [];
+  g.userData.wings = [wingL, wingR];
+  g.traverse((m) => {
+    if (m.isMesh) {
+      m.castShadow = true;
+      m.receiveShadow = true;
+    }
+  });
+  return g;
+}
+
 /** Chuck: boneco pequeno de macacão com faca. */
 export function createChuckMesh() {
   const overall = new THREE.MeshStandardMaterial({ color: 0x2c5aa8, roughness: 0.95 });
@@ -744,6 +775,10 @@ export class Enemy {
       this.updateBoto(dt, elapsed, playerPos, dist, speedMul, hooks);
       return;
     }
+    if (ai === "flyer") {
+      this.updateFlyer(dt, elapsed, playerPos, dist, speedMul, hooks);
+      return;
+    }
     if (ai === "charger") {
       this.updateCharger(dt, elapsed, playerPos, dist, speedMul, hooks);
       return;
@@ -981,6 +1016,52 @@ export class Enemy {
       // Árvore/pedra/obstáculo = cobertura: traçador para no obstáculo, sem dano
       if (cover) return;
       hooks.onAttack?.(this.damageNow, dir, this);
+    }
+  }
+
+  /** Pterodáctilo: voa alto, mergulha para atacar. */
+  updateFlyer(dt, elapsed, playerPos, dist, speedMul, hooks) {
+    const cfg = this.cfg;
+    const m = this.mesh;
+    const flyH = cfg.flyHeight || 8;
+    const gy = this.world.groundHeight(m.position.x, m.position.z);
+    if (this.state === "wander") {
+      if (dist < cfg.aggroRange) {
+        this.state = "chase";
+        if (!this.growled) {
+          this.growled = true;
+          hooks.onEvent?.("growl", this);
+        }
+      } else {
+        this.wanderTimer -= dt;
+        if (this.wanderTimer <= 0) {
+          this.wanderTimer = 2 + Math.random() * 3;
+          const a = Math.random() * Math.PI * 2;
+          const r = 10 + Math.random() * 20;
+          this.target.set(this.home.x + Math.cos(a) * r, 0, this.home.z + Math.sin(a) * r);
+        }
+        this.moveToward(this.target, cfg.wanderSpeed * speedMul, dt, elapsed);
+      }
+    }
+    if (this.state === "chase") {
+      if (dist > cfg.aggroRange * 2.2) {
+        this.state = "wander";
+        this.growled = false;
+      } else {
+        this.moveToward(playerPos, cfg.chaseSpeed * speedMul, dt, elapsed);
+        if (dist < cfg.attackRange && this.attackCd <= 0) {
+          this.attackCd = cfg.attackCooldown;
+          const dir = new THREE.Vector3().subVectors(playerPos, m.position).setY(0).normalize();
+          hooks.onAttack?.(this.damageNow, dir, this);
+        }
+      }
+    }
+    const dive = this.state === "chase" && dist < cfg.attackRange * 2.5 ? 2.2 : flyH;
+    const targetY = gy + dive;
+    m.position.y += (targetY - m.position.y) * Math.min(1, dt * 2.5);
+    const wings = m.userData.wings || [];
+    for (let i = 0; i < wings.length; i++) {
+      wings[i].rotation.z = Math.sin(elapsed * 8 + i) * 0.35 * (i ? -1 : 1);
     }
   }
 

@@ -9,6 +9,7 @@ import {
   createMulaMesh,
   createSlenderMesh,
   createChuckMesh,
+  createPteroMesh,
 } from "../enemies.js";
 
 const SNAP_HZ = 12;
@@ -182,6 +183,7 @@ export class CoopSession {
     if (type === "mula") return createMulaMesh(tex);
     if (type === "slender") return createSlenderMesh(tex);
     if (type === "chuck") return createChuckMesh(tex);
+    if (type === "ptero") return createPteroMesh();
     if (type === "bear_elite") {
       return createBearMesh(tex, { scale: 1.45, color: 0x3a2a1c, dark: 0x1e1510 });
     }

@@ -90,6 +90,17 @@
           <button type="button" id="btn-admin-unlock" class="btn btn--ghost">Ativar nesta sessão</button>
         </div>
         <p id="admin-status" class="status-msg" aria-live="polite"></p>
+        <div class="admin-bar__row" id="admin-bulk" hidden>
+          <label>Bulk status
+            <select id="bulk-status">
+              <option value="open">Aberto</option>
+              <option value="doing">Em progresso</option>
+              <option value="done">Feito</option>
+              <option value="wontfix">Não faremos</option>
+            </select>
+          </label>
+          <button type="button" id="btn-bulk-apply" class="btn btn--ghost">Aplicar aos abertos</button>
+        </div>
       </div>
     </section>
 
@@ -111,6 +122,6 @@
     </div>
   </div>
 
-  <script type="module" src="tickets.js?v=gh47"></script>
+  <script type="module" src="tickets.js?v=gh48"></script>
 </body>
 </html>
