@@ -1,8 +1,11 @@
 <?php
 /**
- * Signaling WebRTC para co-op 2P — NÃO simula o jogo.
- * Ações JSON: ping | create | join | publish | poll
+ * Signaling WebRTC para co-op 2P + relay HTTPS de fallback.
+ * Ações JSON: ping | create | join | publish | poll | relay
  * Rooms: data/rooms/{CODE}.json (TTL 30 min)
+ *
+ * relay: quando NAT/firewall bloqueia WebRTC, o jogo sincroniza
+ * via HTTPS (mesma API) — passa em redes que só liberam 443.
  */
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
@@ -18,6 +21,9 @@ $dataDir = dirname(__DIR__) . '/data';
 $roomsDir = $dataDir . '/rooms';
 $ttlSec = 1800; // 30 min
 $iceCap = 200;
+$relayCap = 60;
+$relayBatchMax = 24;
+$relayMsgMaxBytes = 14000;
 
 if (!is_dir($dataDir)) mkdir($dataDir, 0755, true);
 if (!is_dir($roomsDir)) mkdir($roomsDir, 0755, true);
@@ -128,6 +134,36 @@ function last_ice_id($list) {
   return $last;
 }
 
+function last_relay_id($list) {
+  $last = 0;
+  foreach ($list ?: [] as $entry) {
+    if (is_array($entry) && isset($entry['id'])) {
+      $id = (int)$entry['id'];
+      if ($id > $last) $last = $id;
+    }
+  }
+  return $last;
+}
+
+/** Mensagens relay com id > since; opcionalmente exclui from === $exceptRole. */
+function relay_since($list, $sinceId, $exceptRole = '') {
+  $out = [];
+  $last = (int)$sinceId;
+  foreach ($list ?: [] as $entry) {
+    if (!is_array($entry) || !isset($entry['id'], $entry['m'])) continue;
+    $id = (int)$entry['id'];
+    if ($id <= $sinceId) continue;
+    $from = (string)($entry['from'] ?? '');
+    if ($exceptRole !== '' && $from === $exceptRole) {
+      if ($id > $last) $last = $id;
+      continue;
+    }
+    $out[] = ['id' => $id, 'from' => $from, 'm' => $entry['m']];
+    if ($id > $last) $last = $id;
+  }
+  return [$out, $last];
+}
+
 cleanup_rooms($roomsDir, $ttlSec);
 
 $body = [];
@@ -167,6 +203,9 @@ if ($action === 'create') {
     'guestIce' => [],
     'hostIceNextId' => 1,
     'guestIceNextId' => 1,
+    'relayMode' => false,
+    'relay' => [],
+    'relayNextId' => 1,
   ];
   if (!write_room($roomsDir . '/' . $code . '.json', $room)) {
     http_response_code(500);
@@ -195,6 +234,9 @@ if ($action === 'join') {
     $room['guestIce'] = [];
     $room['guestIceNextId'] = 1;
     $room['answer'] = null;
+    $room['relay'] = [];
+    $room['relayNextId'] = 1;
+    $room['relayMode'] = false;
   }
   $room['guestJoined'] = true;
   write_room($path, $room);
@@ -236,8 +278,50 @@ if ($action === 'publish') {
     echo json_encode(['error' => 'role inválido']);
     exit;
   }
+  if (!empty($body['relayMode'])) {
+    $room['relayMode'] = true;
+  }
   write_room($path, $room);
   echo json_encode(['ok' => true]);
+  exit;
+}
+
+if ($action === 'relay') {
+  $path = room_path($roomsDir, $body['code'] ?? '');
+  $room = read_room($path);
+  if (!$room) {
+    http_response_code(404);
+    echo json_encode(['error' => 'Sala não encontrada']);
+    exit;
+  }
+  $role = $body['role'] ?? '';
+  if ($role !== 'host' && $role !== 'guest') {
+    http_response_code(400);
+    echo json_encode(['error' => 'role inválido']);
+    exit;
+  }
+  $messages = $body['messages'] ?? [];
+  if (!is_array($messages)) $messages = [];
+  if (count($messages) > $relayBatchMax) {
+    $messages = array_slice($messages, -$relayBatchMax);
+  }
+  $next = (int)($room['relayNextId'] ?? 1);
+  if ($next < 1) $next = 1;
+  if (!isset($room['relay']) || !is_array($room['relay'])) $room['relay'] = [];
+  foreach ($messages as $m) {
+    if (!is_array($m)) continue;
+    $enc = json_encode($m, JSON_UNESCAPED_UNICODE);
+    if ($enc === false || strlen($enc) > $relayMsgMaxBytes) continue;
+    $room['relay'][] = ['id' => $next++, 'from' => $role, 'm' => $m];
+  }
+  $room['relayNextId'] = $next;
+  $room['relayMode'] = true;
+  if (count($room['relay']) > $relayCap) {
+    $room['relay'] = array_values(array_slice($room['relay'], -$relayCap));
+  }
+  write_room($path, $room);
+  @touch($path);
+  echo json_encode(['ok' => true, 'relayLastId' => last_relay_id($room['relay'])]);
   exit;
 }
 
@@ -254,6 +338,8 @@ if ($action === 'poll') {
 
   $sinceHost = (int)($body['sinceHostIce'] ?? ($_GET['sinceHostIce'] ?? 0));
   $sinceGuest = (int)($body['sinceGuestIce'] ?? ($_GET['sinceGuestIce'] ?? 0));
+  $sinceRelay = (int)($body['sinceRelay'] ?? ($_GET['sinceRelay'] ?? 0));
+  $role = (string)($body['role'] ?? ($_GET['role'] ?? ''));
   list($hostIce, $hostLast) = ice_since($room['hostIce'] ?? [], $sinceHost);
   list($guestIce, $guestLast) = ice_since($room['guestIce'] ?? [], $sinceGuest);
   if ($hostLast < $sinceHost) $hostLast = $sinceHost;
@@ -264,12 +350,18 @@ if ($action === 'poll') {
   if ($hostAbs > $hostLast) $hostLast = $hostAbs;
   if ($guestAbs > $guestLast) $guestLast = $guestAbs;
 
+  list($relayMsgs, $relayLast) = relay_since($room['relay'] ?? [], $sinceRelay, $role);
+  $relayAbs = last_relay_id($room['relay'] ?? []);
+  if ($relayAbs > $relayLast) $relayLast = $relayAbs;
+  if ($relayLast < $sinceRelay) $relayLast = $sinceRelay;
+
   echo json_encode([
     'ok' => true,
     'code' => $room['code'],
     'seed' => $room['seed'],
     'guestJoined' => !empty($room['guestJoined']),
     'hostReady' => !empty($room['hostReady']),
+    'relayMode' => !empty($room['relayMode']),
     'offer' => $room['offer'],
     'answer' => $room['answer'],
     'hostIce' => $hostIce,
@@ -278,9 +370,11 @@ if ($action === 'poll') {
     'guestIceTotal' => $guestAbs,
     'hostIceLastId' => $hostAbs,
     'guestIceLastId' => $guestAbs,
+    'relayMsgs' => $relayMsgs,
+    'relayLastId' => $relayLast,
   ], JSON_UNESCAPED_UNICODE);
   exit;
 }
 
 http_response_code(400);
-echo json_encode(['error' => 'Ação inválida. Use ping|create|join|publish|poll']);
+echo json_encode(['error' => 'Ação inválida. Use ping|create|join|publish|poll|relay']);

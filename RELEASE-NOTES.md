@@ -37,5 +37,6 @@ Changelog jogável do que entrou desde sábado até hoje. No jogo: botão **N** 
 
 ## Multiplayer e deploy
 - Co-op 2 jogadores (WebRTC + `api/signal.php` na HostGator)
+- Se firewall/NAT bloquear P2P, **relay HTTPS** automático (mesma API)
 - GitHub Pages automático no push
 - Deploy HostGator seguro: ver `DEPLOY-SEGURO.md` (não apagar `data/leaderboard.json`)

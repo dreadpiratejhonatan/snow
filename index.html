@@ -356,7 +356,7 @@
           <li><strong>Estações</strong> do ano ciclam (neve/gelo/frio mudam) · cobertura atrás de pedras/baú bloqueia ataques</li>
           <li><strong>Trilha nova</strong> estilo aventura 16-bit / natureza — várias faixas distintas</li>
           <li><strong>Trilha</strong> desbloqueia no clique da skin/dificuldade</li>
-          <li><strong>Co-op</strong> 2 jogadores mais estável (rejoin, ICE, retries; precisa HostGator com <code>api/signal.php</code>)</li>
+          <li><strong>Co-op</strong> com relay HTTPS se firewall bloquear P2P (precisa HostGator <code>api/signal.php</code>)</li>
           <li>Jogo no <strong>GitHub Pages</strong> + guia de deploy seguro na HostGator (preserva o ranking)</li>
         </ul>
         <button id="btn-release-close" type="button" class="menu__btn">Fechar (Esc)</button>
@@ -424,13 +424,13 @@
           <dt>Co-op não cria sala / “sinalização offline”?</dt>
           <dd>O co-op precisa da <strong>HostGator online</strong> (`api/signal.php`). Se falhar ao criar sala, é a sinalização — não o jogo no Pages. Peça ao admin subir o zip com a pasta <code>api/</code> e <code>data/rooms/</code> gravável.</dd>
           <dt>Criou a sala mas o amigo não conecta?</dt>
-          <dd>Confira o código e tente de novo (rejoin liberado se o handshake não fechou). Em redes diferentes ou CGNAT, fiquem na <strong>mesma Wi‑Fi</strong>; um no Wi‑Fi e outro só em dados móveis costuma falhar.</dd>
+          <dd>Confira o código e tente de novo. Se o P2P for bloqueado por firewall/NAT, o jogo muda sozinho para <strong>relay HTTPS</strong> (~10s) — funciona em redes diferentes e dados móveis. Ambos precisam da HostGator no ar.</dd>
         </dl>
         <button id="btn-help-close" type="button" class="menu__btn">Fechar (H / Esc)</button>
       </div>
     </div>
   </div>
 
-  <script type="module" src="src/js/main.js?v=gh42"></script>
+  <script type="module" src="src/js/main.js?v=gh43"></script>
 </body>
 </html>

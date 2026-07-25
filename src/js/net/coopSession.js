@@ -12,6 +12,7 @@ import {
 } from "../enemies.js";
 
 const SNAP_HZ = 12;
+const SNAP_HZ_HTTP = 6;
 
 /** Sessão co-op: avatares + snapshots host→guest. */
 export class CoopSession {
@@ -64,7 +65,7 @@ export class CoopSession {
     this._remoteNetEnemies.clear();
   }
 
-  /** Chamado quando DataChannel abre. */
+  /** Chamado quando o canal abre (P2P ou relay HTTPS). */
   onConnected() {
     this.ensureRemote();
     const skin = this.game.player.skinId || "natan";
@@ -74,10 +75,12 @@ export class CoopSession {
       skin,
       name: "Player",
     });
+    const via =
+      this.room.transport === "http" ? " (via servidor — firewall OK)" : "";
     this.game.hud?.showMsg(
       this.isHost
-        ? `Co-op ativo — sala ${this.code}. Você é o host.`
-        : `Co-op ativo — conectado ao host.`,
+        ? `Co-op ativo — sala ${this.code}. Você é o host.${via}`
+        : `Co-op ativo — conectado ao host.${via}`,
       4500
     );
   }
@@ -226,7 +229,8 @@ export class CoopSession {
     if (!this.isHost) return;
 
     this._snapAcc += dt;
-    if (this._snapAcc < 1 / SNAP_HZ) return;
+    const snapHz = this.room.transport === "http" ? SNAP_HZ_HTTP : SNAP_HZ;
+    if (this._snapAcc < 1 / snapHz) return;
     this._snapAcc = 0;
 
     const enemies = (g.world.enemies || [])

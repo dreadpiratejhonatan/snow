@@ -107,11 +107,26 @@ export async function publishSignal(code, role, payload) {
   return signalRequest({ action: "publish", code, role, ...payload });
 }
 
-export async function pollRoom(code, sinceHostIce = 0, sinceGuestIce = 0) {
+export async function pollRoom(code, sinceHostIce = 0, sinceGuestIce = 0, sinceRelay = 0, role = "") {
   return signalRequest({
     action: "poll",
     code,
     sinceHostIce,
     sinceGuestIce,
+    sinceRelay,
+    role,
   });
+}
+
+/** Envia lote de mensagens de jogo via HTTPS (fallback quando WebRTC falha). */
+export async function relaySend(code, role, messages) {
+  return signalRequest(
+    {
+      action: "relay",
+      code,
+      role,
+      messages: messages || [],
+    },
+    { retries: 2 }
+  );
 }
