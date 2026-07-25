@@ -406,7 +406,7 @@ export const CONFIG = {
     },
     ze: {
       id: "ze",
-      name: "Zé",
+      name: "ZÉ",
       face: "faces/ze.png",
       suit: 0x3a2a18,
       shirt: 0x6a4a28,
