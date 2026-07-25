@@ -3,7 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "Sobrevivência 3D na neve no navegador — explore, colete itens, enfrente o urso e abasteça a base",
+  "description": "Neve Selvagem v1.0 — sobrevivência 3D na neve no navegador (Three.js)",
   "scripts": {
     "setup": "npm install",
     "start": "serve -l tcp://127.0.0.1:5173",
@@ -15,6 +15,7 @@
     "pages:preview": "npm run build && npm run preview",
     "github:setup": "powershell -ExecutionPolicy Bypass -File scripts/github-setup.ps1",
     "test:smoke": "node tests/smoke-test.mjs",
+    "test:coop-relay": "node tests/coop-relay-smoke.mjs",
     "test:browser": "node tests/browser-test.mjs"
   },
   "dependencies": {

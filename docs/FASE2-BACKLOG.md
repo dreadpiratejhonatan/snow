@@ -1,15 +1,27 @@
-# Fase 2 — backlog (depois do ranking estável)
+# Pós–v1.0 — backlog
 
-Não implementar enquanto a competição de speedrun (Fase 1) não estiver estável em produção.
+A **v1.0 oficial** (jul/2026) já inclui vários itens que estavam planejados aqui (panda, boto, T-Rex, condição de vitória com troféu do boto, ranking estável).
 
-## Conteúdo planejado
+Ideias para **depois** do corte `release/v1.0` / tag `v1.0.0`:
 
-- Novos inimigos: panda, boto-cor-de-rosa (chefão do lago congelado + animação de saída), T-rex, pterodáctilo
-- Escassez maior de munição / recursos de armas
-- História curta amarrando o boto como chefão final (pode mudar a condição de vitória)
+## Conteúdo
+- Pterodáctilo / mais fauna
+- Escassez maior de munição em Difícil (tuning fino)
+- História curta / cutscenes leves em torno do boto
+- Mais personagens ou skins cosméticas
 
-## Pré-requisito
+## Multiplayer
+- Reconnect se o host cair (hoje a sessão acaba)
+- 3–4 jogadores (exige redesenho de autoridade)
+- TURN dedicado próprio (além do openrelay + relay HTTPS)
 
-- Ranking online: POST/GET HostGator OK
-- Nome digitável no fim de jogo
-- Tecla T mostra Top 10 compartilhado após reload
+## Meta / comunidade
+- Moderação de tickets em painel mais rico
+- Export do ranking / temporadas de speedrun
+- Achievements locais
+
+## Técnico
+- Suite de testes browser mais ampla para co-op (2 contexts)
+- CI rodando `test:coop-relay` contra staging
+
+Ver também [`V1-OFICIAL.md`](V1-OFICIAL.md) § Limites conhecidos.

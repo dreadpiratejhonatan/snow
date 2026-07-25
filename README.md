@@ -1,18 +1,29 @@
-# Neve Selvagem
+# Neve Selvagem — v1.0 oficial
 
-Sobrevivência 3D na neve no navegador (Three.js). Explore, colete suprimentos, arme-se, enfrente criaturas e dispute o ranking de tempo.
+Sobrevivência 3D na neve no navegador (Three.js). Explore, colete suprimentos, enfrente criaturas e chefs, dispute o ranking e jogue co-op com um amigo.
 
-Site de produção típico: HostGator em `/snow` com API PHP para o leaderboard.
+**Documentação completa da v1:** [`docs/V1-OFICIAL.md`](docs/V1-OFICIAL.md)  
+**Changelog:** [`CHANGELOG.md`](CHANGELOG.md) · **Novidades in-game:** [`RELEASE-NOTES.md`](RELEASE-NOTES.md)
 
-## O jogo
+| Jogar | URL |
+| --- | --- |
+| GitHub Pages | https://dreadpiratejhonatan.github.io/snow/ |
+| HostGator | https://jhonatanribeiro.com/snow/ |
+| Sugestões | [/tickets/](https://jhonatanribeiro.com/snow/tickets/) |
 
-- **Explore** o mapa nevado (minimapa orientado à sua frente, gelo escorregadio, dia/noite, aurora).
-- **Colete 9 suprimentos** + o **Troféu do Urso Alfa** e deposite tudo no **baú** da cabana para vencer.
-- **Arsenal**: punhos, machado, lança, tocha, claymore, arco, besta, revólver, escopeta, AK-47, granada. Munição no chão também libera a arma correspondente.
-- **Inimigos**: ursos, lobos, lobisomem, mula-sem-cabeça, slender, Chuck — spawns atrasados; NPCs podem brigar entre si.
-- **Armadilhas** perto da fogueira: mina, isca, cerca (`G` tipo / `F` colocar).
-- **Skins**, tutorial, 1ª/3ª pessoa, touch no celular, speedrun + ranking.
-- **Dedicado a CAIO** (primeiro a testar) e **JORGE** (primeiro a zerar).
+**Release Git:** branch `release/v1.0` · tag `v1.0.0` (25 jul 2026)
+
+---
+
+## O jogo (resumo)
+
+- Splash com artes aleatórias → personagem → dificuldade → **Solo** ou **Com um amigo**
+- Colete suprimentos + **Troféu do Urso Alfa** + **Troféu do Boto** e deposite no **baú**
+- Arsenal completo, armadilhas, cobertura atrás de pedras/árvores, estações do ano
+- Chefs: Panda, Saci, T-Rex gatling, Boto (lago)
+- Personagens: Natan, Jhonatan, Jorge Bolado, Caio, Lorenzo, ZÉ
+- Ranking online (**T**), board de sugestões, trilha procedural
+- Dedicado a **CAIO** (primeiro a testar) e **JORGE** (primeiro a zerar)
 
 ### Controles
 
@@ -21,27 +32,21 @@ Site de produção típico: HostGator em `/snow` com API PHP para o leaderboard.
 | WASD | mover |
 | Shift | correr |
 | Espaço | pular |
-| E | pegar / depositar no baú |
-| IJKL | olhar a câmera sem mouse |
-| B | mostrar / esconder barra de armas |
-| 1–9 / 0 | equipar arma |
+| E | pegar / depositar |
+| Scroll | ciclar arma |
+| B | barra de armas |
+| 1–9 / 0 | equipar |
 | G / F | tipo / colocar armadilha |
 | V / Tab | 1ª / 3ª pessoa |
-| R | recarregar (revólver / escopeta / AK) |
-| C | craft cerca (perto da fogueira; gasta 1 da mochila) |
-| H / ? | ajuda e FAQ |
-| Clique | atacar |
-| Esc | pausar (ou pular tutorial) |
+| R | recarregar |
+| T | ranking |
+| H / ? | ajuda |
+| N | novidades |
+| Esc | pausa |
 
-Progresso auto-salva (Continuar / Novo jogo após o splash).
+No celular: stick + botões.
 
-No celular: stick + botões (incluindo `?` de ajuda).
-
-### FAQ rápido (também in-game com H)
-
-- **Flechas sem arco?** Flechas liberam o arco — abra o inventário (`B`).
-- **Morri e perdi tudo?** O carregado cai no chão; o baú fica seguro.
-- **Ranking?** Vença e envie o nome no painel de vitória (API no HostGator).
+---
 
 ## Rodar localmente
 
@@ -53,55 +58,45 @@ npm run start:win   # Windows
 
 Abra http://127.0.0.1:5173/
 
-## Build e deploy
+## Build, testes e deploy
 
 ```bash
-npm run build         # dist/ + release/hostgator-snow/ + release/snow.zip
-npm run preview       # testa dist/ em :5180
-npm run pages:preview # build + preview (igual GitHub Pages)
+npm run build
 npm run test:smoke
+npm run test:coop-relay   # HostGator signal/relay ao vivo
+npm run preview           # dist/ em :5180
 ```
 
-### Co-op 2 jogadores
+- **HostGator (seguro):** [`DEPLOY-SEGURO.md`](DEPLOY-SEGURO.md) — zip em `release/snow.zip`  
+- **GitHub Pages:** [`GITHUB-PAGES.md`](GITHUB-PAGES.md)  
+- **Co-op:** [`docs/COOP.md`](docs/COOP.md)  
+- **APIs:** [`docs/API.md`](docs/API.md)
 
-Menu após a skin: **Criar sala** / **Entrar** com código. Signaling na HostGator (`api/signal.php`), sync via WebRTC. Detalhes: [`docs/COOP.md`](docs/COOP.md).
+O pacote **não inclui** ranking/tickets vivos — preserve `data/` no servidor.
 
-### GitHub Pages (jogar online de graça)
-
-Guia completo: [`GITHUB-PAGES.md`](GITHUB-PAGES.md).
-
-1. Crie um repo no GitHub e faça push desta pasta `web-cs`
-2. **Settings → Pages → Source: GitHub Actions**
-3. O workflow [`.github/workflows/deploy-pages.yml`](.github/workflows/deploy-pages.yml) publica o `dist/`
-4. URL: `https://SEU_USER.github.io/SEU_REPO/`
-
-No Pages o ranking usa a API da HostGator (CORS). Abra a lista com **T**.
-
-### HostGator
-
-Leia [`DEPLOY-SEGURO.md`](DEPLOY-SEGURO.md) e o `LEIA-ME.txt` dentro do zip.
-
-- O pacote **não inclui** `data/leaderboard.json` — para não apagar o ranking no upload.
-- Preserve a pasta `data/` no servidor. Ctrl+F5 após publicar.
+---
 
 ## Estrutura
 
 ```
 web-cs/
-├── index.html
-├── src/js/          # main, world, player, weapons, enemies, tutorial, …
+├── index.html          # shell + menus + splash
+├── src/js/             # game, net/, splash, …
 ├── src/styles/
-├── api/             # leaderboard.php
-├── data/            # leaderboard local (dev)
-├── scripts/build.mjs
+├── api/                # leaderboard, signal, tickets (PHP)
+├── tickets/            # board público de sugestões
+├── data/               # dev + .htaccess (produção no servidor)
+├── docs/               # V1-OFICIAL, API, COOP, …
 ├── tests/
-├── dist/
-└── release/snow.zip
+├── scripts/build.mjs
+├── dist/               # build Pages
+└── release/snow.zip    # pacote HostGator
 ```
 
-## Testes
+## Branches
 
-```bash
-npm run test:smoke
-npm run test:browser   # Chrome/Edge; GAME_URL=http://127.0.0.1:5180/ para dist
-```
+| Branch | Uso |
+| --- | --- |
+| `master` | desenvolvimento / Pages |
+| `release/v1.0` | corte da primeira versão oficial |
+| `release-notes` | espelho histórico do ciclo jul/2026 |

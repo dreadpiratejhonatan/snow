@@ -4,7 +4,7 @@
 
 - A **HostGator** (`api/signal.php`) faz *signaling* (sala, código, offer/answer/ICE) e, se precisar, **relay HTTPS** do jogo.
 - Preferência: sincronizar **peer-to-peer** (WebRTC DataChannel + TURN/TURNS).
-- Se NAT/firewall bloquear P2P (~10s sem DataChannel), os dois caem no **relay via HTTPS** (mesma API) — passa em redes que só liberam 443.
+- Se NAT/firewall bloquear P2P (~8s sem DataChannel), os dois caem no **relay via HTTPS** (mesma API) — passa em redes que só liberam 443.
 - O **host** é autoritativo (inimigos, snapshots). O guest espelha.
 - GitHub Pages / localhost chamam `https://jhonatanribeiro.com/snow/api/signal.php`.
 
@@ -44,7 +44,8 @@ Se o arquivo não estiver no último zip, **reenviar** `api/` + garantir `data/r
 - Rejoin: se o guest marcou entrada mas ainda não há `answer`, um novo `join` substitui o guest (evita 409 preso)
 - ICE com ids sequenciais (`sinceId` / `hostIceLastId`) e teto 200
 - Cliente: retries no `fetch` de sinalização + mensagens claras no menu
-- TURN/TURNS (TLS 443) + failover automático para `action=relay` no PHP
+- TURN/TURNS (TLS 443) + failover automático para `action=relay` no PHP (~8s)
+- Smoke: `npm run test:coop-relay` (ou `node tests/coop-relay-smoke.mjs`)
 
 ## Deploy HostGator
 

@@ -1,42 +1,41 @@
-# Novidades — 19–23 jul 2026
+# Novidades — v1.0 oficial (jul 2026)
 
-Changelog jogável do que entrou desde sábado até hoje. No jogo: botão **N** (ao lado do `?` no PC; nos botões touch no celular) ou **O que mudou** no menu pausa.
+Primeira versão oficial do **Neve Selvagem**. No jogo: botão **N** (ao lado do `?`; touch no celular) ou **O que mudou** no pause.
+
+Documentação completa: [`docs/V1-OFICIAL.md`](docs/V1-OFICIAL.md) · Tag Git: `v1.0.0` · Branch: `release/v1.0`
 
 ## Pickups e combate
 - Itens no chão com silhuetas próprias + partículas/flash ao pegar
 - NPCs: flash vermelho, knockback, startle no aggro; SFX de hurt/teleporte/gatling
+- Árvores, pedras e baú **bloqueiam tiros** e parte dos ataques (cobertura)
+- Scroll do mouse cicla armas
 
 ## Menus de entrada
+- Splash com artes em **ordem aleatória**
 - Visual unificado (tipografia + noite gelada)
 - Co-op em **2 passos**: Solo **ou** Com um amigo → criar/entrar
 
 ## Dificuldade e chefs
 - Picker **Fácil / Médio / Difícil** depois da skin (Médio = balance padrão)
-- Multiplicadores de loot, HP/dano inimigo, dano das armas e frio
-- Chefs novos: **Panda violento**, **Saci-pererê**, **T-Rex gatling**, **Boto-cor-de-rosa** (último, no lago)
-- Vitória exige também o **Troféu do Boto** (além do urso alfa)
+- Chefs: **Panda**, **Saci-pererê**, **T-Rex gatling**, **Boto-cor-de-rosa** (último, no lago)
+- Vitória exige **Troféu do Urso Alfa** + **Troféu do Boto**
 
 ## Personagens
-- 5 rostos: **Natan**, **Jhonatan**, **Jorge Bolado**, **Caio**, **Lorenzo**
-- Escolha obrigatória com preview 3D (arraste para girar)
-- Cards em **ordem aleatória** a cada abertura do picker
-- Rosto só na frente da cabeça (3ª pessoa vê a nuca por padrão)
+- **Natan**, **Jhonatan**, **Jorge Bolado**, **Caio**, **Lorenzo**, **ZÉ**
+- Preview 3D; cards em ordem aleatória; rosto só na frente da cabeça
 
-## Câmera
-- Botão **Ver skin** / **Ver costas** em 3ª pessoa
-- **Alt + setas** orbita a câmera 360° sem girar o corpo
-- **Alt + V** volta a câmera para trás
+## Mundo e áudio
+- **Estações** ciclam (neve/gelo/frio)
+- Trilha procedural estilo aventura 16-bit (desbloqueia no clique dos menus)
 
 ## Inventário e ranking
-- Tecla **B** mostra/esconde a barra de armas por completo (✕ também fecha)
-- Ranking online (**T**) via HostGator; tempos falsos filtrados (mín. 2 min, nomes lixo)
+- Tecla **B** mostra/esconde a barra de armas
+- Ranking online (**T**) via HostGator; filtros anti-tempo-falso
 
 ## Board de sugestões
-- Página `/tickets/` em cards estilo Jira (Aberto / Em progresso / Feito / Não faremos)
-- Qualquer um envia feature ou bug; a lista é pública; admin muda o status
+- `/tickets/` em cards estilo Jira — ideias públicas; admin muda status
 
 ## Multiplayer e deploy
-- Co-op 2 jogadores (WebRTC + `api/signal.php` na HostGator)
-- Se firewall/NAT bloquear P2P, **relay HTTPS** automático (mesma API)
-- GitHub Pages automático no push
-- Deploy HostGator seguro: ver `DEPLOY-SEGURO.md` (não apagar `data/leaderboard.json`)
+- Co-op 2 jogadores (WebRTC + `api/signal.php`)
+- Se firewall/NAT bloquear P2P → **relay HTTPS** automático (~8s)
+- GitHub Pages + HostGator (`DEPLOY-SEGURO.md` — não apagar `data/`)
