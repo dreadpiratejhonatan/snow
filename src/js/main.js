@@ -582,8 +582,13 @@ class Game {
 
     // relógio do mundo: 0 = nascer do sol, 0.25 = meio-dia, 0.5 = pôr do sol
     this.dayTime = 0.12;
+    // estações: começa no inverno (tema neve) e cicla a cada N dias
+    this.seasonIndex = (CONFIG.world.seasons?.length || 1) - 1;
+    this.seasonDayAcc = 0;
+    this._prevDayTime = this.dayTime;
 
     this.world = new World(this.scene);
+    this.world.applySeason?.(this.getSeason());
     this.player = new Player(
       this.camera,
       this.scene,
@@ -802,6 +807,25 @@ class Game {
 
   onEnemyAttack(dmg, dir, enemy) {
     if (this.ended) return;
+    // Cobertura: pedra, árvore, baú, cabana… bloqueiam LOS (melee e tiros)
+    if (enemy?.mesh && this.world?.rayHitsCover) {
+      const origin = enemy.mesh.position.clone();
+      origin.y += 1.1 * (enemy.cfg?.scale || 1);
+      const aim = this.player.position.clone();
+      aim.y += 1.15;
+      const to = new THREE.Vector3().subVectors(aim, origin);
+      const dist = to.length();
+      if (dist > 0.25) {
+        const blocked = this.world.rayHitsCover(origin, to.normalize(), dist - 0.15);
+        if (blocked) {
+          if (!this._coverMsgT || this.clock.elapsedTime - this._coverMsgT > 2.2) {
+            this._coverMsgT = this.clock.elapsedTime;
+            this.hud.showMsg("Protegido atrás do obstáculo!", 1400);
+          }
+          return;
+        }
+      }
+    }
     this.health = Math.max(0, this.health - dmg);
     this.player.applyKnockback(dir, enemy?.type === "wolf" ? 7 : 9);
     this.hud.flashDamage();
@@ -1071,10 +1095,47 @@ class Game {
     this._skyBottom = new THREE.Color();
   }
 
+  getSeason() {
+    const list = CONFIG.world.seasons || [];
+    if (!list.length) {
+      return {
+        id: "winter",
+        label: "Inverno",
+        icon: "❄️",
+        warmthMul: 1,
+        snowMul: 1,
+        iceOpacity: 0.96,
+      };
+    }
+    const i = ((this.seasonIndex % list.length) + list.length) % list.length;
+    return list[i];
+  }
+
+  /** Avança estação a cada `seasonDays` midnights. */
+  tickSeasonOnDayWrap() {
+    if (this.dayTime >= this._prevDayTime) {
+      this._prevDayTime = this.dayTime;
+      return;
+    }
+    // dayTime wrap = meia-noite
+    this._prevDayTime = this.dayTime;
+    const need = CONFIG.world.seasonDays || 2;
+    this.seasonDayAcc = (this.seasonDayAcc || 0) + 1;
+    if (this.seasonDayAcc < need) return;
+    this.seasonDayAcc = 0;
+    const n = CONFIG.world.seasons?.length || 4;
+    this.seasonIndex = ((this.seasonIndex || 0) + 1) % n;
+    const s = this.getSeason();
+    this.world.applySeason?.(s);
+    this.hud.showMsg(`${s.icon} Chegou ${s.label}`, 3800);
+  }
+
   // Ciclo de dia e noite: move sol/lua, mistura cores do céu e da névoa,
   // acende estrelas/vagalumes. Retorna o fator de noite (0..1).
   updateDayNight(dt) {
     this.dayTime = (this.dayTime + dt / CONFIG.world.dayLength) % 1;
+    this.tickSeasonOnDayWrap();
+    const season = this.getSeason();
     const t = this.dayTime * Math.PI * 2;
     const elev = Math.sin(t); // >0 dia, <0 noite
 
@@ -1137,8 +1198,13 @@ class Game {
       this.hemi.color.lerp(new THREE.Color(0x88ffcc), aurora * 0.4);
       this.hemi.intensity = Math.max(this.hemi.intensity, 0.22 + aurora * 0.35);
     }
+    // tinta leve da estação na névoa / hemi
+    if (season?.fogTint != null) {
+      this.scene.fog.color.lerp(new THREE.Color(season.fogTint), 0.18);
+      this.hemi.color.lerp(new THREE.Color(season.fogTint), 0.12);
+    }
 
-    this.hud.updateTime(this.dayTime, night);
+    this.hud.updateTime(this.dayTime, night, season);
     return night;
   }
 
@@ -1869,7 +1935,9 @@ class Game {
       this._freezingWarned = false;
     } else {
       const coldMul = this.difficulty?.cold ?? 1;
-      const drain = (night > 0.5 ? s.warmthDrainNight : s.warmthDrainDay) * coldMul;
+      const seasonMul = this.getSeason()?.warmthMul ?? 1;
+      const drain =
+        (night > 0.5 ? s.warmthDrainNight : s.warmthDrainDay) * coldMul * seasonMul;
       this.warmth = Math.max(0, this.warmth - drain * dt);
 
       // avisos claros — o frio não mata “do nada”

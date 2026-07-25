@@ -48,6 +48,8 @@ export function captureGameState(game) {
   return {
     v: VERSION,
     dayTime: game.dayTime,
+    seasonIndex: game.seasonIndex ?? 0,
+    seasonDayAcc: game.seasonDayAcc ?? 0,
     elapsed: game.clock?.elapsedTime ?? 0,
     health: game.health,
     warmth: game.warmth,
@@ -85,6 +87,10 @@ export function applyGameState(game, data) {
   if (data.difficulty) game.setDifficulty?.(data.difficulty, { thinPickups: false });
   else game.setDifficulty?.(game.difficultyId || "medium", { thinPickups: false });
   game.dayTime = data.dayTime ?? game.dayTime;
+  if (data.seasonIndex != null) game.seasonIndex = data.seasonIndex;
+  if (data.seasonDayAcc != null) game.seasonDayAcc = data.seasonDayAcc;
+  game._prevDayTime = game.dayTime;
+  game.world?.applySeason?.(game.getSeason?.() || null);
   game.health = data.health ?? game.health;
   game.warmth = data.warmth ?? game.warmth;
   game.carried = data.carried ?? 0;

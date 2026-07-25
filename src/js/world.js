@@ -481,14 +481,43 @@ export class World {
     this.scene.add(this.snow);
   }
 
+  /** Aplica visual da estação (neve, gelo, copas). */
+  applySeason(season) {
+    if (!season) return;
+    this.season = season;
+    const snowMul = season.snowMul ?? 1;
+    if (this.ice?.material) {
+      this.ice.material.opacity = season.iceOpacity ?? 0.96;
+      if (season.iceColor != null) this.ice.material.color.setHex(season.iceColor);
+      this.ice.material.transparent = true;
+      this.ice.material.needsUpdate = true;
+    }
+    if (this.snow?.material) {
+      this.snow.visible = snowMul > 0.04;
+      this.snow.material.opacity = Math.max(0.08, 0.9 * snowMul);
+    }
+    // caps de neve nas árvores só no inverno (e quase)
+    if (this.snowCapMat && this.trees) {
+      const showCaps = snowMul > 0.45;
+      for (const tree of this.trees) {
+        tree.traverse((m) => {
+          if (m.isMesh && m.material === this.snowCapMat) m.visible = showCaps;
+        });
+      }
+    }
+  }
+
   updateSnowfall(dt, elapsed, playerPos) {
     const p = playerPos || { x: 0, y: 4, z: 0 };
+    const snowMul = this.season?.snowMul ?? 1;
+    if (snowMul < 0.04 || !this.snow) return;
     const sp = this.snow.geometry.attributes.position;
+    const speedMul = 0.35 + snowMul * 0.9;
     for (let i = 0; i < this.snowData.length; i++) {
       const d = this.snowData[i];
-      let x = sp.getX(i) + Math.sin(elapsed * 1.1 + d.phase) * dt * 0.8;
-      let y = sp.getY(i) - d.speed * dt;
-      let z = sp.getZ(i) + Math.cos(elapsed * 0.9 + d.phase) * dt * 0.5;
+      let x = sp.getX(i) + Math.sin(elapsed * 1.1 + d.phase) * dt * 0.8 * snowMul;
+      let y = sp.getY(i) - d.speed * dt * speedMul;
+      let z = sp.getZ(i) + Math.cos(elapsed * 0.9 + d.phase) * dt * 0.5 * snowMul;
       const dx = x - p.x;
       const dz = z - p.z;
       if (y < this.groundHeight(x, z) || dx * dx + dz * dz > 45 * 45) {
@@ -878,8 +907,10 @@ export class World {
       z: this.chestPos.z,
       y: by,
       r: 0.55,
-      top: by + 0.65,
+      coverR: 0.95,
+      top: by + 1.45, // alto o bastante para cobrir peito/mira
       climbable: true,
+      cover: true,
     });
   }
 

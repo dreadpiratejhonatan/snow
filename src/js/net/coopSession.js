@@ -133,6 +133,11 @@ export class CoopSession {
   applySnapshot(msg) {
     const g = this.game;
     if (typeof msg.dayTime === "number") g.dayTime = msg.dayTime;
+    if (typeof msg.seasonIndex === "number" && msg.seasonIndex !== g.seasonIndex) {
+      g.seasonIndex = msg.seasonIndex;
+      g.world?.applySeason?.(g.getSeason?.());
+    }
+    if (typeof msg.seasonDayAcc === "number") g.seasonDayAcc = msg.seasonDayAcc;
     if (typeof msg.deposited === "number") {
       g.deposited = Math.max(g.deposited, msg.deposited);
       g.hud.setItems(g.carried, g.deposited, g.world.itemsTotal);
@@ -241,6 +246,8 @@ export class CoopSession {
     this.room.send({
       t: "snap",
       dayTime: g.dayTime,
+      seasonIndex: g.seasonIndex ?? 0,
+      seasonDayAcc: g.seasonDayAcc ?? 0,
       deposited: g.deposited,
       collected,
       enemies,
