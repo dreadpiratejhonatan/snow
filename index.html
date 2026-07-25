@@ -353,7 +353,8 @@
           <li>Barra de armas (<kbd>B</kbd>) mostra e esconde de verdade (com ✕)</li>
           <li>Ranking online (<kbd>T</kbd>) via HostGator — tempos falsos filtrados</li>
           <li>Página de <strong>Tickets</strong> — reporte bugs e sugira features (lista pública)</li>
-          <li><strong>Trilha</strong> desbloqueia no clique da skin/dificuldade (mais alta, menos “buracos”)</li>
+          <li><strong>Trilha nova</strong> estilo aventura 16-bit / natureza — várias faixas distintas (não a mesma melodia o tempo todo)</li>
+          <li><strong>Trilha</strong> desbloqueia no clique da skin/dificuldade</li>
           <li><strong>Co-op</strong> 2 jogadores mais estável (rejoin, ICE, retries; precisa HostGator com <code>api/signal.php</code>)</li>
           <li>Jogo no <strong>GitHub Pages</strong> + guia de deploy seguro na HostGator (preserva o ranking)</li>
         </ul>
@@ -412,7 +413,9 @@
           <dt>O T-Rex com metralhadora é injusto?</dt>
           <dd>Use <strong>árvores, pedras e a cabana</strong> como cobertura — os tiros (dele e os seus) param nos obstáculos. Saia da linha de tiro para recarregar e atacar.</dd>
           <dt>Não ouço a trilha / música?</dt>
-          <dd>A trilha é <strong>gerada no browser</strong> (WebAudio) — não vem OST de arquivo por direitos autorais. Toque/clique num personagem ou na dificuldade para liberar o áudio. OST própria: coloque mp3s em <code>music/</code> e liste em <code>music/manifest.json</code>.</dd>
+          <dd>A trilha é <strong>gerada no browser</strong> (WebAudio), com várias faixas de aventura 16-bit — não embutimos OST de outros jogos (direitos autorais). Toque/clique num personagem para liberar o áudio. Suas mp3s: <code>music/manifest.json</code>.</dd>
+          <dt>A música não muda?</dt>
+          <dd>A playlist embaralha várias faixas (Rio da Aurora, Marcha do Norte, Dança na Neve…). Quando o nome <code>♪</code> muda no HUD, a faixa trocou.</dd>
           <dt>Co-op não cria sala / “sinalização offline”?</dt>
           <dd>O co-op precisa da <strong>HostGator online</strong> (`api/signal.php`). Se falhar ao criar sala, é a sinalização — não o jogo no Pages. Peça ao admin subir o zip com a pasta <code>api/</code> e <code>data/rooms/</code> gravável.</dd>
           <dt>Criou a sala mas o amigo não conecta?</dt>
@@ -423,6 +426,6 @@
     </div>
   </div>
 
-  <script type="module" src="src/js/main.js?v=gh39"></script>
+  <script type="module" src="src/js/main.js?v=gh40"></script>
 </body>
 </html>
