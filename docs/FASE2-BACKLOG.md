@@ -6,8 +6,8 @@ Itens pedidos após a v1.0 — status na branch `develop` (gh48+):
 - [x] Difícil mais punitivo (loot/munição/frio)
 - [x] Desafio do dia (seed UTC)
 - [x] Conquistas locais
-- [x] Personagens Rita e Bruno
 - [x] Pterodáctilo (IA flyer)
+- [x] Rita/Bruno removidos (cast só amigos)
 - [x] Cutscene leve do Boto
 - [x] Temporada mensal no ranking + export JSON
 - [x] Tickets admin com bulk status

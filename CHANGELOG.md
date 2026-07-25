@@ -32,7 +32,7 @@ Trabalho na branch `develop` após `v1.0.0` (cache `gh48`).
 
 ### Added
 - Desafio do dia (seed UTC) + conquistas locais
-- Personagens Rita e Bruno; inimigo pterodáctilo (IA flyer)
+- Inimigo pterodáctilo (IA flyer)
 - Cutscene leve ao spawn do Boto
 - Ranking por temporada mensal (`Y-m`) + export JSON
 - Tickets admin: bulk status nos cards Abertos

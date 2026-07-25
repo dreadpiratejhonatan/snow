@@ -14,8 +14,8 @@ try {
   const player = new Player(camera, scene, world, world.getSpawn());
   player.applySkin("arctic"); // alias → jhonatan
   if (player.skinId !== "jhonatan") throw new Error("applySkin falhou");
-  player.applySkin("rita");
-  if (player.skinId !== "rita") throw new Error("skin Rita falhou");
+  player.applySkin("ze");
+  if (player.skinId !== "ze") throw new Error("skin ZÉ falhou");
   console.log("Player OK — spawn:", player.position.toArray().map((n) => n.toFixed(2)).join(", "), "skin:", player.skinId);
 
   const input = {
@@ -92,8 +92,8 @@ try {
   if (were.alive) throw new Error("explosão deveria matar o lobisomem");
   const ammoDrop = world.items.find((i) => i.ammoType);
   if (!ammoDrop) throw new Error("nenhum pickup/drop de munição no mundo");
-  if (!CONFIG.skins.natan || !CONFIG.skins.rita || !CONFIG.skins.bruno) {
-    throw new Error("CONFIG.skins ausente (natan/rita/bruno)");
+  if (!CONFIG.skins.natan || !CONFIG.skins.ze) {
+    throw new Error("CONFIG.skins ausente (natan/ze)");
   }
 
   // armadilhas perto da base

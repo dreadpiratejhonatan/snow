@@ -478,26 +478,8 @@ export const CONFIG = {
       skin: 0xf0d4b8,
       tie: 0x2a1a10,
     },
-    rita: {
-      id: "rita",
-      name: "Rita",
-      face: "faces/rita.png",
-      suit: 0x4a2040,
-      shirt: 0xc04080,
-      skin: 0xf0d0c0,
-      tie: 0x2a1020,
-    },
-    bruno: {
-      id: "bruno",
-      name: "Bruno",
-      face: "faces/bruno.png",
-      suit: 0x1a3040,
-      shirt: 0x3a80a0,
-      skin: 0xe8c4a0,
-      tie: 0x102028,
-    },
   },
-  skinOrder: ["natan", "jhonatan", "jorge", "caio", "lorenzo", "ze", "rita", "bruno"],
+  skinOrder: ["natan", "jhonatan", "jorge", "caio", "lorenzo", "ze"],
   /** IDs antigos → personagem (localStorage / saves). */
   skinAlias: {
     classic: "natan",
@@ -506,6 +488,8 @@ export const CONFIG = {
     night: "caio",
     blaze: "lorenzo",
     ghost: "natan",
+    rita: "natan",
+    bruno: "natan",
   },
   weapons: {
     fists: {
