@@ -121,7 +121,7 @@ class Game {
     this.ensureLoop();
     await runSplash({ minMs: 4200, maxMs: 10000, fadeMs: 800 });
     this.state = "skin";
-    // Sempre exige escolher um dos 5 personagens (rosto visível + preview girável)
+    // Sempre exige escolher um personagem (rosto visível + preview girável)
     const unlockAudio = () => {
       void this.ambience.start();
     };

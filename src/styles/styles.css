@@ -739,7 +739,7 @@ body.is-touch .hud__traps {
 
 .skin-picker__grid {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(6, 1fr);
   gap: 0.45rem;
   margin-bottom: 1.1rem;
 }

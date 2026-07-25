@@ -104,10 +104,8 @@ export function applySkinToPlayer(player, id) {
 }
 
 /**
- * Escolha obrigatória de personagem (5 rostos).
- * @param {{ force?: boolean }} opts force=true sempre abre (boot / pause)
- */
 /**
+ * Escolha obrigatória de personagem (rostos em CONFIG.skinOrder).
  * @param {{ force?: boolean, onGesture?: () => void }} [opts]
  * onGesture: chamar no click/touch real (desbloqueia AudioContext).
  */
@@ -135,7 +133,7 @@ export function runSkinPicker({ force = true, onGesture } = {}) {
 
   // Ordem visual aleatória a cada abertura do picker
   const skins = shuffleSkins(listSkins());
-  let selected = null; // obrigatório clicar num dos cinco
+  let selected = null; // obrigatório clicar num card
   let preview = null;
   if (canvas) {
     try {
@@ -145,12 +143,13 @@ export function runSkinPicker({ force = true, onGesture } = {}) {
     }
   }
 
+  const nSkins = skins.length;
   if (btn) {
     btn.disabled = true;
     btn.textContent = "Escolha um personagem";
   }
   if (hint) {
-    hint.textContent = "Clique num dos 5 rostos. Arraste o boneco para girar e ver o rosto.";
+    hint.textContent = `Clique num dos ${nSkins} rostos. Arraste o boneco para girar e ver o rosto.`;
   }
 
   const render = () => {
@@ -213,7 +212,7 @@ export function runSkinPicker({ force = true, onGesture } = {}) {
       }
       if (e.target.closest("#skin-confirm")) {
         if (!selected) {
-          if (hint) hint.textContent = "Escolha um dos 5 personagens antes de continuar.";
+          if (hint) hint.textContent = "Escolha um personagem antes de continuar.";
           return;
         }
         fireGesture();
