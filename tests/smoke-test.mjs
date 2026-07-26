@@ -110,7 +110,8 @@ try {
 
   // drops de arma ao matar
   const beforeItems = world.items.length;
-  const minion = world.enemies.find((e) => e.type === "bear_minion" && e.alive);
+  let minion = world.enemies.find((e) => e.type === "bear_minion" && e.alive);
+  if (!minion) minion = world.spawnEnemyNow("bear_minion");
   world.damageEnemyDirect(minion, 999);
   if (minion.alive) throw new Error("minion deveria morrer");
   if (world.items.length <= beforeItems) throw new Error("drop de arma não apareceu");
