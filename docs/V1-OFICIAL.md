@@ -3,7 +3,7 @@
 **Data de corte:** 25 de julho de 2026  
 **Tag Git:** `v1.0.0`  
 **Branch de release:** `release/v1.0`  
-**Cache do cliente (referência):** `?v=gh47`
+**Cache do cliente (referência):** `?v=gh48`
 
 Este documento é o mapa da **primeira versão oficial**: o que o jogo faz, onde roda, APIs, deploy e limites conhecidos.
 
@@ -45,7 +45,7 @@ Sobrevivência 3D na neve (Three.js no navegador). Explore, colete suprimentos, 
 
 ### Personagens
 
-Natan, Jhonatan, Jorge Bolado, Caio, Lorenzo, **ZÉ**, **HEROBRINE** — rostos em `faces/`, cards embaralhados no picker.
+Natan, Jhonatan, Jorge Bolado, Caio, Lorenzo, **ZÉ**, **HEROBRINE**, **MEGA BRAIN** — rostos em `faces/`, cards embaralhados no picker.
 
 ### Dificuldade
 
