@@ -140,56 +140,110 @@ export function endCinematic(skipped) {
   a.onEnd?.(!!skipped);
 }
 
-/** Cutscene longa do Boto com órbita no lago. */
-export function playBotoCutscene(game) {
-  if (game._botoCutDone) return;
-  game._botoCutDone = true;
-
-  const lake = game.world?.lakeCenter || game.world?.campfirePos || game.player?.position;
-  const origin = lake?.clone?.() || new THREE.Vector3(0, 0, 0);
-  const gy = game.world?.groundHeight?.(origin.x, origin.z) ?? 0;
-  origin.y = gy;
-
-  const p = game.player?.position || origin;
-  const yaw = game.player?.yaw || 0;
+/** Shots genéricos orbitando um ponto (chefe). */
+function bossOrbitShots(origin, gy, player, game) {
+  const p = player?.position || origin;
+  const yaw = player?.yaw || 0;
   const behind = new THREE.Vector3(
     p.x + Math.sin(yaw) * 5,
     p.y + 2.4,
     p.z + Math.cos(yaw) * 5
   );
   const eye = new THREE.Vector3(p.x, p.y + 1.62, p.z);
+  return [
+    {
+      from: new THREE.Vector3(origin.x + 16, gy + 8, origin.z + 12),
+      to: new THREE.Vector3(origin.x + 9, gy + 5, origin.z + 7),
+      lookAt: origin,
+      lookY: 0.7,
+      duration: 2.6,
+      fov: 56,
+    },
+    {
+      from: new THREE.Vector3(origin.x + 9, gy + 5, origin.z + 7),
+      to: new THREE.Vector3(origin.x - 5, gy + 3.5, origin.z + 10),
+      lookAt: origin,
+      lookY: 0.9,
+      duration: 2.8,
+      fov: 50,
+    },
+    {
+      from: behind,
+      to: eye,
+      lookAt: origin,
+      lookY: 1.0,
+      duration: 2.0,
+      fov: game.camera?.fov || 75,
+    },
+  ];
+}
 
+function playBossCutscene(game, flag, id, title, body, originHint) {
+  if (game[flag]) return;
+  game[flag] = true;
+  const origin = originHint?.clone?.() || game.player?.position?.clone?.() || new THREE.Vector3();
+  const gy = game.world?.groundHeight?.(origin.x, origin.z) ?? 0;
+  origin.y = gy;
   playCinematic(game, {
-    id: "boto",
-    title: "O lago desperta",
-    body:
-      "O gelo estala. Uma sombra rosada corta a água sob a superfície — o Boto-cor-de-rosa emerge. Último guardião da expedição. Prepare-se.",
-    shots: [
-      {
-        from: new THREE.Vector3(origin.x + 18, gy + 9, origin.z + 14),
-        to: new THREE.Vector3(origin.x + 10, gy + 5.5, origin.z + 8),
-        lookAt: origin,
-        lookY: 0.6,
-        duration: 3.2,
-        fov: 58,
-      },
-      {
-        from: new THREE.Vector3(origin.x + 10, gy + 5.5, origin.z + 8),
-        to: new THREE.Vector3(origin.x - 6, gy + 3.2, origin.z + 12),
-        lookAt: origin,
-        lookY: 0.8,
-        duration: 3.6,
-        fov: 52,
-      },
-      {
-        from: behind,
-        to: eye,
-        lookAt: origin,
-        lookY: 1.0,
-        duration: 2.4,
-        fov: game.camera?.fov || 75,
-      },
-    ],
+    id,
+    title,
+    body,
+    shots: bossOrbitShots(origin, gy, game.player, game),
     skippable: true,
   });
+}
+
+/** Cutscene longa do Boto com órbita no lago. */
+export function playBotoCutscene(game) {
+  const lake = game.world?.lakeCenter || game.world?.campfirePos || game.player?.position;
+  playBossCutscene(
+    game,
+    "_botoCutDone",
+    "boto",
+    "O lago desperta",
+    "O gelo estala. Uma sombra rosada corta a água sob a superfície — o Boto-cor-de-rosa emerge. Último guardião da expedição. Prepare-se.",
+    lake
+  );
+}
+
+export function playPandaCutscene(game, enemy) {
+  playBossCutscene(
+    game,
+    "_pandaCutDone",
+    "panda",
+    "O Panda desperta",
+    "Um rugido baixo ecoa entre os pinheiros. O Panda sai da neve — pesado, paciente e letal. Não o subestime.",
+    enemy?.mesh?.position
+  );
+}
+
+export function playSaciCutscene(game, enemy) {
+  playBossCutscene(
+    game,
+    "_saciCutDone",
+    "saci",
+    "Redemoinho na neve",
+    "Uma risada fina gira no vento. O Saci-pererê aparece e some — um pé só, um chapéu e muito caos.",
+    enemy?.mesh?.position
+  );
+}
+
+export function playTrexCutscene(game, enemy) {
+  playBossCutscene(
+    game,
+    "_trexCutDone",
+    "trex",
+    "Gatling pré-histórico",
+    "O chão treme. Um T-Rex armado com metralhadora emerge da neblina. Cobertura ou morte.",
+    enemy?.mesh?.position
+  );
+}
+
+/** Dispara cutscene do chef correspondente (uma vez por run). */
+export function playChefCutscene(game, enemy) {
+  if (!enemy?.type) return;
+  if (enemy.type === "boto") playBotoCutscene(game);
+  else if (enemy.type === "panda") playPandaCutscene(game, enemy);
+  else if (enemy.type === "saci") playSaciCutscene(game, enemy);
+  else if (enemy.type === "trex") playTrexCutscene(game, enemy);
 }

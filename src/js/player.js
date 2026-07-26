@@ -241,13 +241,20 @@ export class Player {
     const readyR = holding ? (bowLike ? 1.05 : ranged ? 0.85 : 0.55) : 0;
     const readyL = bowLike ? 0.95 : holding && ranged ? 0.45 : 0;
 
+    const spearLike = this.weaponIdHeld === "spear";
+
     this.leftLeg.rotation.x = swing;
     this.rightLeg.rotation.x = -swing;
     this.leftArm.rotation.x = -readyL - swing * (holding ? 0.25 : 0.8) - (bowLike ? punch * 0.4 : 0);
     this.leftArm.rotation.z = bowLike ? 0.35 : 0;
-    // braço direito: hold + golpe / recoil
-    this.rightArm.rotation.x = -readyR + swing * (holding ? 0.2 : 0.8) - punch * (ranged ? 0.9 : 1.7);
-    this.rightArm.rotation.z = punch * (ranged ? 0.15 : 0.5) + (holding ? 0.12 : 0);
+    // braço direito: hold + golpe / recoil (lança = estocada, não golpe de cima)
+    this.rightArm.rotation.x =
+      -readyR + swing * (holding ? 0.2 : 0.8) - punch * (spearLike ? 0.7 : ranged ? 0.9 : 1.7);
+    this.rightArm.rotation.z = punch * (spearLike ? 0.05 : ranged ? 0.15 : 0.5) + (holding ? 0.12 : 0);
+    // estocada: a lança avança para frente durante o ataque
+    if (spearLike && this.heldWeapon) {
+      this.heldWeapon.position.z = 0.2 + punch * 0.45;
+    }
     if (this.mesh) {
       this.mesh.rotation.x = -punch * 0.12;
       this.mesh.rotation.z = punch * 0.08;

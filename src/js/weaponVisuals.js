@@ -185,6 +185,17 @@ export function buildHeldWeaponMesh(weaponId) {
   if (weaponId === "spear") {
     g.rotation.set(-0.35, 0.05, 0.05);
     g.position.set(-0.05, 0, 0.2);
+  } else if (weaponId === "claymore" || weaponId === "relic") {
+    // lâminas longas: inclinadas para frente/fora para não atravessar corpo/cabeça
+    g.rotation.set(-0.55, 0, 0.38);
+    g.position.set(0.09, 0, 0.14);
+  } else if (weaponId === "axe") {
+    g.rotation.set(-0.45, 0, 0.32);
+    g.position.set(0.07, 0, 0.12);
+  } else if (weaponId === "torch") {
+    // chama levemente para fora, longe do rosto
+    g.rotation.set(-0.3, 0, 0.3);
+    g.position.set(0.08, 0, 0.1);
   } else {
     g.rotation.set(-0.15, 0, 0.15);
     g.position.set(0.05, 0.05, 0.1);

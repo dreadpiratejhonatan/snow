@@ -293,16 +293,54 @@ export class World {
     });
   }
 
+  /**
+   * Bioma local do mapa (influencia densidade de árvores):
+   * - clareira: perto da base
+   * - floresta: anéis densos
+   * - montanha: altitude alta, menos árvores / mais pedras
+   * - neve: restante
+   */
+  biomeAt(x, z) {
+    const dist = Math.hypot(x, z);
+    if (dist < 14) return "clareira";
+    const h = this.getHeight(x, z);
+    if (h > 7.2) return "montanha";
+    // duas manchas de floresta densa (seed-ish via posição)
+    const a = Math.sin(x * 0.045) * Math.cos(z * 0.038);
+    if (a > 0.35 && dist > 22 && dist < this.bounds * 0.85) return "floresta";
+    return "neve";
+  }
+
   scatterTrees() {
     let placed = 0;
     let tries = 0;
-    while (placed < CONFIG.world.treeCount && tries < CONFIG.world.treeCount * 12) {
+    const target = CONFIG.world.treeCount;
+    while (placed < target && tries < target * 16) {
       tries++;
       const x = (Math.random() * 2 - 1) * this.bounds;
       const z = (Math.random() * 2 - 1) * this.bounds;
       const h = this.getHeight(x, z);
       if (h < this.waterLevel + 0.9 || h > 9.5) continue;
       if (Math.hypot(x, z) < 9) continue; // clareira da base
+      const biome = this.biomeAt(x, z);
+      // densidades relativas
+      if (biome === "montanha" && Math.random() > 0.35) continue;
+      if (biome === "neve" && Math.random() > 0.55) continue;
+      if (biome === "floresta") {
+        this.makeTree(x, z);
+        placed++;
+        // cluster extra na floresta
+        if (placed < target && Math.random() < 0.55) {
+          const ox = x + (Math.random() - 0.5) * 4;
+          const oz = z + (Math.random() - 0.5) * 4;
+          const oh = this.getHeight(ox, oz);
+          if (oh >= this.waterLevel + 0.9 && oh <= 9.5 && Math.hypot(ox, oz) > 9) {
+            this.makeTree(ox, oz);
+            placed++;
+          }
+        }
+        continue;
+      }
       this.makeTree(x, z);
       placed++;
     }
@@ -1059,6 +1097,35 @@ export class World {
     return glow;
   }
 
+  /** Raridade do loot: epic (dourado), rare (azul), common (sem anel extra). */
+  lootRarity(kind, weaponId = null) {
+    if (kind === "trophy" || weaponId === "relic") return "epic";
+    if (kind === "weapon" || kind === "medkit" || weaponId === "grenade") return "rare";
+    return "common";
+  }
+
+  /** Anel de raridade girando no chão (só rare/epic). */
+  _addRarityRing(g, rarity) {
+    if (!rarity || rarity === "common") return;
+    const color = rarity === "epic" ? 0xffc84a : 0x5ab0ff;
+    const ring = new THREE.Mesh(
+      new THREE.RingGeometry(0.52, 0.62, 24, 1, 0, Math.PI * 1.6),
+      new THREE.MeshBasicMaterial({
+        color,
+        transparent: true,
+        opacity: rarity === "epic" ? 0.55 : 0.38,
+        side: THREE.DoubleSide,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+      })
+    );
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.y = 0.02;
+    ring.userData.isGlow = true;
+    g.add(ring);
+    g.userData.rarityRing = ring;
+  }
+
   _addLootParticles(g, color, count = 4) {
     const particles = [];
     const positions = new Float32Array(count * 3);
@@ -1341,6 +1408,7 @@ export class World {
     }
 
     this._addLootGlow(g, color, kind === "trophy" ? 0.55 : 0.42);
+    this._addRarityRing(g, this.lootRarity(kind));
     g.traverse((m) => {
       if (m.isMesh && !m.userData.isGlow) {
         m.castShadow = true;
@@ -1559,6 +1627,10 @@ export class World {
       }
       if (it.mesh.userData.spin) {
         it.mesh.userData.spin.rotation.y = elapsed * 3;
+      }
+      // anel de raridade gira devagar
+      if (it.mesh.userData.rarityRing) {
+        it.mesh.userData.rarityRing.rotation.z = elapsed * 1.1 + it.phase;
       }
       // animar partículas (movimento circular suave)
       if (it.mesh.userData.particles) {
@@ -2412,6 +2484,7 @@ export class World {
     // partículas sutis ao redor da arma
     this._addLootParticles(g, color ?? 0xc8d0d8, 4);
     this._addLootGlow(g, color, 0.4);
+    this._addRarityRing(g, this.lootRarity("weapon", weaponId));
     g.traverse((m) => {
       if (m.isMesh && !m.userData.isGlow) {
         m.castShadow = true;

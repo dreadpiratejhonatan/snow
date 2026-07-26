@@ -31,6 +31,17 @@ export const DIFFICULTIES = {
     cold: 1.9,
     spawnDelayMul: 0.72,
   },
+  hardcore: {
+    id: "hardcore",
+    label: "Hardcore",
+    blurb: "Como Difícil — mas morte = fim. Sem renascer. Sem save mid-run.",
+    loot: 0.28,
+    enemy: 1.75,
+    weapon: 0.55,
+    cold: 2.0,
+    spawnDelayMul: 0.68,
+    hardcore: true,
+  },
 };
 
 export function getDifficulty(id) {
@@ -40,7 +51,7 @@ export function getDifficulty(id) {
 /**
  * Overlay #difficulty-picker — depois da skin, antes do co-op.
  * @param {{ onGesture?: () => void }} [opts]
- * @returns {Promise<"easy"|"medium"|"hard">}
+ * @returns {Promise<"easy"|"medium"|"hard"|"hardcore">}
  */
 export function runDifficultyPicker({ onGesture } = {}) {
   const el = document.getElementById("difficulty-picker");
