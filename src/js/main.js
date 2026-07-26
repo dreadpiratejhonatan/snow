@@ -1717,6 +1717,19 @@ class Game {
 
   requestPointerLock() {
     void this.ambience.start(); // gesto do usuário: pode iniciar o áudio + trilha
+    // Durante o tutorial o mouse fica livre para clicar em “Pular”
+    if (this.tutorial?.active) {
+      try {
+        document.exitPointerLock?.();
+      } catch {
+        /* ignore */
+      }
+      if (this.clickHint) {
+        this.clickHint.hidden = false;
+        this.clickHint.textContent = "Tutorial: Esc/P ou botão Pular · depois clique para mirar";
+      }
+      return;
+    }
     if (this.input.mobile) {
       this.input.locked = true;
       return;

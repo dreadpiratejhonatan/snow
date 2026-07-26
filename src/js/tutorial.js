@@ -1,5 +1,7 @@
 const STORAGE_KEY = "neveTutorialDone";
 
+const SKIP_HINT = " · Esc/P pular";
+
 const STEPS = [
   {
     id: "move",
@@ -59,12 +61,26 @@ export class Tutorial {
     this.hintEl = document.getElementById("tutorial-hint");
     this.skipBtn = document.getElementById("tutorial-skip");
     if (this.skipBtn) {
-      this.skipBtn.addEventListener("click", (e) => {
+      // pointerdown: funciona mesmo se o click for engolido depois
+      const onSkip = (e) => {
         e.preventDefault();
         e.stopPropagation();
         this.skip();
-      });
+      };
+      this.skipBtn.addEventListener("pointerdown", onSkip);
+      this.skipBtn.addEventListener("click", onSkip);
     }
+    this._onSkipKey = (e) => {
+      if (!this.active) return;
+      if (e.code !== "Escape" && e.code !== "KeyP") return;
+      // Chat / inputs: não roubar
+      if (e.target?.closest?.("input, textarea, [contenteditable]")) return;
+      e.preventDefault();
+      e.stopPropagation();
+      this.skip();
+    };
+    // capture: Esc/P pulam antes de pausar / outros handlers
+    window.addEventListener("keydown", this._onSkipKey, true);
     if (this.active) this.showStep();
     else this.hide();
   }
@@ -81,8 +97,12 @@ export class Tutorial {
       return;
     }
     this.banner.hidden = false;
-    if (this.hintEl) this.hintEl.textContent = s.hint;
-    this.game.hud?.showMsg(s.hint, 4500);
+    if (this.hintEl) this.hintEl.textContent = s.hint + SKIP_HINT;
+    if (this.skipBtn) {
+      this.skipBtn.hidden = false;
+      this.skipBtn.textContent = "Pular (Esc)";
+    }
+    this.game.hud?.showMsg(s.hint + SKIP_HINT, 4500);
   }
 
   notify(ev) {
@@ -112,11 +132,16 @@ export class Tutorial {
     this.active = false;
     markTutorialDone();
     this.hide();
+    window.removeEventListener("keydown", this._onSkipKey, true);
     this.game.hud?.showMsg(
       skipped
         ? "Tutorial pulado. Pressione H se tiver dúvidas!"
         : "Tutorial concluído. H = ajuda a qualquer momento.",
       3600
     );
+    // Depois de pular/concluir, libera captura do mouse no próximo clique
+    if (skipped || this.game.state === "playing") {
+      queueMicrotask(() => this.game.requestPointerLock?.());
+    }
   }
 }
