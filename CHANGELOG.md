@@ -30,5 +30,6 @@ Primeira versão **oficial** (`release/v1.0`, tag `v1.0.0`).
 
 ### Added
 - Personagem jogável **HEROBRINE** (Jonathan Herobrine) — rosto em `faces/herobrine.png`
+- Personagem jogável **MEGA BRAIN** — rosto em `faces/mega_brain.png`
 
 Trabalho após o corte `v1.0.0` entra aqui / em branches de feature.
