@@ -647,8 +647,17 @@ export const CONFIG = {
       skin: 0xf0e0d0,
       tie: 0xe8c040,
     },
+    neymar: {
+      id: "neymar",
+      name: "Neymar",
+      face: "faces/neymar.png",
+      suit: 0x1a3a18,
+      shirt: 0xe8d030,
+      skin: 0xc48c60,
+      tie: 0x0e2810,
+    },
   },
-  skinOrder: ["natan", "jorge", "caio", "lorenzo", "ze", "mega_brain"],
+  skinOrder: ["natan", "jorge", "caio", "lorenzo", "ze", "mega_brain", "neymar"],
   /** IDs antigos → personagem (localStorage / saves). */
   skinAlias: {
     classic: "natan",
