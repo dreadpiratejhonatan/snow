@@ -2695,12 +2695,14 @@ class Game {
         const beast = mountNear.enemy;
         if (mountNear.kind === "tame") {
           this.mounts.tame(beast);
+          this.tutorial?.notify("tame");
           this.hud.showMsg(`${beast.label} domado! Aperte ${useKey} de novo para montar.`, 4200);
           this.toastAchievement(unlockAchievement("tame_mount"));
         } else if (mountNear.kind === "armor") {
           this.mounts.equipArmor(beast);
           this.hud.showMsg(`Armadura equipada em ${beast.label} — dano recebido cai pela metade.`, 3800);
         } else if (this.mounts.mount(beast, this.player)) {
+          this.tutorial?.notify("ride");
           this.hud.showMsg(
             this.input.mobile
               ? `Montado em ${beast.label} — joystick anda, ◉ desmonta.`

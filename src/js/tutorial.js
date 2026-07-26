@@ -7,33 +7,40 @@ const SKIP_HINT_DESKTOP = " · Esc/P pular";
 const STEPS_DESKTOP = [
   {
     id: "move",
-    hint: "Tutorial 1/6 — Use WASD para se mover",
+    hint: "Tutorial 1/7 — Use WASD para se mover",
     check: (g) =>
       g.input.moveForward || g.input.moveBack || g.input.moveLeft || g.input.moveRight,
   },
   {
     id: "pickup",
-    hint: "Tutorial 2/6 — Aproxime-se de um item brilhante e pressione E",
+    hint: "Tutorial 2/7 — Aproxime-se de um item brilhante e pressione E",
     check: (g, ev) => ev === "pickup",
   },
   {
     id: "deposit",
-    hint: "Tutorial 3/6 — Leve o item ao baú na base e pressione E",
+    hint: "Tutorial 3/7 — Leve o item ao baú na base e pressione E",
     check: (g, ev) => ev === "deposit",
   },
   {
     id: "inventory",
-    hint: "Tutorial 4/6 — Barra de armas: B mostra/esconde · 1–0 troca de arma",
+    hint: "Tutorial 4/7 — Barra de armas: B mostra/esconde · 1–0 troca de arma",
     check: (g, ev) => ev === "inventory" || ev === "equip",
   },
   {
     id: "trap",
-    hint: "Tutorial 5/6 — Perto da fogueira: [G] tipo de armadilha e [F] colocar",
+    hint: "Tutorial 5/7 — Perto da fogueira: [G] tipo de armadilha e [F] colocar",
     check: (g, ev) => ev === "trap",
   },
   {
+    id: "mount",
+    hint:
+      "Tutorial 6/7 — Montarias: enfraqueça mula, cavalo, pônei, dromedário ou panda — E para domar, E de novo para montar",
+    autoMs: 6500,
+    check: (g, ev) => ev === "tame" || ev === "ride",
+  },
+  {
     id: "attack",
-    hint: "Tutorial 6/6 — Clique para atacar · H abre a ajuda",
+    hint: "Tutorial 7/7 — Clique para atacar · H abre a ajuda",
     check: (g, ev) => ev === "attack",
   },
 ];
@@ -41,33 +48,40 @@ const STEPS_DESKTOP = [
 const STEPS_TOUCH = [
   {
     id: "move",
-    hint: "1/6 — Use o stick à esquerda para se mover",
+    hint: "1/7 — Use o stick à esquerda para se mover",
     check: (g) =>
       g.input.moveForward || g.input.moveBack || g.input.moveLeft || g.input.moveRight,
   },
   {
     id: "pickup",
-    hint: "2/6 — Chegue perto de um item brilhante e toque ◉",
+    hint: "2/7 — Chegue perto de um item brilhante e toque ◉",
     check: (g, ev) => ev === "pickup",
   },
   {
     id: "deposit",
-    hint: "3/6 — Leve o item ao baú na base e toque ◉",
+    hint: "3/7 — Leve o item ao baú na base e toque ◉",
     check: (g, ev) => ev === "deposit",
   },
   {
     id: "inventory",
-    hint: "4/6 — Toque ⋯ e depois 🎒 para ver as armas",
+    hint: "4/7 — Toque ⋯ e depois 🎒 para ver as armas",
     check: (g, ev) => ev === "inventory" || ev === "equip",
   },
   {
     id: "trap",
-    hint: "5/6 — Perto da fogueira: ⋯ → Trap / ✚ para armadilhas",
+    hint: "5/7 — Perto da fogueira: ⋯ → Trap / ✚ para armadilhas",
     check: (g, ev) => ev === "trap",
   },
   {
+    id: "mount",
+    hint:
+      "6/7 — Montarias: enfraqueça mula/cavalo/pônei/dromedário/panda → ◉ para domar e montar",
+    autoMs: 6500,
+    check: (g, ev) => ev === "tame" || ev === "ride",
+  },
+  {
     id: "attack",
-    hint: "6/6 — Toque ⚔ para atacar · ⋯ → ? abre a ajuda",
+    hint: "7/7 — Toque ⚔ para atacar · ⋯ → ? abre a ajuda",
     check: (g, ev) => ev === "attack",
   },
 ];
@@ -93,6 +107,7 @@ export class Tutorial {
     this.game = game;
     this.active = !isTutorialDone();
     this.step = 0;
+    this._stepAt = 0;
     this.mobile = isTouchDevice() || !!game.input?.mobile;
     this.steps = this.mobile ? STEPS_TOUCH : STEPS_DESKTOP;
     this.banner = document.getElementById("tutorial-banner");
@@ -134,6 +149,7 @@ export class Tutorial {
       this.finish();
       return;
     }
+    this._stepAt = performance.now();
     this.banner.hidden = false;
     const text = this.mobile ? s.hint : s.hint + SKIP_HINT_DESKTOP;
     if (this.hintEl) this.hintEl.textContent = text;
@@ -156,7 +172,12 @@ export class Tutorial {
   update() {
     if (!this.active) return;
     const s = this.steps[this.step];
-    if (s?.check(this.game, null)) this.advance();
+    if (!s) return;
+    if (s.autoMs && performance.now() - this._stepAt >= s.autoMs) {
+      this.advance();
+      return;
+    }
+    if (s.check(this.game, null)) this.advance();
   }
 
   advance() {

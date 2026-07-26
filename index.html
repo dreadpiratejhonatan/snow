@@ -13,10 +13,10 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
-  <link rel="stylesheet" href="src/styles/styles.css?v=gh85" />
+  <link rel="stylesheet" href="src/styles/styles.css?v=gh86" />
   <script>
-    // Build id — no console deve aparecer gh85 (se for antigo, limpe o cache)
-    window.SNOW_BUILD = "gh85";
+    // Build id — no console deve aparecer gh86 (se for antigo, limpe o cache)
+    window.SNOW_BUILD = "gh86";
     console.info("[Neve] build", window.SNOW_BUILD);
     // Evita flash do splash quando ?demo=1 (antes do bundle carregar)
     try {
@@ -188,7 +188,7 @@
       </div>
 
       <div class="hud__bottom">
-        <div class="hud__controls">WASD · IJKL olhar · botão direito mirar · Alt+←→ ou Ver skin · scroll/1-9/0 arma · R recarga · B armas · E pegar · G/F armadilha · C craft · H ajuda</div>
+        <div class="hud__controls">WASD · IJKL olhar · botão direito mirar · Alt+←→ ou Ver skin · scroll/1-9/0 arma · R recarga · B armas · E pegar/domar · G/F armadilha · C craft · H ajuda</div>
       </div>
     </div>
 
@@ -479,7 +479,7 @@
         <h3 class="help-overlay__h">Controles</h3>
         <ul class="help-overlay__list">
           <li><kbd>WASD</kbd> mover · <kbd>Shift</kbd> correr · <kbd>Espaço</kbd> pular</li>
-          <li><kbd>E</kbd> pegar item / depositar no baú</li>
+          <li><kbd>E</kbd> pegar item / depositar no baú / domar ou montar animal enfraquecido</li>
           <li><kbd>IJKL</kbd> olhar (sem mouse) · <kbd>B</kbd> mostrar/esconder armas · <kbd>1–9</kbd>/<kbd>0</kbd> ou <strong>scroll</strong> equipar</li>
           <li><kbd>G</kbd> tipo de armadilha · <kbd>F</kbd> colocar (perto da fogueira)</li>
           <li><kbd>V</kbd> / <kbd>Tab</kbd> 1ª / 3ª pessoa · clique esquerdo atacar · <strong>arco/besta: segurar</strong> carrega (barra na mira) e soltar atira · <strong>segurar botão direito</strong> mirar (zoom)</li>
@@ -511,6 +511,8 @@
           <dd>Sim — a cada 2 dias de jogo ciclam Primavera → Verão → Outono → Inverno. Neve, gelo e frio mudam; o ícone aparece no relógio do HUD.</dd>
           <dt>Dá para se proteger dos inimigos?</dt>
           <dd>Sim. Fique atrás de <strong>pedras, árvores, baú ou cabana</strong> — a linha de visão deles fica bloqueada (mordida e tiros).</dd>
+          <dt>Posso montar animais?</dt>
+          <dd>Sim. Enfraqueça a <strong>mula sem cabeça, cavalo, pônei, dromedário ou panda</strong> (eles param de atacar) e aperte <kbd>E</kbd> para <strong>domar</strong>, depois <kbd>E</kbd> de novo para montar. Na fogueira dá para craftar armadura de montaria.</dd>
           <dt>Como troco de arma rápido?</dt>
           <dd>Com o mouse capturado, use o <strong>scroll</strong> (ou <kbd>1–9</kbd>/<kbd>0</kbd>). <kbd>B</kbd> abre a barra de armas.</dd>
           <dt>Como sugiro uma feature ou reporto um bug?</dt>
@@ -531,6 +533,6 @@
     </div>
   </div>
 
-  <script type="module" src="src/js/main.js?v=gh85"></script>
+  <script type="module" src="src/js/main.js?v=gh86"></script>
 </body>
 </html>
