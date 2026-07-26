@@ -206,8 +206,8 @@ export class MusicPlayer {
     }
     if (ctx.state === "suspended") return;
     this.bus = ctx.createGain();
-    // Fundo discreto — não compete com vento/SFX
-    this.bus.gain.value = 0.28;
+    // Mobile: procedural um pouco mais alta (é a trilha principal no Android)
+    this.bus.gain.value = this.preferProcOnly ? 0.42 : 0.28;
     this.bus.connect(master);
 
     this.combatBus = ctx.createGain();
@@ -237,79 +237,97 @@ export class MusicPlayer {
     }
   }
 
-  /**
-   * Elemento de áudio único roteado pelo grafo WebAudio (bus → master).
-   * Um <audio> só aceita UM MediaElementSource na vida — por isso é compartilhado
-   * e as trocas de faixa mudam apenas o src.
-   */
-  ensureFileGraph() {
-    if (this.fileAudio) return;
-    const ctx = this.getCtx();
-    const master = this.getMaster();
-    this.fileAudio = new Audio();
-    this.fileAudio.preload = "auto";
-    this.fileAudio.onended = () => this.nextAfterSilence(1.5 + Math.random() * 2.5);
+  /** Celular/tablet (ponteiro grosso): evita HTMLAudio — Chrome Android engole com frequência. */
+  get preferProcOnly() {
     try {
-      this.fileSource = ctx.createMediaElementSource(this.fileAudio);
-      this.fileGain = ctx.createGain();
-      this.fileGain.gain.value = 0.55;
-      this.fileSource.connect(this.fileGain).connect(master);
+      return window.matchMedia("(pointer: coarse)").matches;
     } catch {
-      // fallback raro: elemento cru com volume próprio
-      this.fileGain = null;
-      this.fileAudio.volume = 0.32;
+      return false;
     }
   }
 
-  trySwitchToFiles(filePl) {
-    return new Promise((resolve) => {
-      const entry = filePl.list[filePl.start];
-      if (!entry) {
-        resolve(false);
-        return;
-      }
-      this.ensureFileGraph();
-      const audio = this.fileAudio;
-      let settled = false;
-      const fail = () => {
-        if (settled) return;
-        settled = true;
-        try {
-          audio.pause();
-        } catch {
-          /* ignore */
+  ensureFileBus() {
+    if (this.fileGain) return;
+    const ctx = this.getCtx();
+    const master = this.getMaster();
+    if (!ctx || !master) return;
+    this.fileGain = ctx.createGain();
+    this.fileGain.gain.value = 0.62;
+    this.fileGain.connect(master);
+  }
+
+  stopBufferSource() {
+    if (!this._bufferSrc) return;
+    try {
+      this._bufferSrc.stop();
+    } catch {
+      /* ignore */
+    }
+    try {
+      this._bufferSrc.disconnect();
+    } catch {
+      /* ignore */
+    }
+    this._bufferSrc = null;
+  }
+
+  /**
+   * Toca WAV/MP3 via decodeAudioData → BufferSource (WebAudio puro).
+   * Mais estável no Android do que <audio> + MediaElementSource.
+   */
+  async trySwitchToFiles(filePl) {
+    // No mobile ficamos na procedural (já audível via WebAudio) — evita silêncio
+    // quando o Chrome Android engole HTMLAudio/MediaElementSource.
+    if (this.preferProcOnly) return false;
+
+    const entry = filePl.list[filePl.start];
+    if (!entry) return false;
+    const ctx = this.getCtx();
+    if (!ctx) return false;
+
+    try {
+      const res = await fetch(entry.url, { cache: "force-cache" });
+      if (!res.ok) throw new Error("fetch");
+      const raw = await res.arrayBuffer();
+      const buffer = await ctx.decodeAudioData(raw.slice(0));
+      this.ensureFileBus();
+      this.stopBufferSource();
+      const src = ctx.createBufferSource();
+      src.buffer = buffer;
+      src.connect(this.fileGain);
+      src.onended = () => {
+        if (this._bufferSrc === src) {
+          this._bufferSrc = null;
+          this.nextAfterSilence(1.5 + Math.random() * 2.5);
         }
-        // Autoplay bloqueado fora do gesto (iOS/Safari): guarda para
-        // retentar no próximo clique/toque real via retryFilesOnGesture().
-        this._pendingFilePl = filePl;
-        resolve(false);
       };
-      const ok = () => {
-        if (settled) return;
-        settled = true;
-        this._pendingFilePl = null;
-        this.mode = "file";
-        this.playlist = filePl.list;
-        this.index = filePl.start;
-        this.muteProcPad();
-        this.queue = [];
-        this.notesLeftInTrack = 0;
-        this.silence = 0;
-        this._pendingNext = false;
-        this.onTrack?.(entry.name);
-        resolve(true);
-      };
-      audio.addEventListener("error", fail, { once: true });
-      audio.addEventListener("playing", ok, { once: true });
-      setTimeout(fail, 4000);
-      audio.src = entry.url;
-      audio.play().catch(fail);
-    });
+      src.start(0);
+      this._bufferSrc = src;
+      this._bufferPlaylist = filePl;
+      this.mode = "file";
+      this.playlist = filePl.list;
+      this.index = filePl.start;
+      this.muteProcPad();
+      this.queue = [];
+      this.notesLeftInTrack = 0;
+      this.silence = 0;
+      this._pendingNext = false;
+      this._pendingFilePl = null;
+      this.onTrack?.(entry.name);
+      return true;
+    } catch {
+      this._pendingFilePl = filePl;
+      return false;
+    }
   }
 
   /** Chamar dentro de um gesto real: retenta a playlist de arquivos pendente. */
   retryFilesOnGesture() {
     if (this.mode === "file" || !this._pendingFilePl || this._retrying) return;
+    if (this.preferProcOnly) {
+      this._pendingFilePl = null;
+      return;
+    }
     const pl = this._pendingFilePl;
     this._pendingFilePl = null;
     this._retrying = true;
@@ -396,12 +414,14 @@ export class MusicPlayer {
 
   playFile(entry) {
     if (!entry) return;
-    this.ensureFileGraph();
-    const audio = this.fileAudio;
-    this.onTrack?.(entry.name);
-    audio.src = entry.url;
-    audio.play().catch(() => {
-      this.nextAfterSilence(1);
+    // Reusa o decoder WebAudio (mesma playlist)
+    const pl = {
+      list: this.playlist,
+      start: Math.max(0, this.playlist.findIndex((t) => t.url === entry.url || t === entry)),
+    };
+    if (pl.start < 0) pl.start = this.index;
+    void this.trySwitchToFiles(pl).then((ok) => {
+      if (!ok) this.nextAfterSilence(1);
     });
   }
 
@@ -558,7 +578,8 @@ export class MusicPlayer {
     this._moodBlend += (want - this._moodBlend) * Math.min(1, dt * 1.4);
 
     if (this.bus) {
-      const exploreVol = (0.28 - this._moodBlend * 0.06) * dangerMul;
+      const base = this.preferProcOnly ? 0.42 : 0.28;
+      const exploreVol = (base - this._moodBlend * 0.06) * dangerMul;
       this.bus.gain.value += (exploreVol - this.bus.gain.value) * Math.min(1, dt * 1.6);
     }
     if (this.combatBus) {
@@ -569,11 +590,9 @@ export class MusicPlayer {
       const f = 44 + this._moodBlend * 14 + Math.sin(ctx.currentTime * 0.45) * 2;
       this._combatPad.frequency.setTargetAtTime(f, ctx.currentTime, 0.4);
     }
-    if (this.fileGain) {
-      const fVol = (0.55 - this._moodBlend * 0.12) * dangerMul;
+    if (this.fileGain && this.mode === "file") {
+      const fVol = (0.62 - this._moodBlend * 0.12) * dangerMul;
       this.fileGain.gain.value += (fVol - this.fileGain.gain.value) * Math.min(1, dt * 1.6);
-    } else if (this.fileAudio && !this.fileAudio.paused) {
-      this.fileAudio.volume = (0.3 - this._moodBlend * 0.06) * dangerMul;
     }
 
     // combate: pulsos bem raros

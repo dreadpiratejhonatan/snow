@@ -28,22 +28,17 @@ Primeira versão **oficial** (`release/v1.0`, tag `v1.0.0`).
 
 ## [Unreleased]
 
-## [gh72] - 2026-07-26
-### Added
-- **Melhorias visuais de pickups**: Geometria mais detalhada (dobradiças, fechos, antenas), PointLights emissivas em itens-chave (munição, armadilhas, troféus, lanternas, armas), e sistema de partículas flutuantes sutis ao redor de armas e troféus para maior destaque visual
-
-### Changed
-- **Balanceamento de drops**: Redução significativa na quantidade e chance de munição dropada por inimigos eliminados (~40-50% menos munição), com suporte a ranges variáveis de quantidade ([min, max])
-
-Trabalho na branch `develop` após `v1.0.0` (cache **`gh71`**).  
+Trabalho na branch `develop` após `v1.0.0` (cache **`gh72`**).  
 Resumo narrativo: [`docs/DEVELOP-ATE-GH63.md`](docs/DEVELOP-ATE-GH63.md).
 
 ### Added
 - **Dungeon secreta**: caverna escondida em posição aleatória por seed (sem marcador no mapa) — ondas de inimigos, parkour, Guardião do Abismo e a arma exclusiva **Relíquia do Abismo** + conquista "Segredo do Abismo" (solo only; morrer reseta a dungeon)
+- Botão **Ativar som** no mobile quando o AudioContext ainda está suspenso
 
 ### Fixed
-- Áudio no mobile: desbloqueio persistente em qualquer toque (iOS suspende o contexto); aviso "toque para som" só some com o som rodando de verdade
-- Trilha sonora: WAVs roteados pelo grafo WebAudio (volume unificado), retry no próximo gesto quando o autoplay bloqueia, e pausas entre faixas de 6–18s para 1.5–4s
+- Áudio no **Android Chrome**: `unlockFromGesture()` síncrono (resume sem await), trilha procedural dedicada no mobile (sem HTMLAudio/MediaElementSource que silenciava), volumes um pouco mais altos
+- Áudio no mobile: desbloqueio em todo toque; aviso só some com o som rodando de verdade
+- Trilha desktop: WAVs via `decodeAudioData` + BufferSource (WebAudio puro), pausas curtas entre faixas
 
 ### Changed
 - Organização do repositório: artes do splash em `assets/splash/`; guias `DEPLOY-SEGURO`, `GITHUB-PAGES` e `RELEASE-NOTES` em `docs/`
@@ -52,6 +47,14 @@ Resumo narrativo: [`docs/DEVELOP-ATE-GH63.md`](docs/DEVELOP-ATE-GH63.md).
 ### Removed
 - Personagem de teste **HEROBRINE** (só validação do fluxo de deploy)
 
+## [gh72] - 2026-07-26
+### Added
+- **Melhorias visuais de pickups**: Geometria mais detalhada (dobradiças, fechos, antenas), PointLights emissivas em itens-chave (munição, armadilhas, troféus, lanternas, armas), e sistema de partículas flutuantes sutis ao redor de armas e troféus para maior destaque visual
+
+### Changed
+- **Balanceamento de drops**: Redução significativa na quantidade e chance de munição dropada por inimigos eliminados (~40-50% menos munição), com suporte a ranges variáveis de quantidade ([min, max])
+
+## [gh71] - 2026-07-25
 ### Added
 - Playbook genérico de lições: [`docs/PLAYBOOK-JOGO-WEB.md`](docs/PLAYBOOK-JOGO-WEB.md) (reutilizável em projetos parecidos)
 - Desafio do dia (seed UTC) + conquistas locais
