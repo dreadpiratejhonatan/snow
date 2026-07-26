@@ -3,7 +3,8 @@ name: Deploy GitHub Pages
 
 on:
   push:
-    branches: [main, master]
+    # develop = HostGator production; also publish Pages from the same branch
+    branches: [main, master, develop]
   workflow_dispatch:
 
 permissions:
