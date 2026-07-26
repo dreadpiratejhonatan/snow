@@ -13,6 +13,7 @@ const DEFS = [
   { id: "coop_win", title: "Dois contra a neve", desc: "Vencer em co-op" },
   { id: "craft_fence", title: "Engenheiro da base", desc: "Craftar uma cerca" },
   { id: "full_deposit", title: "Baú lotado", desc: "Depositar todos os suprimentos" },
+  { id: "dungeon_clear", title: "Segredo do Abismo", desc: "Vencer a dungeon secreta" },
 ];
 
 function read() {

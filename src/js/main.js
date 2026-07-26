@@ -45,6 +45,7 @@ import {
   clearDemoFlag,
   armDemoFromMenu,
 } from "./demoBot.js";
+import { SecretDungeon } from "./dungeon.js";
 
 // Vinheta cinematográfica suave nas bordas da tela
 const VignetteShader = {
@@ -812,6 +813,7 @@ class Game {
     for (const c of [...this.camera.children]) this.camera.remove(c);
 
     this.world = new World(this.scene, { seed, authority });
+    this.dungeon = new SecretDungeon(this.world, this.scene);
     this.player = new Player(this.camera, this.scene, this.world, this.world.getSpawn());
     this.setCameraMode(this.cameraMode);
     this.initSurvival();
@@ -970,6 +972,7 @@ class Game {
 
     this.world = new World(this.scene);
     this.world.applySeason?.(this.getSeason());
+    this.dungeon = new SecretDungeon(this.world, this.scene);
     this.player = new Player(
       this.camera,
       this.scene,
@@ -1274,6 +1277,8 @@ class Game {
     this.closeHelp(true);
     this.closeReleaseNotes(true);
     this.closeRank(true);
+    // morreu na dungeon: volta para a entrada (loot cai lá fora, dungeon reseta)
+    if (this.dungeon?.active) this.dungeon.leave(this, { died: true });
     this.dropCarriedOnDeath();
     this.persistSave();
     document.exitPointerLock();
@@ -1567,6 +1572,28 @@ class Game {
     this.dayTime = (this.dayTime + dt / CONFIG.world.dayLength) % 1;
     this.tickSeasonOnDayWrap();
     const season = this.getSeason();
+
+    // Dungeon secreta: ambiente fixo escuro (fog curto esconde o mundo lá fora).
+    // O caminho normal recalcula tudo por frame, então ao sair restaura sozinho.
+    if (this.dungeon?.active) {
+      this.scene.background.set(0x05060a);
+      this.scene.fog.color.set(0x05060a);
+      this.scene.fog.near = 5;
+      this.scene.fog.far = 46;
+      this.hemi.intensity = 0.1;
+      this.ambient.intensity = 0.12;
+      this.sunLight.intensity = 0;
+      this.moonLight.intensity = 0;
+      this.starMat.opacity = 0;
+      this.renderer.toneMappingExposure = 0.85;
+      if (this.bloomPass) {
+        this.bloomPass.strength = 0.5;
+        this.bloomPass.threshold = 0.6;
+      }
+      if (this.vignettePass) this.vignettePass.uniforms.darkness.value = 0.72;
+      this.hud.updateTime(this.dayTime, 1, season);
+      return 1;
+    }
     const t = this.dayTime * Math.PI * 2;
     const elev = Math.sin(t); // >0 dia, <0 noite
 
@@ -2242,6 +2269,7 @@ class Game {
 
     const night = this.updateDayNight(dt);
     this.world.update(dt, this.clock.elapsedTime, night, this.duskF, this.player.position);
+    this.dungeon?.update(dt, this);
 
     this.updateInteractions(dt);
     this.updateSurvival(dt, night);
@@ -2293,7 +2321,10 @@ class Game {
     const giftNear =
       gift?.visible && gift.userData.landed && p.distanceTo(gift.position) < 6;
     const useKey = this.input.mobile ? "◉" : "E";
-    if (item) {
+    const caveNear = this.dungeon?.nearEntrance(p);
+    if (caveNear) {
+      this.hud.setHint(`[${useKey}] Entrar na caverna escura...`);
+    } else if (item) {
       this.hud.setHint(`[${useKey}] Pegar ${item.name}`);
     } else if (chestDist < 3.2 && this.carried > 0) {
       this.hud.setHint(`[${useKey}] Depositar ${this.carried} ${this.carried === 1 ? "item" : "itens"} no baú`);
@@ -2304,7 +2335,9 @@ class Game {
     }
 
     if (this.input.interact) {
-      if (item) {
+      if (caveNear) {
+        this.dungeon.tryEnter(this);
+      } else if (item) {
         const kind =
           item.kind ||
           (item.weaponId ? "weapon" : item.ammoType ? "ammo" : item.trapId ? "trap" : "crate");

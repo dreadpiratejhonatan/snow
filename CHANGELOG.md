@@ -28,8 +28,11 @@ Primeira versão **oficial** (`release/v1.0`, tag `v1.0.0`).
 
 ## [Unreleased]
 
-Trabalho na branch `develop` após `v1.0.0` (cache **`gh69`**).  
+Trabalho na branch `develop` após `v1.0.0` (cache **`gh70`**).  
 Resumo narrativo: [`docs/DEVELOP-ATE-GH63.md`](docs/DEVELOP-ATE-GH63.md).
+
+### Added
+- **Dungeon secreta**: caverna escondida em posição aleatória por seed (sem marcador no mapa) — ondas de inimigos, parkour, Guardião do Abismo e a arma exclusiva **Relíquia do Abismo** + conquista "Segredo do Abismo" (solo only; morrer reseta a dungeon)
 
 ### Changed
 - Organização do repositório: artes do splash em `assets/splash/`; guias `DEPLOY-SEGURO`, `GITHUB-PAGES` e `RELEASE-NOTES` em `docs/`

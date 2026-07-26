@@ -424,6 +424,26 @@ export const CONFIG = {
         { weaponId: "spear", chance: 0.5, name: "Lança de gelo", color: 0xa8e8ff },
       ],
     },
+    // Guardião da dungeon secreta — nunca spawna sozinho (count: 0);
+    // a SecretDungeon o invoca via spawnEnemyAt. Drop é a Relíquia (via FSM).
+    dungeon_boss: {
+      label: "Guardião do Abismo",
+      hp: 320,
+      wanderSpeed: 1.2,
+      chaseSpeed: 5.2,
+      aggroRange: 40,
+      attackRange: 2.6,
+      damage: 22,
+      attackCooldown: 1.4,
+      scale: 1.55,
+      color: 0x2a1e3a,
+      dark: 0x140c1e,
+      count: 0,
+      mesh: "bear",
+      ai: "bear",
+      faction: "abyss",
+      drops: [],
+    },
   },
   traps: {
     mine: {
@@ -687,6 +707,18 @@ export const CONFIG = {
       skinColor: 0x5a7a4a,
       desc: "Explode em área após 2s",
     },
+    // exclusiva da dungeon secreta — não conta para vitória, é bônus
+    relic: {
+      id: "relic",
+      name: "Relíquia do Abismo",
+      icon: "🔮",
+      damage: 55,
+      range: 3.0,
+      cooldown: 0.62,
+      slowElite: 1.4,
+      skinColor: 0x9a5aff,
+      desc: "Lâmina ancestral arrancada do Guardião do Abismo",
+    },
   },
   weaponOrder: [
     "fists",
@@ -700,6 +732,7 @@ export const CONFIG = {
     "shotgun",
     "ak47",
     "grenade",
+    "relic",
   ],
   // munição: reserva + carregador (hitscan). Arco/besta/granada gastam da reserva.
   ammoTypes: {
