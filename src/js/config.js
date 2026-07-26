@@ -52,10 +52,13 @@ export const CONFIG = {
         label: "Inverno",
         icon: "❄️",
         warmthMul: 1.2,
-        snowMul: 1,
+        snowMul: 1.15,
         iceOpacity: 0.96,
         iceColor: 0xcfe4f2,
-        fogTint: 0xc8d8e8,
+        fogTint: 0xb0c8dc,
+        /** Whiteout: névoa mais densa + neve mais rápida */
+        fogDensityMul: 1.35,
+        blizzardMul: 1.3,
       },
     ],
   },
@@ -71,6 +74,20 @@ export const CONFIG = {
     attackRange: 2.5,
     attackDamage: 25,
     attackCooldown: 0.55,
+  },
+  /** FOV e mira (segurar botão direito = ADS). */
+  camera: {
+    fov: 75,
+    fovSprint: 82,
+    fovAim: 46,
+    fovLerp: 10,
+    aimSensMul: 0.48,
+    /** Em 3ª pessoa, aproxima a câmera ao mirar. */
+    aimDistanceMul: 0.62,
+    /** Extra de vignette enquanto mira (0–1). */
+    aimVignetteExtra: 0.22,
+    /** true = em 3ª pessoa só aproxima câmera (sem FOV); false = zoom FOV também. */
+    aimFirstPersonOnly: false,
   },
   survival: {
     maxHealth: 100,
@@ -166,6 +183,28 @@ export const CONFIG = {
         { weaponId: "bow", chance: 0.45, name: "Arco", color: 0x9be07a, amount: 4 },
         { ammoType: "arrow", amount: 3, chance: 0.4, name: "Flechas", color: 0x9be07a },
         { trapId: "mine", chance: 0.5, amount: 1, name: "Mina", color: 0x6a6a6a },
+      ],
+    },
+    snow_fox: {
+      label: "Raposa-da-neve",
+      hp: 22,
+      wanderSpeed: 2.4,
+      chaseSpeed: 8.2,
+      aggroRange: 11,
+      attackRange: 1.45,
+      damage: 6,
+      attackCooldown: 0.95,
+      count: 2,
+      mesh: "fox",
+      ai: "wolf",
+      spawnMin: 44,
+      spawnDelay: 55,
+      spawnStagger: 28,
+      faction: "wildlife",
+      drops: [
+        { ammoType: "arrow", amount: 2, chance: 0.55, name: "Flechas", color: 0x9be07a },
+        { trapId: "bait", chance: 0.4, amount: 1, name: "Isca", color: 0xc48a5a },
+        { weaponId: "torch", chance: 0.25, name: "Tocha", color: 0xff9a3c },
       ],
     },
     werewolf: {

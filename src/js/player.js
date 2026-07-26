@@ -20,6 +20,8 @@ export class Player {
     this.onGround = false;
     this.cameraMode = "first";
     this.skinId = "natan";
+    this.aiming = false;
+    this._aimCamDist = CONFIG.thirdPerson?.distance ?? 4.8;
     this.buildMesh();
   }
 
@@ -310,8 +312,8 @@ export class Player {
     this.syncCamera();
   }
 
-  applyLook(delta) {
-    const sensitivity = 0.0034;
+  applyLook(delta, sensMul = 1) {
+    const sensitivity = 0.0034 * sensMul;
     this.yaw -= delta.x * sensitivity;
     this.pitch -= delta.y * sensitivity;
     // yaw livre 360°; pitch quase no zenite/chão
@@ -445,9 +447,21 @@ export class Player {
     const moving = horizontalSpeed > 0.5;
     this.animateLimbs(dt, moving);
 
-    // FOV abre um pouco ao correr (sensação de velocidade)
-    const targetFov = input.sprint && moving ? 82 : 75;
-    this.camera.fov += (targetFov - this.camera.fov) * Math.min(1, dt * 6);
+    // ADS (botão direito): zoom no crosshair. Alt/órbita não ativa mira.
+    const cam = CONFIG.camera || {};
+    const aiming =
+      !!input.rightDown && !input.orbitModifier && !input.mobile && !input.blockAim;
+    this.aiming = aiming;
+    const fovZoom =
+      aiming &&
+      (!cam.aimFirstPersonOnly || this.cameraMode === "first");
+    const targetFov = fovZoom
+      ? cam.fovAim ?? 46
+      : input.sprint && moving
+        ? cam.fovSprint ?? 82
+        : cam.fov ?? 75;
+    const fovLerp = fovZoom ? (cam.fovLerp ?? 10) : 6;
+    this.camera.fov += (targetFov - this.camera.fov) * Math.min(1, dt * fovLerp);
     this.camera.updateProjectionMatrix();
 
     this.syncMesh();
@@ -480,6 +494,7 @@ export class Player {
 
   syncThirdPersonCamera(dt = 0) {
     const cfg = CONFIG.thirdPerson;
+    const camCfg = CONFIG.camera || {};
     const camYaw = this.cameraYaw;
     const camPitch = this.cameraPitch;
     const pivot = new THREE.Vector3(
@@ -498,7 +513,11 @@ export class Player {
       -Math.cos(camYaw) * cosP
     ).normalize();
     const back = look.clone().negate();
-    const distance = this.clipCameraDistance(pivot, back, cfg.distance);
+    const wantDist =
+      cfg.distance * (this.aiming ? camCfg.aimDistanceMul ?? 0.68 : 1);
+    this._aimCamDist ??= cfg.distance;
+    this._aimCamDist += (wantDist - this._aimCamDist) * Math.min(1, dt * 8);
+    const distance = this.clipCameraDistance(pivot, back, this._aimCamDist);
     const target = pivot.clone().addScaledVector(back, distance);
 
     // suaviza só a POSIÇÃO; orientação acompanha a órbita (360° sem flip)

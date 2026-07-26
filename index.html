@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="src/styles/styles.css" />
+  <link rel="stylesheet" href="src/styles/styles.css?v=gh62" />
   <script type="importmap">
   {
     "imports": {
@@ -99,6 +99,7 @@
     <div id="hud" class="hud" hidden>
       <div class="hud__crosshair" aria-hidden="true">
         <span></span><span></span><span></span><span></span>
+        <i class="hud__crosshair-dot"></i>
       </div>
 
       <div class="hud__status">
@@ -113,16 +114,12 @@
         <div id="items-info" class="hud__items">🎒 0 · 📦 0/10</div>
       </div>
 
-      <!-- Inventário de armas: B mostra/esconde · ✕ fecha · 1–9/0 equipa -->
+      <!-- Hotbar estilo Minecraft: B mostra/esconde · ✕ fecha · 1–9/0 equipa -->
       <div id="inv-bar" class="inv-bar is-hidden" hidden role="toolbar" aria-label="Inventário de armas" aria-hidden="true" style="display: none">
-        <div class="inv-bar__title">
-          <span>Armas</span>
-          <span class="inv-bar__title-right">
-            <span class="inv-bar__hint">B ou ✕ esconde · 1-9/0 equipa</span>
-            <button type="button" id="btn-inv-close" class="inv-bar__close" title="Esconder armas (B)" aria-label="Esconder inventário">✕</button>
-          </span>
+        <div class="inv-bar__row">
+          <div id="inv-slots" class="inv-bar__slots"></div>
+          <button type="button" id="btn-inv-close" class="inv-bar__close" title="Esconder armas (B)" aria-label="Esconder inventário">✕</button>
         </div>
-        <div id="inv-slots" class="inv-bar__slots"></div>
         <div id="inv-detail" class="inv-bar__detail">✊ Punhos — dano 12</div>
       </div>
 
@@ -168,7 +165,7 @@
       </div>
 
       <div class="hud__bottom">
-        <div class="hud__controls">WASD · IJKL olhar · Alt+←→ ou Ver skin · scroll/1-9/0 arma · R recarga · B armas · E pegar · G/F armadilha · C craft · H ajuda</div>
+        <div class="hud__controls">WASD · IJKL olhar · botão direito mirar · Alt+←→ ou Ver skin · scroll/1-9/0 arma · R recarga · B armas · E pegar · G/F armadilha · C craft · H ajuda</div>
       </div>
     </div>
 
@@ -215,7 +212,7 @@
             </button>
             <button id="btn-coop-friends" type="button" class="boot-choice boot-choice--alt">
               <span class="boot-choice__title">Com amigos</span>
-              <span class="boot-choice__desc">2 ou 3 jogadores — mesma tempestade</span>
+              <span class="boot-choice__desc">2 a 4 jogadores — mesma tempestade</span>
             </button>
           </div>
         </div>
@@ -228,6 +225,7 @@
             <select id="coop-max-players" class="coop-menu__input">
               <option value="2" selected>2 jogadores</option>
               <option value="3">3 jogadores (via servidor)</option>
+              <option value="4">4 jogadores (via servidor)</option>
             </select>
           </label>
 
@@ -383,11 +381,22 @@
       </div>
     </div>
 
-    <div id="cutscene-overlay" class="help-overlay" hidden aria-hidden="true">
+    <div id="cutscene-letterbox" class="cutscene-letterbox" hidden aria-hidden="true"></div>
+    <div id="cutscene-overlay" class="help-overlay cutscene-overlay" hidden aria-hidden="true">
       <div class="help-overlay__panel" role="dialog" aria-labelledby="cutscene-title">
         <h2 id="cutscene-title">…</h2>
         <p id="cutscene-body" class="boot-sub"></p>
-        <p class="splash__skip">Clique para continuar</p>
+        <p id="cutscene-skip" class="splash__skip">Esc / clique para pular</p>
+      </div>
+    </div>
+
+    <div id="coop-reconnect-overlay" class="help-overlay" hidden aria-hidden="true">
+      <div class="help-overlay__panel" role="dialog" aria-labelledby="coop-reconnect-title">
+        <h2 id="coop-reconnect-title">Co-op desconectado</h2>
+        <p id="coop-reconnect-status" class="boot-sub">A conexão caiu.</p>
+        <p class="boot-sub">Reconecta na mesma partida sem refazer o menu.</p>
+        <button id="btn-coop-reconnect-now" type="button" class="menu__btn">Reconectar agora</button>
+        <button id="btn-coop-reconnect-dismiss" type="button" class="menu__btn menu__btn--ghost">Depois</button>
       </div>
     </div>
 
@@ -415,7 +424,7 @@
           <li><kbd>E</kbd> pegar item / depositar no baú</li>
           <li><kbd>IJKL</kbd> olhar (sem mouse) · <kbd>B</kbd> mostrar/esconder armas · <kbd>1–9</kbd>/<kbd>0</kbd> ou <strong>scroll</strong> equipar</li>
           <li><kbd>G</kbd> tipo de armadilha · <kbd>F</kbd> colocar (perto da fogueira)</li>
-          <li><kbd>V</kbd> / <kbd>Tab</kbd> 1ª / 3ª pessoa · clique atacar</li>
+          <li><kbd>V</kbd> / <kbd>Tab</kbd> 1ª / 3ª pessoa · clique esquerdo atacar · <strong>segurar botão direito</strong> mirar (zoom)</li>
           <li><kbd>Alt</kbd> + setas (3ª pessoa) orbitar câmera 360° e ver o rosto · <kbd>Alt</kbd>+<kbd>V</kbd> volta atrás</li>
           <li><kbd>Y</kbd> ou <kbd>Enter</kbd> chat (estilo CS) · <kbd>Esc</kbd> cancela o chat</li>
           <li>Tutorial: botão <strong>Pular</strong>, <kbd>Esc</kbd> ou <kbd>P</kbd> — depois o mouse captura no clique</li>
@@ -448,7 +457,9 @@
           <dt>O T-Rex com metralhadora é injusto?</dt>
           <dd>Use <strong>árvores, pedras e a cabana</strong> como cobertura — os tiros (dele e os seus) param nos obstáculos. Saia da linha de tiro para recarregar e atacar.</dd>
           <dt>Não ouço a trilha / música?</dt>
-          <dd>A trilha é <strong>gerada no browser</strong> (WebAudio) — faixas procedurais calmas. Toque/clique num personagem ou na dificuldade para liberar o áudio. OST própria: coloque mp3s em <code>music/</code> e liste em <code>music/manifest.json</code>.</dd>
+          <dd>A trilha é <strong>ambient gerado no browser</strong> (pads suaves + poucas notas). Toque/clique num personagem ou na dificuldade para liberar o áudio. OST própria: coloque mp3s em <code>music/</code> e liste em <code>music/manifest.json</code>.</dd>
+          <dt>Como miro com zoom?</dt>
+          <dd>Segure o <strong>botão direito</strong> do mouse — a câmera aproxima no crosshair (sensibilidade menor). Em 3ª pessoa a câmera também chega mais perto. <kbd>Alt</kbd> continua só para orbitar.</dd>
           <dt>Co-op não cria sala / “sinalização offline”?</dt>
           <dd>O co-op precisa da <strong>HostGator online</strong> (`api/signal.php`). Se falhar ao criar sala, é a sinalização — não o jogo no Pages. Peça ao admin subir o zip com a pasta <code>api/</code> e <code>data/rooms/</code> gravável.</dd>
           <dt>Criou a sala mas o amigo não conecta?</dt>
@@ -459,6 +470,6 @@
     </div>
   </div>
 
-  <script type="module" src="src/js/main.js?v=gh58"></script>
+  <script type="module" src="src/js/main.js?v=gh62"></script>
 </body>
 </html>

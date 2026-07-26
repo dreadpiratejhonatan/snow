@@ -13,16 +13,16 @@
 | Modo | Sync | Notas |
 |------|------|--------|
 | 2 jogadores | WebRTC P2P → failover relay | Padrão |
-| 3 jogadores | **Relay HTTPS** obrigatório | Estrela no servidor (`relayMode`) |
+| 3–4 jogadores | **Relay HTTPS** obrigatório | Estrela no servidor (`relayMode`) |
 
-## Reconnect (mesmo aparelho)
+## Reconnect
 
-| Papel | Chave | Botão no menu |
-|-------|--------|----------------|
-| Host | `hostKey` em `sessionStorage` | **Reconectar como host** → `rejoinHost` |
-| Guest | `guestKey` em `sessionStorage` | **Reconectar como convidado** → `rejoinGuest` |
+| Situação | Como |
+|----------|------|
+| Menu | **Reconectar como host / convidado** (mesmo aparelho + chave) |
+| **Durante a partida** | Overlay **Reconectar agora** — não recria o mundo |
 
-O código da última sala fica em `neveLastRoom` (preenche o campo).  
+Chaves: `hostKey` / `guestKey` em `sessionStorage`; código em `neveLastRoom`.  
 Não é possível “virar host” em outro PC — a chave não sai do browser.
 
 ## Status no menu
@@ -30,6 +30,8 @@ Não é possível “virar host” em outro PC — a chave não sai do browser.
 Mensagens típicas: “Conectando P2P…”, “Relay ativo (via servidor)…”, “Host parece offline…”, “Sala sumiu…”.
 
 ## TURN próprio (opcional)
+
+Guia completo: [`docs/TURN-VPS.md`](TURN-VPS.md).
 
 Antes de carregar o jogo:
 
@@ -40,17 +42,16 @@ Antes de carregar o jogo:
     username: "…",
     credential: "…"
   };
-  // ou: window.NEVE_ICE_SERVERS = [ { urls: "stun:…" }, { urls: "turn:…", … } ];
 </script>
 ```
 
-Ver `src/js/net/iceConfig.js`.
+Ver `src/js/net/iceConfig.js`. TURN ajuda 2P P2P; 3–4P seguem no relay.
 
 ## Checklist HostGator (obrigatório)
 
 No cPanel, confirme:
 
-1. Existe `public_html/snow/api/signal.php` (com `ping`, `rejoinHost`, `rejoinGuest`, `relay`, `maxPlayers`)
+1. Existe `public_html/snow/api/signal.php` (com `ping`, `rejoinHost`, `rejoinGuest`, `relay`, `maxPlayers` até **4**)
 2. Pasta `public_html/snow/data/rooms/` com permissão **755/775** gravável
 3. Health check (POST JSON): `{"action":"ping"}` → `ok` + `roomsWritable`
 4. Create smoke: `{"action":"create","seed":1,"maxPlayers":2}` → `code` + `hostKey`
@@ -59,7 +60,7 @@ No cPanel, confirme:
 
 ## Limites
 
-- Máx. **3** jogadores por sala (3P só via relay)
+- Máx. **4** jogadores por sala (3–4 via relay)
 - Relay HTTPS tem latência maior que P2P
 - Salas expiram em **30 min** (TTL renovado enquanto há poll)
 - `hostKey` / `guestKey` só no browser que criou / entrou
@@ -67,19 +68,14 @@ No cPanel, confirme:
 ## Robustez
 
 - Rejoin guest se join preso sem answer
+- Reconnect mid-run (overlay) sem `recreateWorld`
 - ICE com ids sequenciais + teto 200
 - Cliente: retries + mensagens claras no menu
 - Smoke: `npm run test:coop-relay`
 
 ## Como jogar
 
-1. Host: **Com amigos** → jogadores (2 ou 3) → **Criar sala** → anota o código  
+1. Host: **Com amigos** → jogadores (2–4) → **Criar sala** → anota o código  
 2. Guest(s): cola o código → **Entrar**  
-3. Host caiu? Mesmo PC: **Reconectar como host**  
+3. Host/guest caiu mid-run? **Reconectar agora** no overlay  
 4. Solo / **Desafio do dia**: seed UTC compartilhado no menu
-
-## Deploy HostGator
-
-1. `npm run build`
-2. Suba `release/hostgator-snow/` (ou `snow.zip`) **sem apagar** `data/*.json`
-3. Garanta `api/signal.php` + `data/rooms/` (+ `.htaccess` negando HTTP na pasta)

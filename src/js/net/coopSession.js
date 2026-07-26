@@ -6,6 +6,7 @@ import {
   Enemy,
   createBearMesh,
   createWolfMesh,
+  createSnowFoxMesh,
   createWerewolfMesh,
   createMulaMesh,
   createSlenderMesh,
@@ -16,7 +17,7 @@ import {
 const SNAP_HZ = 12;
 const SNAP_HZ_HTTP = 6;
 
-/** Sessão co-op: avatares + snapshots host→guest. */
+/** Sessão co-op: avatares remotos (2–4) + snapshots host→guest. */
 export class CoopSession {
   constructor(game, room) {
     this.game = game;
@@ -24,19 +25,17 @@ export class CoopSession {
     this.role = room.role;
     this.seed = room.seed;
     this.code = room.code;
-    this.remote = null;
+    /** @type {Map<string, import("../player.js").Player>} */
+    this.remotes = new Map();
+    this._names = new Map();
     this._snapAcc = 0;
     this._remoteNetEnemies = new Map();
     this.partnerName = "Parceiro";
 
     room.onMessage = (msg) => this.onMessage(msg);
     room.onClose = (why) => {
-      const tip =
-        this.isHost
-          ? "Reinicie e use “Reconectar como host” com o mesmo código."
-          : "Reinicie e use “Reconectar como convidado” (mesmo aparelho).";
-      game.hud?.showMsg(`Co-op caiu (${why}). ${tip}`, 7000);
-      this.disposeRemote();
+      game.showCoopReconnect?.(why, this.role);
+      this.disposeRemotes();
     };
   }
 
@@ -48,38 +47,57 @@ export class CoopSession {
     return this.role === "guest";
   }
 
-  ensureRemote() {
-    if (this.remote) return this.remote;
+  /** Compat: primeiro remoto (2P). */
+  get remote() {
+    return this.remotes.values().next().value || null;
+  }
+
+  peerKey(msg) {
+    return msg?.from || msg?.id || msg?.peerId || "partner";
+  }
+
+  ensureRemote(peerId = "partner") {
+    if (this.remotes.has(peerId)) return this.remotes.get(peerId);
     const g = this.game;
     const dummyCam = new THREE.PerspectiveCamera(70, 1, 0.1, 10);
     const spawn = g.world.getSpawn().clone();
-    spawn.x += this.isHost ? 2.2 : -2.2;
-    this.remote = new Player(dummyCam, g.scene, g.world, spawn);
-    this.remote.mesh.visible = true;
-    this.remote.setCameraMode("third");
-    if (this.remote.fpWeaponRoot) this.remote.fpWeaponRoot.visible = false;
-    return this.remote;
+    const idx = this.remotes.size;
+    const ang = (idx / Math.max(1, (this.room.maxPlayers || 4) - 1)) * Math.PI * 2;
+    spawn.x += Math.cos(ang) * 2.4;
+    spawn.z += Math.sin(ang) * 2.4;
+    const remote = new Player(dummyCam, g.scene, g.world, spawn);
+    remote.mesh.visible = true;
+    remote.setCameraMode("third");
+    if (remote.fpWeaponRoot) remote.fpWeaponRoot.visible = false;
+    this.remotes.set(peerId, remote);
+    return remote;
   }
 
-  disposeRemote() {
-    if (!this.remote) return;
-    this.game.scene.remove(this.remote.mesh);
-    this.remote = null;
+  disposeRemotes() {
+    for (const remote of this.remotes.values()) {
+      this.game.scene.remove(remote.mesh);
+    }
+    this.remotes.clear();
+    this._names.clear();
     for (const e of this._remoteNetEnemies.values()) {
       this.game.scene.remove(e.mesh);
     }
     this._remoteNetEnemies.clear();
   }
 
+  disposeRemote() {
+    this.disposeRemotes();
+  }
+
   /** Chamado quando o canal abre (P2P ou relay HTTPS). */
   onConnected() {
-    this.ensureRemote();
     const skin = this.game.player.skinId || "natan";
     const name =
       this.game.chat?.displayName?.() || CONFIG.skins?.[skin]?.name || "Player";
     this.room.send({
       t: "hello",
       role: this.role,
+      id: this.room.peerId || this.role,
       skin,
       name,
     });
@@ -87,33 +105,40 @@ export class CoopSession {
       this.room.transport === "http"
         ? " Relay HTTPS (firewall OK, um pouco mais de lag)."
         : " P2P direto.";
+    const cap = this.room.maxPlayers || 2;
     this.game.hud?.showMsg(
       this.isHost
-        ? `Co-op ativo — sala ${this.code}. Você é o host.${via}`
-        : `Co-op ativo — ligado ao host.${via}`,
+        ? `Co-op ativo — sala ${this.code} (até ${cap}). Você é o host.${via}`
+        : `Co-op ativo — ligado ao host (até ${cap}).${via}`,
       5000
     );
+    this.game.hideCoopReconnect?.();
   }
 
   onMessage(msg) {
     if (!msg || !msg.t) return;
+    const selfId = this.room.peerId || this.role;
+    const from = this.peerKey(msg);
+    if (from === selfId) return;
+
     if (msg.t === "hello") {
-      this.ensureRemote();
-      if (msg.skin) applySkinToPlayer(this.remote, msg.skin);
-      if (msg.name) this.partnerName = msg.name;
+      const r = this.ensureRemote(from);
+      if (msg.skin) applySkinToPlayer(r, msg.skin);
+      if (msg.name) {
+        this._names.set(from, msg.name);
+        this.partnerName = msg.name;
+      }
       return;
     }
     if (msg.t === "pose") {
-      this.ensureRemote();
-      this.remote.position.set(msg.x, msg.y, msg.z);
-      this.remote.yaw = msg.yaw || 0;
-      this.remote.pitch = 0;
-      if (msg.skin && msg.skin !== this.remote.skinId) {
-        applySkinToPlayer(this.remote, msg.skin);
-      }
-      if (msg.weapon) this.remote.setHeldWeapon(msg.weapon);
-      this.remote.syncMesh();
-      this.remote.animateLimbs(1 / 30, true);
+      const r = this.ensureRemote(from);
+      r.position.set(msg.x, msg.y, msg.z);
+      r.yaw = msg.yaw || 0;
+      r.pitch = 0;
+      if (msg.skin && msg.skin !== r.skinId) applySkinToPlayer(r, msg.skin);
+      if (msg.weapon) r.setHeldWeapon(msg.weapon);
+      r.syncMesh();
+      r.animateLimbs(1 / 30, true);
       return;
     }
     if (msg.t === "snap" && this.isGuest) {
@@ -131,16 +156,17 @@ export class CoopSession {
 
   applyEvent(msg) {
     const g = this.game;
+    const who = msg.name || this.partnerName || "Parceiro";
     if (msg.kind === "deposit") {
       g.deposited = Math.max(g.deposited, msg.deposited ?? 0);
       g.hud.setItems(g.carried, g.deposited, g.world.itemsTotal);
-      g.hud.showMsg(`${this.partnerName} depositou no baú (${g.deposited}/${g.world.itemsTotal})`, 2800);
+      g.hud.showMsg(`${who} depositou no baú (${g.deposited}/${g.world.itemsTotal})`, 2800);
       if (this.isHost && !g.ended) g.checkWin?.();
     } else if (msg.kind === "pickup" && msg.saveId) {
       const it = g.world.items?.find((i) => i.saveId === msg.saveId && !i.collected);
       if (it) {
         g.world.collectItem(it);
-        g.hud.showMsg(`${this.partnerName} pegou ${it.name}`, 2200);
+        g.hud.showMsg(`${who} pegou ${it.name}`, 2200);
       }
     } else if (msg.kind === "hit" && this.isHost && msg.id != null) {
       const id = msg.id;
@@ -177,21 +203,33 @@ export class CoopSession {
     if (Array.isArray(msg.enemies)) {
       this.applyEnemySnapshot(msg.enemies);
     }
-    if (msg.hostPose) {
-      this.ensureRemote();
+    if (Array.isArray(msg.poses)) {
+      for (const p of msg.poses) {
+        if (!p?.id || p.id === (this.room.peerId || this.role)) continue;
+        const r = this.ensureRemote(p.id);
+        r.position.set(p.x, p.y, p.z);
+        r.yaw = p.yaw || 0;
+        if (p.skin && p.skin !== r.skinId) applySkinToPlayer(r, p.skin);
+        if (p.weapon) r.setHeldWeapon(p.weapon);
+        r.syncMesh();
+        r.animateLimbs(1 / SNAP_HZ, true);
+      }
+    } else if (msg.hostPose) {
+      const r = this.ensureRemote("host");
       const p = msg.hostPose;
-      this.remote.position.set(p.x, p.y, p.z);
-      this.remote.yaw = p.yaw || 0;
-      if (p.skin && p.skin !== this.remote.skinId) applySkinToPlayer(this.remote, p.skin);
-      if (p.weapon) this.remote.setHeldWeapon(p.weapon);
-      this.remote.syncMesh();
-      this.remote.animateLimbs(1 / SNAP_HZ, true);
+      r.position.set(p.x, p.y, p.z);
+      r.yaw = p.yaw || 0;
+      if (p.skin && p.skin !== r.skinId) applySkinToPlayer(r, p.skin);
+      if (p.weapon) r.setHeldWeapon(p.weapon);
+      r.syncMesh();
+      r.animateLimbs(1 / SNAP_HZ, true);
     }
   }
 
   _makeEnemyMesh(type, world) {
     const tex = world.tex;
     if (type === "wolf") return createWolfMesh(tex);
+    if (type === "snow_fox" || type === "fox") return createSnowFoxMesh(tex);
     if (type === "werewolf") return createWerewolfMesh(tex);
     if (type === "mula") return createMulaMesh(tex);
     if (type === "slender") return createSlenderMesh(tex);
@@ -233,15 +271,15 @@ export class CoopSession {
     }
   }
 
-  /** Host: não usa inimigos puppet; guest: world.enemies AI off. */
   tick(dt) {
     if (!this.room?.isOpen) return;
     const g = this.game;
     const p = g.player;
+    const id = this.room.peerId || this.role;
 
-    // pose contínua (ambos)
     this.room.send({
       t: "pose",
+      id,
       x: p.position.x,
       y: p.position.y,
       z: p.position.z,
@@ -271,6 +309,29 @@ export class CoopSession {
 
     const collected = (g.world.items || []).filter((i) => i.collected && i.saveId).map((i) => i.saveId);
 
+    const poses = [
+      {
+        id: "host",
+        x: p.position.x,
+        y: p.position.y,
+        z: p.position.z,
+        yaw: p.yaw,
+        skin: p.skinId,
+        weapon: g.weapons?.current?.id || "fists",
+      },
+    ];
+    for (const [pid, r] of this.remotes) {
+      poses.push({
+        id: pid,
+        x: r.position.x,
+        y: r.position.y,
+        z: r.position.z,
+        yaw: r.yaw,
+        skin: r.skinId,
+        weapon: r.weaponIdHeld || "fists",
+      });
+    }
+
     this.room.send({
       t: "snap",
       dayTime: g.dayTime,
@@ -279,19 +340,16 @@ export class CoopSession {
       deposited: g.deposited,
       collected,
       enemies,
-      hostPose: {
-        x: p.position.x,
-        y: p.position.y,
-        z: p.position.z,
-        yaw: p.yaw,
-        skin: p.skinId,
-        weapon: g.weapons?.current?.id || "fists",
-      },
+      poses,
+      hostPose: poses[0],
     });
   }
 
   broadcastEvent(kind, payload = {}) {
     if (!this.room?.isOpen) return;
-    this.room.send({ t: "event", kind, ...payload });
+    const skin = this.game.player?.skinId;
+    const name =
+      this.game.chat?.displayName?.() || CONFIG.skins?.[skin]?.name || "Player";
+    this.room.send({ t: "event", kind, name, ...payload });
   }
 }

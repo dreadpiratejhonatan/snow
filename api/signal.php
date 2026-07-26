@@ -225,7 +225,7 @@ if ($action === 'create') {
   $seed = isset($body['seed']) ? (int)$body['seed'] : random_int(1, 2147483646);
   $maxPlayers = (int)($body['maxPlayers'] ?? 2);
   if ($maxPlayers < 2) $maxPlayers = 2;
-  if ($maxPlayers > 3) $maxPlayers = 3;
+  if ($maxPlayers > 4) $maxPlayers = 4;
   $hostKey = bin2hex(random_bytes(8));
   $room = [
     'code' => $code,

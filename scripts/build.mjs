@@ -8,7 +8,7 @@ import { execSync } from "node:child_process";
 process.chdir(path.dirname(path.dirname(fileURLToPath(import.meta.url))));
 const DIST = "dist";
 const HOST = path.join("release", "hostgator-snow");
-const CACHE = "gh41";
+const CACHE = "gh62";
 
 /** Arquivos de dados vivos no servidor — nunca clobber no pacote HostGator. */
 const PRESERVE_DATA = new Set(["leaderboard.json", "tickets.json", "tickets-rate.json", "tickets-admin.key"]);
@@ -66,7 +66,10 @@ execSync(
 
 let html = fs.readFileSync("index.html", "utf8");
 html = html
-  .replace(/<link rel="stylesheet" href="src\/styles\/styles\.css" \/>/, '<link rel="stylesheet" href="styles/styles.css" />')
+  .replace(
+    /<link rel="stylesheet" href="src\/styles\/styles\.css(?:\?v=[^"]*)?" \/>/,
+    `<link rel="stylesheet" href="styles/styles.css?v=${CACHE}" />`
+  )
   .replace(/<script type="importmap">[\s\S]*?<\/script>\s*/, "")
   .replace(
     /<script type="module" src="src\/js\/main\.js\?v=[^"]*"><\/script>/,

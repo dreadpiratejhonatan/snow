@@ -28,25 +28,30 @@ Primeira versão **oficial** (`release/v1.0`, tag `v1.0.0`).
 
 ## [Unreleased]
 
-Trabalho na branch `develop` após `v1.0.0` (cache `gh55`).
+Trabalho na branch `develop` após `v1.0.0` (cache `gh62`).
 
 ### Added
 - Desafio do dia (seed UTC) + conquistas locais
 - Inimigo pterodáctilo (IA flyer)
-- Cutscene leve ao spawn do Boto
+- Cutscene cinematográfica do Boto (caminho de câmera + Esc)
 - Ranking por temporada mensal (`Y-m`) + export JSON
 - Tickets admin: bulk status nos cards Abertos
-- Co-op até 3 jogadores (relay HTTPS)
+- Co-op até **4** jogadores (relay HTTPS) + avatares multi-remoto
 - Host reconnect (`hostKey`) + guest reconnect (`guestKey` / `rejoinGuest`)
+- Rejoin mid-run (overlay **Reconectar agora**, sem menu)
 - Status claros no menu (P2P / relay / host offline / sala sumiu)
 - Chat in-game estilo CS (`Y` / `Enter`) no co-op
-- TURN próprio via `window.NEVE_TURN` / `NEVE_ICE_SERVERS`
+- TURN próprio via `window.NEVE_TURN` / `NEVE_ICE_SERVERS` + `docs/TURN-VPS.md`
 - CI GitHub Actions (build + smokes)
 - Sussurros sintéticos bem esporádicos na ambiência (mais à noite)
+- Hotbar de armas estilo Minecraft (1 linha)
+- Mira ADS (segurar botão direito): zoom FOV + vignette + ponto
+- Raposa-da-neve + whiteout de inverno
+- OST ambient em arquivo (`music/*.wav` + `manifest.json`)
 
 ### Changed
 - Difícil mais punitivo (loot/munição/frio/spawns)
 - Cast só amigos (Rita/Bruno removidos)
 - Munição mais escassa no mapa e nos drops
 - Hitscan/projéteis alinhados à crosshair
-- Trilha procedural restaurada (versão calma pré–16-bit; menos poluída)
+- Trilha procedural ambient (baixa) + prioridade a arquivos em `music/`

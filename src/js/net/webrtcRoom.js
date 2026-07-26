@@ -89,7 +89,7 @@ export class WebRtcRoom {
     this.onCode?.(this.code);
     this._status(
       this.maxPlayers >= 3
-        ? `Sala ${this.code} (até 3) — sync via servidor. Aguardando amigos…`
+        ? `Sala ${this.code} (até ${this.maxPlayers}) — sync via servidor. Aguardando amigos…`
         : `Sala criada. Código ${this.code} — peça ao amigo Entrar.`
     );
     await this._setupFlow();
@@ -258,7 +258,10 @@ export class WebRtcRoom {
       if (this._httpReady) return;
       try {
         const obj = typeof ev.data === "string" ? JSON.parse(ev.data) : null;
-        if (obj) this.onMessage?.(obj);
+        if (obj) {
+          const from = this.role === "host" ? "g0" : "host";
+          this.onMessage?.(obj.from ? obj : { ...obj, from });
+        }
       } catch {
         /* ignore */
       }
@@ -447,7 +450,10 @@ export class WebRtcRoom {
     if (relayMsgs.length) {
       if (this.onMessage) {
         for (const entry of relayMsgs) {
-          if (entry?.m) this.onMessage(entry.m);
+          if (entry?.m) {
+            const m = entry.m;
+            this.onMessage(m.from ? m : { ...m, from: entry.from });
+          }
         }
         if (typeof data.relayLastId === "number" && data.relayLastId > this._relaySeen) {
           this._relaySeen = data.relayLastId;

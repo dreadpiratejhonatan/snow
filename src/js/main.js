@@ -37,7 +37,7 @@ import {
 } from "./save.js";
 import { dailySeed, dailyLabel, isDailyMode, setDailyMode } from "./daily.js";
 import { unlockAchievement, listAchievements } from "./achievements.js";
-import { playBotoCutscene } from "./cutscene.js";
+import { playBotoCutscene, updateCinematic, isCinematicActive } from "./cutscene.js";
 import { GameChat } from "./chat.js";
 
 // Vinheta cinematográfica suave nas bordas da tela
@@ -360,7 +360,7 @@ class Game {
               status.textContent = `Código ${code} — no outro aparelho: Com amigos → colar → Entrar.`;
             }
           };
-          const maxPlayers = Math.min(3, Math.max(2, Number(maxPlayersEl?.value) || 2));
+          const maxPlayers = Math.min(4, Math.max(2, Number(maxPlayersEl?.value) || 2));
           const seed = isDailyMode() ? dailySeed() : this.world.seed;
           const { code } = await room.create(seed, { maxPlayers });
           await this.waitForRoomOpen(room);
@@ -594,6 +594,104 @@ class Game {
     }
   }
 
+  /** Overlay in-run: reconectar sem voltar ao menu de co-op. */
+  showCoopReconnect(why, role) {
+    this._coopReconnectRole = role || this.coop?.role || "guest";
+    const el = document.getElementById("coop-reconnect-overlay");
+    const status = document.getElementById("coop-reconnect-status");
+    if (status) {
+      status.textContent =
+        why === "room-gone"
+          ? "Sala sumiu no servidor."
+          : `Conexão caiu (${why || "rede"}).`;
+    }
+    if (el) {
+      el.hidden = false;
+      el.setAttribute("aria-hidden", "false");
+    }
+    if (!this.input?.mobile) {
+      try {
+        document.exitPointerLock();
+      } catch {
+        /* ignore */
+      }
+    }
+    if (this.state === "playing") {
+      this.state = "paused";
+      this.speedrun?.pause?.();
+    }
+  }
+
+  hideCoopReconnect() {
+    const el = document.getElementById("coop-reconnect-overlay");
+    if (el) {
+      el.hidden = true;
+      el.setAttribute("aria-hidden", "true");
+    }
+  }
+
+  async reconnectCoopInPlace() {
+    const status = document.getElementById("coop-reconnect-status");
+    let code = "";
+    try {
+      code = (sessionStorage.getItem("neveLastRoom") || "").trim().toUpperCase();
+    } catch {
+      /* ignore */
+    }
+    if (code.length < 4) {
+      if (status) status.textContent = "Código da sala não encontrado neste aparelho.";
+      return;
+    }
+    const role = this._coopReconnectRole || "guest";
+    let key = "";
+    try {
+      key =
+        role === "host"
+          ? sessionStorage.getItem("neveHostKey:" + code) || ""
+          : sessionStorage.getItem("neveGuestKey:" + code) || "";
+    } catch {
+      /* ignore */
+    }
+    if (!key) {
+      if (status) {
+        status.textContent =
+          role === "host"
+            ? "Chave de host ausente — use o menu Com amigos."
+            : "Chave de convidado ausente — use Entrar no menu.";
+      }
+      return;
+    }
+    if (status) status.textContent = "Reconectando…";
+    const btn = document.getElementById("btn-coop-reconnect-now");
+    if (btn) btn.disabled = true;
+    try {
+      const room = new WebRtcRoom();
+      room.onStatus = (m) => {
+        if (status) status.textContent = m;
+      };
+      if (role === "host") await room.resumeHost(code, key);
+      else await room.resumeGuest(code, key);
+      await this.waitForRoomOpen(room);
+      this.coop?.disposeRemotes?.();
+      try {
+        this.coopRoom?.close?.("replaced");
+      } catch {
+        /* ignore */
+      }
+      this.coopRoom = room;
+      this.coop = new CoopSession(this, room);
+      if (room.isOpen) this.coop.onConnected();
+      else room.onOpen = () => this.coop.onConnected();
+      this.hideCoopReconnect();
+      if (this.state === "paused") this.resume();
+      this.hud?.showMsg("Co-op reconectado — mundo intacto.", 3200);
+    } catch (err) {
+      if (status) status.textContent = err.message || "Falha ao reconectar";
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  }
+
   /** Recria mundo/player com seed (co-op guest/host alinhados). */
   recreateWorld(seed, authority = true, diffOpts = null) {
     const preserve = new Set([
@@ -728,6 +826,8 @@ class Game {
     this.scene.background = new THREE.Color(CONFIG.colors.skyDay);
     // névoa fria e fechada: sensação de nevasca no horizonte
     this.scene.fog = new THREE.Fog(CONFIG.colors.skyDay, 28, 110);
+    this._baseFogNear = 28;
+    this._baseFogFar = 110;
 
     this.camera = new THREE.PerspectiveCamera(
       75,
@@ -1410,7 +1510,18 @@ class Game {
       this.bloomPass.threshold = 0.82 - night * 0.2 - aurora * 0.15;
     }
     if (this.vignettePass) {
-      this.vignettePass.uniforms.darkness.value = 0.4 + night * 0.25 - aurora * 0.12;
+      const aimExtra =
+        this.player?.aiming && this.state === "playing"
+          ? CONFIG.camera?.aimVignetteExtra ?? 0.22
+          : 0;
+      const winterFog = season?.id === "winter" ? 0.08 : 0;
+      this.vignettePass.uniforms.darkness.value =
+        0.4 + night * 0.25 - aurora * 0.12 + aimExtra + winterFog;
+    }
+    if (this.scene.fog && this._baseFogNear != null) {
+      const mul = season?.fogDensityMul ?? 1;
+      this.scene.fog.near = this._baseFogNear / mul;
+      this.scene.fog.far = this._baseFogFar / Math.sqrt(mul);
     }
     // névoa ganha tom verde-azulado sob a aurora
     if (aurora > 0.05) {
@@ -1587,6 +1698,13 @@ class Game {
 
   bindUI() {
     this.hud.onVerSkin = () => this.toggleVerSkinView();
+    document.getElementById("btn-coop-reconnect-now")?.addEventListener("click", () => {
+      void this.reconnectCoopInPlace();
+    });
+    document.getElementById("btn-coop-reconnect-dismiss")?.addEventListener("click", () => {
+      this.hideCoopReconnect();
+      if (this.state === "paused") this.overlay.hidden = false;
+    });
     document.getElementById("btn-resume").addEventListener("click", () => this.resume());
     document.getElementById("btn-restart").addEventListener("click", () => this.restart());
     document.getElementById("btn-skin")?.addEventListener("click", () => this.openSkinPickerFromPause());
@@ -1785,6 +1903,8 @@ class Game {
     this.setCameraMode(this.cameraMode);
     this.overlay.hidden = true;
     this.hud.show();
+    this.hud.setInventoryVisible(true);
+    this.refreshInventoryUI();
     this.state = "playing";
     if (this.input.mobile) this.setTouchUiVisible(true);
     this.maybeShowOrbitHint();
@@ -1829,6 +1949,8 @@ class Game {
     this.state = "playing";
     this.speedrun.resume();
     this.overlay.hidden = true;
+    this.hud.setInventoryVisible(true);
+    this.refreshInventoryUI();
     this.requestPointerLock();
   }
 
@@ -1847,6 +1969,19 @@ class Game {
   }
 
   update(dt) {
+    if (this.state === "cutscene" || isCinematicActive()) {
+      updateCinematic(dt);
+      if (this.ambience?.started) {
+        this.ambience.updateMusic(dt, {
+          bearChasing: false,
+          bearDist: 999,
+          lowHealth: false,
+        });
+      }
+      this.input.endFrame();
+      return;
+    }
+
     if (this.state !== "playing") {
       // Trilha continua nos menus (skin/dificuldade/co-op) após o gesto
       if (this.ambience?.started) {
@@ -1899,6 +2034,7 @@ class Game {
       const order = this.weapons.slots();
       const pick = order[slot - 1];
       if (pick) {
+        if (!this.hud.isInventoryVisible()) this.hud.setInventoryVisible(true);
         this.equipWeapon(pick.id);
         this.tutorial?.notify("equip");
       }
@@ -1934,9 +2070,15 @@ class Game {
     const mouseDelta = this.input.consumeMouseDelta();
     const orbiting =
       this.cameraMode === "third" && this.input.orbitModifier;
+    const aiming =
+      !!this.input.rightDown &&
+      !this.input.orbitModifier &&
+      !this.input.mobile &&
+      !this.chat?.open;
+    const aimSens = aiming ? CONFIG.camera?.aimSensMul ?? 0.52 : 1;
     if (this.input.locked || this.input.mobile || this.input.rightDown) {
       if (orbiting) this.player.applyOrbitLook(mouseDelta);
-      else this.player.applyLook(mouseDelta);
+      else this.player.applyLook(mouseDelta, aimSens);
     }
     if (orbiting) this.player.applyOrbitKeys(dt, this.input);
     else this.player.applyKeyboardLook(dt, this.input);
@@ -1954,7 +2096,9 @@ class Game {
       }
     }
 
+    this.input.blockAim = !!this.chat?.open;
     this.player.update(dt, this.input);
+    this.hud.el?.classList.toggle("is-aiming", !!this.player.aiming);
     this.coop?.tick(dt);
 
     const night = this.updateDayNight(dt);

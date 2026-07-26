@@ -29,7 +29,7 @@ export class HUD {
     this.onInvClose = null; // () => void — botão X / atalho
     this._invBound = false;
     this._invVisible = false;
-    // Começa escondido — B mostra (HUD limpo)
+    // Menu/boot: escondido. start()/resume() abre de novo (B ainda alterna).
     if (this.invBar) this.setInventoryVisible(false);
     document.getElementById("btn-inv-close")?.addEventListener("click", (e) => {
       e.preventDefault();
@@ -205,7 +205,7 @@ export class HUD {
           : eq.ammoType
             ? ` · munição ${eq.ammo}`
             : "";
-      this.invDetail.textContent = `${eq.icon} ${eq.name} — dano ${eq.damage}${ammoTxt} · ${eq.desc}`;
+      this.invDetail.textContent = `${eq.icon} ${eq.name}${ammoTxt}`;
     }
   }
 
@@ -217,8 +217,9 @@ export class HUD {
     this.invBar.classList.toggle("is-hidden", !this._invVisible);
     this.invBar.classList.toggle("is-open", this._invVisible);
     this.invBar.setAttribute("aria-hidden", this._invVisible ? "false" : "true");
-    // style inline vence qualquer CSS cacheado antigo
-    this.invBar.style.display = this._invVisible ? "" : "none";
+    // inline `display:none` no HTML + CSS !important: ao abrir, limpa o inline
+    if (this._invVisible) this.invBar.style.removeProperty("display");
+    else this.invBar.style.display = "none";
     return this._invVisible;
   }
 

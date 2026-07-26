@@ -6,6 +6,7 @@ import {
   Enemy,
   createBearMesh,
   createWolfMesh,
+  createSnowFoxMesh,
   createWerewolfMesh,
   createMulaMesh,
   createSlenderMesh,
@@ -521,7 +522,8 @@ export class World {
     const snowMul = this.season?.snowMul ?? 1;
     if (snowMul < 0.04 || !this.snow) return;
     const sp = this.snow.geometry.attributes.position;
-    const speedMul = 0.35 + snowMul * 0.9;
+    const blizzard = this.season?.blizzardMul ?? 1;
+    const speedMul = (0.35 + snowMul * 0.9) * blizzard;
     for (let i = 0; i < this.snowData.length; i++) {
       const d = this.snowData[i];
       let x = sp.getX(i) + Math.sin(elapsed * 1.1 + d.phase) * dt * 0.8 * snowMul;
@@ -1573,6 +1575,8 @@ export class World {
     switch (cfg.mesh) {
       case "wolf":
         return createWolfMesh(this.tex);
+      case "fox":
+        return createSnowFoxMesh(this.tex);
       case "werewolf":
         return createWerewolfMesh(this.tex);
       case "mula":

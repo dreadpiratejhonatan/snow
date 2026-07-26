@@ -104,6 +104,68 @@ export function createWolfMesh(tex) {
   return g;
 }
 
+/** Raposa-da-neve: menor, branca, pontas alaranjadas — IA de lobo. */
+export function createSnowFoxMesh(tex) {
+  const fur = new THREE.MeshStandardMaterial({
+    color: 0xf2f4f7,
+    roughness: 0.95,
+    map: tex?.fur || null,
+  });
+  const tip = new THREE.MeshStandardMaterial({
+    color: 0xd07840,
+    roughness: 0.9,
+    map: tex?.fur || null,
+  });
+  const dark = new THREE.MeshStandardMaterial({
+    color: 0xc8a090,
+    roughness: 1,
+    map: tex?.fur || null,
+  });
+  const g = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.SphereGeometry(0.28, 12, 10), fur);
+  body.scale.set(0.8, 0.7, 1.85);
+  body.position.y = 0.42;
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.2, 10, 8), fur);
+  head.position.set(0, 0.55, 0.62);
+  const snout = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.09, 0.22), dark);
+  snout.position.set(0, 0.5, 0.86);
+  const earGeo = new THREE.ConeGeometry(0.07, 0.16, 5);
+  const earL = new THREE.Mesh(earGeo, tip);
+  earL.position.set(-0.1, 0.72, 0.55);
+  earL.rotation.z = -0.25;
+  const earR = new THREE.Mesh(earGeo, tip);
+  earR.position.set(0.1, 0.72, 0.55);
+  earR.rotation.z = 0.25;
+  const tail = new THREE.Mesh(new THREE.SphereGeometry(0.1, 8, 6), fur);
+  tail.scale.set(0.55, 0.55, 2.1);
+  tail.position.set(0, 0.48, -0.7);
+  const tipBall = new THREE.Mesh(new THREE.SphereGeometry(0.08, 6, 5), tip);
+  tipBall.position.set(0, 0.48, -1.05);
+  g.add(body, head, snout, earL, earR, tail, tipBall);
+  const legs = [];
+  const legGeo = new THREE.CylinderGeometry(0.05, 0.06, 0.4, 6);
+  for (const [dx, dz] of [
+    [-0.14, 0.32],
+    [0.14, 0.32],
+    [-0.14, -0.32],
+    [0.14, -0.32],
+  ]) {
+    const leg = new THREE.Mesh(legGeo, dark);
+    leg.position.set(dx, 0.2, dz);
+    legs.push(leg);
+    g.add(leg);
+  }
+  g.userData.legs = legs;
+  g.scale.setScalar(0.92);
+  g.traverse((m) => {
+    if (m.isMesh) {
+      m.castShadow = true;
+      m.receiveShadow = true;
+    }
+  });
+  return g;
+}
+
 /** Lobisomem: humanoide bípede peludo. */
 export function createWerewolfMesh(tex) {
   const fur = new THREE.MeshStandardMaterial({ color: 0x4e4238, roughness: 1, map: tex?.fur || null });

@@ -1,6 +1,6 @@
 # Pós–v1.0 — backlog
 
-Status na branch `develop` (gh50+):
+Status na branch `develop` (gh62+):
 
 ## Entregue
 - [x] Difícil mais punitivo (loot/munição/frio)
@@ -8,19 +8,23 @@ Status na branch `develop` (gh50+):
 - [x] Conquistas locais
 - [x] Pterodáctilo (IA flyer)
 - [x] Cast só amigos (Rita/Bruno removidos)
-- [x] Cutscene leve do Boto
+- [x] Cutscene leve do Boto → **cinemática longa** (câmera + Esc)
 - [x] Temporada mensal no ranking + export JSON
 - [x] Tickets admin com bulk status
 - [x] Host reconnect (`hostKey` + rejoinHost)
 - [x] Guest reconnect (`guestKey` + rejoinGuest)
+- [x] Rejoin mid-run (overlay sem menu)
 - [x] Mensagens claras de status (P2P / relay / host offline)
-- [x] TURN próprio via `window.NEVE_TURN` / `NEVE_ICE_SERVERS`
-- [x] Co-op até 3 jogadores (sync via relay HTTPS)
+- [x] TURN próprio via `window.NEVE_TURN` / `NEVE_ICE_SERVERS` + `docs/TURN-VPS.md`
+- [x] Co-op até **4** jogadores (sync via relay HTTPS)
 - [x] CI GitHub Actions (build + smokes)
+- [x] Hotbar Minecraft + inventário padrão aberto
+- [x] Mira ADS (botão direito)
+- [x] OST ambient por arquivo (`music/manifest.json` + WAVs)
+- [x] Raposa-da-neve + winter whiteout
 
 ## Ainda aberto / futuro
-- 4 jogadores com mesh P2P (hoje 3 via servidor)
-- TURN dedicado em VPS própria (só faltam credenciais em produção)
-- Cutscenes cinematográficas longas
-- Mais fauna / biomas
-- Rejoin mid-run sem voltar ao menu (hoje: menu → Reconectar)
+- Mesh P2P completo entre 4 peers (hoje 3–4 via servidor estrela)
+- Credenciais TURN em produção (coturn na VPS — guia pronto)
+- Mais biomas além do ciclo de estações
+- Cutscenes para outros chefs (mesmo runner `playCinematic`)
