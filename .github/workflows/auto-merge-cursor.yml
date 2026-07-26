@@ -28,12 +28,19 @@ jobs:
     outputs:
       merged: ${{ steps.merge.outputs.merged }}
     steps:
+      - name: Checkout (needed for gh)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - name: Retarget to develop, wait for CI, squash-merge
         id: merge
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR: ${{ github.event.pull_request.number }}
           BASE: ${{ github.event.pull_request.base.ref }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
 
@@ -47,20 +54,48 @@ jobs:
             gh pr ready "$PR"
           fi
 
-          echo "Waiting for CI on PR #$PR (ignoring this auto-merge workflow)…"
-          sleep 15
+          echo "Waiting for CI on $HEAD_SHA (ignoring Auto-merge Cursor PRs)…"
+          sleep 10
           deadline=$((SECONDS + 900))
           while [ "$SECONDS" -lt "$deadline" ]; do
-            set +e
-            # TSV: name, state, conclusion... — drop our own jobs to avoid deadlock.
-            out=$(gh pr checks "$PR" 2>&1)
-            code=$?
-            set -e
-            filtered=$(echo "$out" | grep -viE 'Auto-merge Cursor PRs|^merge\b|deploy-hostgator|deploy-pages' || true)
-            echo "Relevant checks:"
-            echo "$filtered"
+            # Use Checks API — avoid parsing prose from `gh pr checks`.
+            json=$(gh api "repos/${REPO}/commits/${HEAD_SHA}/check-runs" --paginate)
+            echo "$json" | jq -r '.check_runs[] | "\(.name)\t\(.status)\t\(.conclusion // "-")\t\(.app.name // "-")"' \
+              | grep -viE '^(merge|deploy-hostgator|deploy-pages)\t' \
+              | grep -vi 'Auto-merge Cursor PRs' \
+              | tee /tmp/checks.tsv || true
 
-            if [ -z "$filtered" ]; then
+            # Keep only jobs from the CI workflow (name smoke) or anything not ours.
+            # Fail if any non-auto-merge check concluded failure/cancelled.
+            if awk -F'\t' '
+              BEGIN { pending=0; failed=0; seen=0 }
+              $1 ~ /^(merge|deploy-hostgator|deploy-pages)$/ { next }
+              {
+                seen=1
+                if ($2 != "completed") pending=1
+                else if ($3 == "failure" || $3 == "cancelled" || $3 == "timed_out") failed=1
+              }
+              END {
+                if (failed) exit 2
+                if (pending) exit 3
+                if (!seen) exit 4
+                exit 0
+              }
+            ' /tmp/checks.tsv; then
+              echo "CI green"
+              break
+            else
+              rc=$?
+              if [ "$rc" -eq 2 ]; then
+                echo "A CI check failed — not merging"
+                exit 1
+              fi
+              if [ "$rc" -eq 3 ]; then
+                echo "CI still running…"
+                sleep 15
+                continue
+              fi
+              # rc 4: no external checks yet
               if [ "$SECONDS" -lt 180 ]; then
                 echo "CI not registered yet — waiting…"
                 sleep 15
@@ -69,21 +104,6 @@ jobs:
               echo "No external checks after wait — proceeding"
               break
             fi
-
-            if echo "$filtered" | grep -qiE 'fail|failure|cancelled'; then
-              echo "A CI check failed — not merging"
-              exit 1
-            fi
-
-            if echo "$filtered" | grep -qiE 'pending|queued|in_progress|running'; then
-              echo "CI still running…"
-              sleep 15
-              continue
-            fi
-
-            # Remaining rows look finished (pass / skip / success).
-            echo "CI looks green (gh exit $code)"
-            break
           done
 
           if [ "$SECONDS" -ge "$deadline" ]; then
