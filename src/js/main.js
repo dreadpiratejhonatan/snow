@@ -1014,6 +1014,7 @@ class Game {
       this.world,
       this.world.getSpawn()
     );
+    this.pet = new HuskyPet(this.scene, this.world);
 
     this.initSurvival();
     this.buildPostFX();
