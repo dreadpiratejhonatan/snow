@@ -35,7 +35,7 @@ Resumo narrativo: [`docs/DEVELOP-ATE-GH63.md`](docs/DEVELOP-ATE-GH63.md) · [`DE
 - **Modos de mapa (gh75)**: seletor no boot após a dificuldade — **Classic** (layout fixo atual) e **Random** (terreno, lago, base e spawn derivados da seed). Persistido no mid-run save; no co-op o modo viaja no bit 31 da seed da sala (daily continua sempre Classic)
 - **Raridade de loot**: anéis rare/epic nos pickups + partículas (armas/troféus)
 - **Crafting na fogueira (C)**: materiais (corda, latas, isqueiro, mapa, bússola, rádio) → munição/armadilhas; cerca clássica como fallback
-- **Husky companheiro**: segue o jogador e fareja loot próximo
+- **Husky companheiro**: opcional (desligado por padrão); liga/desliga no pause; fareja loot próximo
 - **Eventos de mundo**: nevasca (visão/frio) e invasão noturna na base
 - **Hardcore**: dificuldade com morte permanente, sem mid-run save; ranking marcado com ★
 - **Dungeon cronometrada**: tempo de clear + melhor tempo local + conquista sob 4 min
