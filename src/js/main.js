@@ -127,7 +127,10 @@ class Game {
     this._saveAcc = 0;
     this._minimapAcc = 0;
     this.lowFx = isTouchDevice();
-    this.clock = new THREE.Clock();
+    // THREE.Timer (Clock está deprecated desde r183)
+    this.timer = new THREE.Timer();
+    this.timer.connect(document);
+    this.elapsed = 0;
     this.initThree();
     this.bindUI();
     this.chat = new GameChat(this);
@@ -146,8 +149,7 @@ class Game {
   ensureLoop() {
     if (this._looping) return;
     this._looping = true;
-    this.clock.start();
-    this.loop();
+    requestAnimationFrame((t) => this.loop(t));
   }
 
   async boot() {
@@ -981,9 +983,8 @@ class Game {
     // Desktop: sombras suaves. Celular: desliga — 2048 PCF + bloom engasga Android.
     const shadowsOn = gfx ? !!gfx.shadows : true;
     this.renderer.shadowMap.enabled = shadowsOn;
-    this.renderer.shadowMap.type = shadowsOn
-      ? THREE.PCFSoftShadowMap
-      : THREE.BasicShadowMap;
+    // PCFSoftShadowMap deprecated (r183+): PCFShadowMap já é soft
+    this.renderer.shadowMap.type = shadowsOn ? THREE.PCFShadowMap : THREE.BasicShadowMap;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.15;
 
@@ -1369,8 +1370,8 @@ class Game {
       if (dist > 0.25) {
         const blocked = this.world.rayHitsCover(origin, to.normalize(), dist - 0.15);
         if (blocked) {
-          if (!this._coverMsgT || this.clock.elapsedTime - this._coverMsgT > 2.2) {
-            this._coverMsgT = this.clock.elapsedTime;
+          if (!this._coverMsgT || this.elapsed - this._coverMsgT > 2.2) {
+            this._coverMsgT = this.elapsed;
             this.hud.showMsg("Protegido atrás do obstáculo!", 1400);
           }
           return;
@@ -2390,7 +2391,8 @@ class Game {
     this._saveAcc = (this._saveAcc || 0) + dt;
     if (!this.demoMode && this._saveAcc >= 25) {
       this._saveAcc = 0;
-      this.persistSave();
+      // JSON no localStorage no meio do frame engasga — adianta para o próximo tick
+      setTimeout(() => this.persistSave(), 0);
     }
 
     if (this.input.wasPressed("KeyR")) {
@@ -2491,7 +2493,7 @@ class Game {
     this.coop?.tick(dt);
 
     const night = this.updateDayNight(dt);
-    this.world.update(dt, this.clock.elapsedTime, night, this.duskF, this.player.position);
+    this.world.update(dt, this.elapsed, night, this.duskF, this.player.position);
     this.dungeon?.update(dt, this);
     this.worldEvents?.update(dt, this, night);
     this.pet?.update(dt, this.player.position);
@@ -2983,9 +2985,11 @@ class Game {
     ctx.restore();
   }
 
-  loop() {
-    requestAnimationFrame(() => this.loop());
-    const dt = Math.min(this.clock.getDelta(), 0.05);
+  loop(timestamp) {
+    requestAnimationFrame((t) => this.loop(t));
+    this.timer.update(timestamp);
+    const dt = Math.min(this.timer.getDelta(), 0.05);
+    this.elapsed += dt;
     this.update(dt);
     this.composer.render();
   }

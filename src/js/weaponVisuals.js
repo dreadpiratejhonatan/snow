@@ -137,14 +137,13 @@ export function buildHeldWeaponMesh(weaponId) {
     g.add(handle, head);
     g.scale.setScalar(1.2);
   } else if (weaponId === "spear") {
-    const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.03, 1.4, 6), wood);
-    shaft.rotation.z = Math.PI / 2.5;
-    shaft.position.set(0.35, 0.15, 0.25);
-    const tip = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.25, 6), metal);
-    tip.rotation.z = Math.PI / 2.5;
-    tip.position.set(0.95, 0.38, 0.25);
+    // eixo local +Y (como as outras melees): cabo na mão, ponta para cima
+    const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.028, 1.45, 6), wood);
+    shaft.position.y = 0.35;
+    const tip = new THREE.Mesh(new THREE.ConeGeometry(0.055, 0.22, 6), metal);
+    tip.position.y = 1.18;
     g.add(shaft, tip);
-    g.scale.setScalar(1.15);
+    g.scale.setScalar(1.08);
   } else if (weaponId === "relic") {
     // lâmina de cristal do Abismo: cabo escuro + cristal roxo com brilho próprio
     const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.035, 0.35, 6), dark);
@@ -183,8 +182,9 @@ export function buildHeldWeaponMesh(weaponId) {
   // orientação padrão: aponta para frente do personagem
   // ajustes específicos por arma
   if (weaponId === "spear") {
-    g.rotation.set(-0.35, 0.05, 0.05);
-    g.position.set(-0.05, 0, 0.2);
+    // gira ~90°: ponta para frente do braço, ligeiramente para fora (não atravessa o torso)
+    g.rotation.set(-Math.PI / 2 + 0.28, 0.08, 0.22);
+    g.position.set(0.08, 0.02, 0.14);
   } else if (weaponId === "claymore" || weaponId === "relic") {
     // lâminas longas: inclinadas para frente/fora para não atravessar corpo/cabeça
     g.rotation.set(-0.55, 0, 0.38);

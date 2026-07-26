@@ -1209,6 +1209,7 @@ export class World {
   }
 
   _addLootParticles(g, color, count = 4) {
+    if (count <= 0 || this.lowFx) return;
     const particles = [];
     const positions = new Float32Array(count * 3);
     for (let i = 0; i < count; i++) {
@@ -1273,12 +1274,9 @@ export class World {
       const gem2 = new THREE.Mesh(new THREE.OctahedronGeometry(0.14, 0), accent);
       gem2.position.y = 0.72;
       gem2.rotation.y = Math.PI / 4;
-      // PointLight dourada no topo
-      const trophyLight = new THREE.PointLight(0xd4a84a, 0.8, 3.5, 1.8);
-      trophyLight.position.y = 0.72;
-      g.add(pedestal, stem, gem, gem2, trophyLight);
+      // só emissive no gem — PointLight em todo loot engasga o GPU
+      g.add(pedestal, stem, gem, gem2);
       g.userData.pulse = [gem, gem2];
-      g.userData.light = trophyLight;
       // partículas douradas girando ao redor
       this._addLootParticles(g, 0xd4a84a, 5);
     } else if (kind === "ammo") {
@@ -1310,12 +1308,7 @@ export class World {
         g.add(shell);
         shells.push(shell);
       }
-      // PointLight fraca
-      const ammoLight = new THREE.PointLight(color ?? 0xffd75a, 0.5, 2.5, 2);
-      ammoLight.position.y = 0.3;
-      g.add(ammoLight);
       g.userData.pulse = shells;
-      g.userData.light = ammoLight;
     } else if (kind === "trap") {
       const body = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.24, 0.1, 12), mat);
       body.position.y = 0.08;
@@ -1336,12 +1329,8 @@ export class World {
       antenna.position.y = 0.29;
       const sensor = new THREE.Mesh(new THREE.SphereGeometry(0.018, 6, 5), accent);
       sensor.position.y = 0.37;
-      // PointLight vermelha sutil
-      const trapLight = new THREE.PointLight(0xff2020, 0.3, 1.5, 2);
-      trapLight.position.y = 0.22;
-      g.add(body, top, light, antenna, sensor, trapLight);
+      g.add(body, top, light, antenna, sensor);
       g.userData.pulse = [light];
-      g.userData.light = trapLight;
     } else if (kind === "medkit") {
       const pack = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.22, 0.26), mat);
       pack.position.y = 0.18;
@@ -1392,12 +1381,8 @@ export class World {
       cap.position.y = 0.38;
       const handle = new THREE.Mesh(new THREE.TorusGeometry(0.1, 0.015, 5, 12, Math.PI), dark);
       handle.position.y = 0.44;
-      // PointLight laranja dentro do vidro
-      const lanternLight = new THREE.PointLight(0xff9a3c, 0.6, 2.5, 1.6);
-      lanternLight.position.y = 0.24;
-      g.add(base, glass, cap, handle, lanternLight);
+      g.add(base, glass, cap, handle);
       g.userData.pulse = [glass];
-      g.userData.light = lanternLight;
     } else if (kind === "compass") {
       const body = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.06, 16), gold);
       body.position.y = 0.1;
@@ -2560,13 +2545,8 @@ export class World {
       hilt.position.y = 0.1;
       g.add(blade, hilt);
     }
-    // PointLight da cor da arma
-    const weaponLight = new THREE.PointLight(color ?? 0xc8d0d8, 0.4, 2, 1.8);
-    weaponLight.position.y = 0.3;
-    g.add(weaponLight);
-    g.userData.light = weaponLight;
-    // partículas sutis ao redor da arma
-    this._addLootParticles(g, color ?? 0xc8d0d8, 4);
+    // partículas sutis ao redor da arma (sem PointLight — dezenas delas travavam o frame)
+    this._addLootParticles(g, color ?? 0xc8d0d8, this.lowFx ? 0 : 3);
     this._addLootGlow(g, color, 0.4);
     this._addRarityRing(g, this.lootRarity("weapon", weaponId));
     g.traverse((m) => {
