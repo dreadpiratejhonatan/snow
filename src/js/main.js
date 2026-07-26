@@ -116,12 +116,14 @@ class Game {
     this.difficultyId = "medium";
     this.difficulty = getDifficulty("medium");
     this._saveAcc = 0;
+    this._minimapAcc = 0;
+    this.lowFx = isTouchDevice();
     this.clock = new THREE.Clock();
     this.initThree();
     this.bindUI();
     this.chat = new GameChat(this);
     window.addEventListener("beforeunload", () => this.persistSave());
-    if (isTouchDevice()) {
+    if (this.lowFx) {
       this.touch = new TouchControls(this.input);
       this.cameraMode = "third";
     }
@@ -812,7 +814,7 @@ class Game {
     // limpa viewmodel órfão na câmera
     for (const c of [...this.camera.children]) this.camera.remove(c);
 
-    this.world = new World(this.scene, { seed, authority });
+    this.world = new World(this.scene, { seed, authority, lowFx: this.lowFx });
     this.dungeon = new SecretDungeon(this.world, this.scene);
     this.player = new Player(this.camera, this.scene, this.world, this.world.getSpawn());
     this.setCameraMode(this.cameraMode);
@@ -916,30 +918,37 @@ class Game {
   }
 
   initThree() {
+    const gfx = this.lowFx ? CONFIG.mobileGfx || {} : null;
+    const maxDpr = gfx?.maxDpr ?? 2;
     this.renderer = new THREE.WebGLRenderer({
       canvas: this.canvas,
-      antialias: true,
+      antialias: gfx ? !!gfx.antialias : true,
+      powerPreference: this.lowFx ? "high-performance" : "default",
     });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, maxDpr));
     this.renderer.setSize(window.innerWidth, window.innerHeight);
-    // sombras suaves + tone mapping cinematográfico
-    this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    // Desktop: sombras suaves. Celular: desliga — 2048 PCF + bloom engasga Android.
+    const shadowsOn = gfx ? !!gfx.shadows : true;
+    this.renderer.shadowMap.enabled = shadowsOn;
+    this.renderer.shadowMap.type = shadowsOn
+      ? THREE.PCFSoftShadowMap
+      : THREE.BasicShadowMap;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.15;
 
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(CONFIG.colors.skyDay);
     // névoa fria e fechada: sensação de nevasca no horizonte
-    this.scene.fog = new THREE.Fog(CONFIG.colors.skyDay, 28, 110);
-    this._baseFogNear = 28;
-    this._baseFogFar = 110;
+    // celular: horizonte um pouco mais perto = menos fill-rate
+    this._baseFogNear = this.lowFx ? 22 : 28;
+    this._baseFogFar = this.lowFx ? 85 : 110;
+    this.scene.fog = new THREE.Fog(CONFIG.colors.skyDay, this._baseFogNear, this._baseFogFar);
 
     this.camera = new THREE.PerspectiveCamera(
       75,
       window.innerWidth / window.innerHeight,
       0.1,
-      500
+      this.lowFx ? 220 : 500
     );
     this.scene.add(this.camera);
 
@@ -949,19 +958,27 @@ class Game {
     this.scene.add(this.ambient);
 
     this.sunLight = new THREE.DirectionalLight(0xfff2d6, 0.8);
-    this.sunLight.castShadow = true;
-    this.sunLight.shadow.mapSize.set(2048, 2048);
-    this.sunLight.shadow.camera.left = -60;
-    this.sunLight.shadow.camera.right = 60;
-    this.sunLight.shadow.camera.top = 60;
-    this.sunLight.shadow.camera.bottom = -60;
-    this.sunLight.shadow.camera.near = 1;
-    this.sunLight.shadow.camera.far = 400;
-    this.sunLight.shadow.bias = -0.0006;
+    this.sunLight.castShadow = shadowsOn;
+    if (shadowsOn) {
+      const mapSize = gfx?.shadowMapSize || 2048;
+      this.sunLight.shadow.mapSize.set(mapSize, mapSize);
+      this.sunLight.shadow.camera.left = -60;
+      this.sunLight.shadow.camera.right = 60;
+      this.sunLight.shadow.camera.top = 60;
+      this.sunLight.shadow.camera.bottom = -60;
+      this.sunLight.shadow.camera.near = 1;
+      this.sunLight.shadow.camera.far = 400;
+      this.sunLight.shadow.bias = -0.0006;
+    }
     this.scene.add(this.sunLight);
     this.scene.add(this.sunLight.target);
     this.moonLight = new THREE.DirectionalLight(0x8ea8d8, 0);
     this.scene.add(this.moonLight);
+
+    // temps reutilizáveis (evita `new Color/Vector3` todo frame → GC no Android)
+    this._tmpColorA = new THREE.Color();
+    this._tmpColorB = new THREE.Color();
+    this._tmpSunDir = new THREE.Vector3();
 
     this.buildSky();
 
@@ -972,7 +989,7 @@ class Game {
     this.seasonDayAcc = 0;
     this._prevDayTime = this.dayTime;
 
-    this.world = new World(this.scene);
+    this.world = new World(this.scene, { lowFx: this.lowFx });
     this.world.applySeason?.(this.getSeason());
     this.dungeon = new SecretDungeon(this.world, this.scene);
     this.player = new Player(
@@ -1450,9 +1467,14 @@ class Game {
     this.composer = new EffectComposer(this.renderer);
     this.composer.addPass(new RenderPass(this.scene, this.camera));
 
-    // bloom suave: sol, lua e vagalumes “brilham”
-    this.bloomPass = new UnrealBloomPass(size, 0.35, 0.4, 0.85);
-    this.composer.addPass(this.bloomPass);
+    // Bloom é o vilão no celular (multipass full-screen) — só no desktop
+    const wantBloom = this.lowFx ? CONFIG.mobileGfx?.bloom === true : true;
+    if (wantBloom) {
+      this.bloomPass = new UnrealBloomPass(size, 0.35, 0.4, 0.85);
+      this.composer.addPass(this.bloomPass);
+    } else {
+      this.bloomPass = null;
+    }
 
     this.vignettePass = new ShaderPass(VignetteShader);
     this.composer.addPass(this.vignettePass);
@@ -1508,7 +1530,7 @@ class Game {
     this.scene.add(this.moonMesh);
 
     // cúpula de estrelas (só aparece à noite)
-    const starCount = 900;
+    const starCount = this.lowFx ? 220 : 900;
     const positions = new Float32Array(starCount * 3);
     for (let i = 0; i < starCount; i++) {
       // direção aleatória no hemisfério superior
@@ -1612,12 +1634,12 @@ class Game {
 
     // direção do sol (a lua fica no lado oposto)
     // a área de sombra acompanha o jogador para manter nitidez
-    const sunDir = new THREE.Vector3(Math.cos(t), Math.sin(t), 0.35).normalize();
+    const sunDir = this._tmpSunDir.set(Math.cos(t), Math.sin(t), 0.35).normalize();
     const anchor = this.player.position;
     this.sunLight.position.copy(anchor).addScaledVector(sunDir, 150);
     this.sunLight.target.position.copy(anchor);
     this.sunLight.intensity = Math.max(0, elev) * 0.95;
-    this.sunLight.color.setHex(0xfff2d6).lerp(new THREE.Color(0xff8844), duskF);
+    this.sunLight.color.setHex(0xfff2d6).lerp(this._tmpColorA.setHex(0xff8844), duskF);
     this.moonLight.position.copy(sunDir).multiplyScalar(-150);
     this.moonLight.intensity = Math.max(0, -elev) * 0.22;
 
@@ -1635,16 +1657,16 @@ class Game {
     this.scene.fog.color.copy(this._skyTmp);
 
     // gradiente da cúpula: zenite vs horizonte
-    this._skyTop.copy(this._skyNight).lerp(new THREE.Color(0x6d9cc4), dayF);
+    this._skyTop.copy(this._skyNight).lerp(this._tmpColorA.setHex(0x6d9cc4), dayF);
     this._skyTop.lerp(this._skyDusk, duskF * 0.35);
-    this._skyBottom.copy(this._skyNight).lerp(new THREE.Color(0xe8f0f7), dayF);
-    this._skyBottom.lerp(new THREE.Color(0xffb070), duskF * 0.7);
+    this._skyBottom.copy(this._skyNight).lerp(this._tmpColorA.setHex(0xe8f0f7), dayF);
+    this._skyBottom.lerp(this._tmpColorA.setHex(0xffb070), duskF * 0.7);
     this.skyMat.uniforms.topColor.value.copy(this._skyTop);
     this.skyMat.uniforms.bottomColor.value.copy(this._skyBottom);
 
     // luzes gerais acompanham o dia
     this.hemi.intensity = 0.22 + dayF * 0.7;
-    this.hemi.color.setHex(0xdceaff).lerp(new THREE.Color(0xffc090), duskF * 0.5);
+    this.hemi.color.setHex(0xdceaff).lerp(this._tmpColorA.setHex(0xffc090), duskF * 0.5);
     this.ambient.intensity = 0.12 + dayF * 0.28;
     this.starMat.opacity = THREE.MathUtils.clamp(-elev * 2.2, 0, 1);
     this.renderer.toneMappingExposure = 0.85 + dayF * 0.4;
@@ -1672,14 +1694,14 @@ class Game {
     }
     // névoa ganha tom verde-azulado sob a aurora
     if (aurora > 0.05) {
-      this.scene.fog.color.lerp(new THREE.Color(0x1a3a38), aurora * 0.35);
-      this.hemi.color.lerp(new THREE.Color(0x88ffcc), aurora * 0.4);
+      this.scene.fog.color.lerp(this._tmpColorA.setHex(0x1a3a38), aurora * 0.35);
+      this.hemi.color.lerp(this._tmpColorB.setHex(0x88ffcc), aurora * 0.4);
       this.hemi.intensity = Math.max(this.hemi.intensity, 0.22 + aurora * 0.35);
     }
     // tinta leve da estação na névoa / hemi
     if (season?.fogTint != null) {
-      this.scene.fog.color.lerp(new THREE.Color(season.fogTint), 0.18);
-      this.hemi.color.lerp(new THREE.Color(season.fogTint), 0.12);
+      this.scene.fog.color.lerp(this._tmpColorA.setHex(season.fogTint), 0.18);
+      this.hemi.color.lerp(this._tmpColorB.setHex(season.fogTint), 0.12);
     }
 
     this.hud.updateTime(this.dayTime, night, season);
@@ -2151,6 +2173,8 @@ class Game {
     const h = window.innerHeight;
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
+    const maxDpr = this.lowFx ? CONFIG.mobileGfx?.maxDpr ?? 1 : 2;
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, maxDpr));
     this.renderer.setSize(w, h);
     this.composer.setSize(w, h);
   }
@@ -2321,7 +2345,13 @@ class Game {
     this.updateInteractions(dt);
     this.updateSurvival(dt, night);
     this.updateEnemyHud();
-    this.drawMinimap();
+    // Minimapa Canvas2D todo frame + WebGL = hitch no Android
+    const mapHz = this.lowFx ? CONFIG.mobileGfx?.minimapHz ?? 8 : 60;
+    this._minimapAcc = (this._minimapAcc || 0) + dt;
+    if (this._minimapAcc >= 1 / mapHz) {
+      this._minimapAcc = 0;
+      this.drawMinimap();
+    }
 
     const moving = Math.hypot(this.player.velocity.x, this.player.velocity.z) > 0.5;
     const threat = this.world.anyEnemyChasing(this.player.position);

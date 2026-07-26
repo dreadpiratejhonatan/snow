@@ -54,6 +54,7 @@ Documentação completa: [`docs/V1-OFICIAL.md`](docs/V1-OFICIAL.md) · Tag Git: 
 - Pause e **⋯** no canto; câmera, armas, armadilhas, chat, ajuda e novidades no menu
 - Tutorial e dicas usam ícones de toque (não WASD/Esc)
 - Minimapa/status/timer compactos; legenda de teclado escondida
+- **Performance**: no celular desliga bloom/sombras pesadas, limita DPR e reduz neve — evita engasgos periódicos
 
 ## Board de sugestões
 - `/tickets/` em cards estilo Jira — ideias públicas; admin muda status

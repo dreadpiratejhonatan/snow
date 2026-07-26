@@ -42,6 +42,7 @@ Resumo narrativo: [`docs/DEVELOP-ATE-GH63.md`](docs/DEVELOP-ATE-GH63.md).
 - HUD mobile redesenhado: só 4 ações na tela (correr, interagir, pular, atacar); resto no menu ⋯ (inclui chat)
 - Tutorial e dicas no celular usam ícones de toque em vez de teclas WASD/E/Esc
 - Minimapa, barras e timer compactos; legenda de armadilha/teclado escondida no touch
+- **Performance mobile**: DPR≤1, sem antialias/bloom/sombras, menos neve/grama/vagalumes, minimapa ~8 Hz (evita engasgos a cada poucos segundos no Android)
 
 ### Fixed
 - Áudio no **Android Chrome**: `unlockFromGesture()` síncrono (resume sem await), trilha procedural dedicada no mobile (sem HTMLAudio/MediaElementSource que silenciava), volumes um pouco mais altos
