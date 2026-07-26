@@ -28,11 +28,12 @@ Primeira versão **oficial** (`release/v1.0`, tag `v1.0.0`).
 
 ## [Unreleased]
 
-Trabalho na branch `develop` após `v1.0.0` (cache **`gh90`**).  
+Trabalho na branch `develop` após `v1.0.0` (cache **`gh91`**).  
 Resumo narrativo: [`docs/DEVELOP-ATE-GH63.md`](docs/DEVELOP-ATE-GH63.md) · [`DEVELOP-GH64-ATE-GH73.md`](docs/DEVELOP-GH64-ATE-GH73.md).
 
 ### Fixed
-- **HUD mobile (gh90)**: tutorial não cobre ❤/🔥; hotbar fechada por padrão (⋯→🎒); sem texto “Punhos” em cima dos botões; status sob o minimapa
+- **Hotbar mobile (gh91)**: barra de armas de novo visível no celular (acima do stick; sem “Punhos” / ✕)
+- **HUD mobile (gh90)**: tutorial não cobre ❤/🔥; sem texto “Punhos” em cima dos botões; status sob o minimapa
 
 ### Added
 - **Solo sazonal (gh89)**: chão e vegetação (grama/folhas) mudam de cor com as estações — gradual, Classic e Random; desktop também (material + vertex tint)

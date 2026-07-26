@@ -1456,6 +1456,11 @@ body.is-touch .inv-bar {
   z-index: 22;
 }
 
+/* No touch a hotbar fica sempre à vista — ✕ some (⋯ → 🎒 ainda alterna) */
+body.is-touch .inv-bar__close {
+  display: none;
+}
+
 body.is-touch .inv-bar__slots {
   overflow-x: auto;
   overflow-y: hidden;

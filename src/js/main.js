@@ -2376,8 +2376,8 @@ class Game {
     this.setCameraMode(this.cameraMode);
     this.overlay.hidden = true;
     this.hud.show();
-    // No celular a hotbar aberta cobre stick/botões — só abre via ⋯ → 🎒
-    this.hud.setInventoryVisible(!this.input.mobile);
+    // Hotbar sempre visível; no touch ela fica acima do stick (CSS) sem o texto “Punhos”
+    this.hud.setInventoryVisible(true);
     this.refreshInventoryUI();
     this.state = "playing";
     if (this.input.mobile) this.setTouchUiVisible(true);
