@@ -9,9 +9,13 @@ import {
   createSnowFoxMesh,
   createWerewolfMesh,
   createMulaMesh,
+  createHorseMesh,
+  createDromedaryMesh,
+  createPonyMesh,
   createSlenderMesh,
   createChuckMesh,
   createPteroMesh,
+  createPandaMesh,
 } from "../enemies.js";
 
 const SNAP_HZ = 12;
@@ -232,6 +236,10 @@ export class CoopSession {
     if (type === "snow_fox" || type === "fox") return createSnowFoxMesh(tex);
     if (type === "werewolf") return createWerewolfMesh(tex);
     if (type === "mula") return createMulaMesh(tex);
+    if (type === "horse") return createHorseMesh(tex);
+    if (type === "dromedary") return createDromedaryMesh(tex);
+    if (type === "pony") return createPonyMesh(tex);
+    if (type === "panda") return createPandaMesh(tex);
     if (type === "slender") return createSlenderMesh(tex);
     if (type === "chuck") return createChuckMesh(tex);
     if (type === "ptero") return createPteroMesh();

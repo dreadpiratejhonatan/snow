@@ -9,6 +9,9 @@ import {
   createSnowFoxMesh,
   createWerewolfMesh,
   createMulaMesh,
+  createHorseMesh,
+  createDromedaryMesh,
+  createPonyMesh,
   createSlenderMesh,
   createChuckMesh,
   createPandaMesh,
@@ -1099,7 +1102,7 @@ export class World {
     if (def.saveId?.startsWith?.("win:trophy") || /troféu/i.test(def.name || "")) return "trophy";
     if (def.weaponId) return "weapon";
     const n = (def.name || "").toLowerCase();
-    if (/kit|médic|medic/.test(n)) return "medkit";
+    if (/poção|pocao|kit|médic|medic/.test(n) || def.healthHeal) return "potion";
     if (/mapa/.test(n)) return "map";
     if (/rádio|radio/.test(n)) return "radio";
     if (/lanterna/.test(n)) return "lantern";
@@ -1135,7 +1138,7 @@ export class World {
         emissiveIntensity: 0.14,
       });
     }
-    if (kind === "medkit" || kind === "map" || kind === "rope" || kind === "cloth" || kind === "trap") {
+    if (kind === "potion" || kind === "medkit" || kind === "map" || kind === "rope" || kind === "cloth" || kind === "trap") {
       return new THREE.MeshStandardMaterial({
         color: c,
         map: T.cloth || null,
@@ -1181,7 +1184,7 @@ export class World {
   /** Raridade do loot: epic (dourado), rare (azul), common (sem anel extra). */
   lootRarity(kind, weaponId = null) {
     if (kind === "trophy" || weaponId === "relic") return "epic";
-    if (kind === "weapon" || kind === "medkit" || weaponId === "grenade") return "rare";
+    if (kind === "weapon" || kind === "potion" || kind === "medkit" || weaponId === "grenade") return "rare";
     return "common";
   }
 
@@ -1330,17 +1333,45 @@ export class World {
       sensor.position.y = 0.37;
       g.add(body, top, light, antenna, sensor);
       g.userData.pulse = [light];
-    } else if (kind === "medkit") {
-      const pack = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.22, 0.26), mat);
-      pack.position.y = 0.18;
-      const crossH = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.06, 0.04), accent);
-      crossH.position.set(0, 0.3, 0.14);
-      const crossV = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.22, 0.04), accent);
-      crossV.position.set(0, 0.3, 0.14);
-      const handle = new THREE.Mesh(new THREE.TorusGeometry(0.08, 0.02, 5, 10, Math.PI), dark);
-      handle.rotation.x = Math.PI / 2;
-      handle.position.set(0, 0.32, 0);
-      g.add(pack, crossH, crossV, handle);
+    } else if (kind === "potion" || kind === "medkit") {
+      // jarro mágico com líquido vermelho (poção)
+      const glass = new THREE.MeshStandardMaterial({
+        color: 0xa8d8e8,
+        roughness: 0.15,
+        metalness: 0.05,
+        transparent: true,
+        opacity: 0.45,
+        emissive: 0x204050,
+        emissiveIntensity: 0.15,
+      });
+      const liquid = new THREE.MeshStandardMaterial({
+        color: color ?? 0xc42838,
+        roughness: 0.35,
+        metalness: 0.05,
+        emissive: color ?? 0xc42838,
+        emissiveIntensity: 0.55,
+      });
+      const corkMat = new THREE.MeshStandardMaterial({ color: 0x8a5a28, roughness: 0.9 });
+      const band = new THREE.MeshStandardMaterial({
+        color: 0xd4a84a,
+        roughness: 0.4,
+        metalness: 0.65,
+      });
+      const bottle = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.14, 0.32, 12), glass);
+      bottle.position.y = 0.22;
+      const fluid = new THREE.Mesh(new THREE.CylinderGeometry(0.095, 0.11, 0.2, 12), liquid);
+      fluid.position.y = 0.18;
+      const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.08, 0.1, 10), glass);
+      neck.position.y = 0.42;
+      const cork = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.055, 0.07, 8), corkMat);
+      cork.position.y = 0.5;
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(0.09, 0.015, 6, 14), band);
+      ring.rotation.x = Math.PI / 2;
+      ring.position.y = 0.36;
+      // brilho do líquido (só emissive — sem PointLight)
+      g.add(fluid, bottle, neck, cork, ring);
+      g.userData.pulse = [fluid];
+      g.userData.spin = cork;
     } else if (kind === "map") {
       const sheet = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.02, 0.32), mat);
       sheet.position.y = 0.12;
@@ -1526,6 +1557,7 @@ export class World {
       ammoAmount: def.amount || 0,
       trapId: def.trapId || null,
       trapAmount: def.trapId ? def.amount || 1 : 0,
+      healthHeal: def.healthHeal || 0,
       countsForWin,
       saveId,
     });
@@ -1552,6 +1584,10 @@ export class World {
     i = 0;
     for (const def of CONFIG.trapPickups || []) {
       this._spawnItemDef(def, { countsForWin: false, nearBase: true, saveId: `trap:${i++}` });
+    }
+    i = 0;
+    for (const def of CONFIG.healPickups || []) {
+      this._spawnItemDef(def, { countsForWin: false, nearBase: Math.random() < 0.4, saveId: `heal:${i++}` });
     }
     // vitória = itens de sobrevivência + troféu do urso + troféu do Boto
     this.itemsTotal = CONFIG.items.length + 2;
@@ -1877,6 +1913,12 @@ export class World {
         return createWerewolfMesh(this.tex);
       case "mula":
         return createMulaMesh(this.tex);
+      case "horse":
+        return createHorseMesh(this.tex);
+      case "dromedary":
+        return createDromedaryMesh(this.tex);
+      case "pony":
+        return createPonyMesh(this.tex);
       case "slender":
         return createSlenderMesh();
       case "chuck":
@@ -2400,10 +2442,11 @@ export class World {
         ammoAmount: amt,
         trapId: row.trapId || null,
         trapAmount: row.trapId ? amt || 1 : 0,
+        healthHeal: row.healthHeal || 0,
         countsForWin: false,
         discovered: true,
       });
-      got.push(row.weaponId || row.ammoType || row.trapId);
+      got.push(row.weaponId || row.ammoType || row.trapId || (row.healthHeal ? "potion" : null));
       i++;
     }
     // garantia: se nada caiu, deixa munição ou tocha
@@ -2432,6 +2475,7 @@ export class World {
     ammoAmount = 0,
     trapId = null,
     trapAmount = 0,
+    healthHeal = 0,
     countsForWin = false,
     discovered = true,
     saveId = null,
@@ -2441,6 +2485,7 @@ export class World {
       weaponId,
       ammoType,
       trapId,
+      healthHeal,
       countsForWin,
       saveId,
     });
@@ -2464,6 +2509,7 @@ export class World {
       ammoAmount: ammoAmount || 0,
       trapId,
       trapAmount: trapAmount || 0,
+      healthHeal: healthHeal || 0,
       countsForWin,
       saveId: saveId || `dyn:${name}:${Math.random().toString(36).slice(2, 8)}`,
     });

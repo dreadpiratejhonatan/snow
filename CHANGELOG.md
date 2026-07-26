@@ -28,8 +28,12 @@ Primeira versão **oficial** (`release/v1.0`, tag `v1.0.0`).
 
 ## [Unreleased]
 
-Trabalho na branch `develop` após `v1.0.0` (cache **`gh81`**).  
+Trabalho na branch `develop` após `v1.0.0` (cache **`gh82`**).  
 Resumo narrativo: [`docs/DEVELOP-ATE-GH63.md`](docs/DEVELOP-ATE-GH63.md) · [`DEVELOP-GH64-ATE-GH73.md`](docs/DEVELOP-GH64-ATE-GH73.md).
+
+### Added
+- **Poções de vida (gh82)**: jarros mágicos com líquido vermelho no mapa (+ drops); restauram vida ao pegar
+- **Montarias (gh82)**: cavalo (rápido), dromedário (tanque) e pônei — domar como mula/panda (E com vida baixa)
 
 ### Fixed
 - **Travamentos graves (gh80/gh81)**: neve desktop não chama mais `groundHeight` por floco (era ~1400×/frame); menos flocos, shadow 1024, bloom leve, loot sem castShadow; auto-modo leve se o frame > 80ms; `.htaccess` força HTML sem cache + `console [Neve] build gh81` para confirmar o bundle
