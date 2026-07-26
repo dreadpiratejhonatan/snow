@@ -28,8 +28,11 @@ Primeira versão **oficial** (`release/v1.0`, tag `v1.0.0`).
 
 ## [Unreleased]
 
-Trabalho na branch `develop` após `v1.0.0` (cache **`gh85`**).  
+Trabalho na branch `develop` após `v1.0.0` (cache **`gh86`**).  
 Resumo narrativo: [`docs/DEVELOP-ATE-GH63.md`](docs/DEVELOP-ATE-GH63.md) · [`DEVELOP-GH64-ATE-GH73.md`](docs/DEVELOP-GH64-ATE-GH73.md).
+
+### Added
+- **Tutorial/ajuda: montarias (gh86)**: passo 6/7 ensina a domar; FAQ e controles mencionam mula, cavalo, pônei, dromedário e panda
 
 ### Changed
 - **Domar montarias mais fácil (gh85)**: basta ~28% de dano (HP ≤ 72%); ao enfraquecer o animal para de atacar; alcance de interação maior; mula/cavalo/dromedário/pônei/panda um pouco mais fracos
