@@ -1035,6 +1035,35 @@ export class World {
     return glow;
   }
 
+  _addLootParticles(g, color, count = 4) {
+    const particles = [];
+    const positions = new Float32Array(count * 3);
+    for (let i = 0; i < count; i++) {
+      const a = (i / count) * Math.PI * 2;
+      const r = 0.3 + Math.random() * 0.15;
+      const h = 0.2 + Math.random() * 0.4;
+      positions[i * 3] = Math.cos(a) * r;
+      positions[i * 3 + 1] = h;
+      positions[i * 3 + 2] = Math.sin(a) * r;
+      particles.push({ phase: Math.random() * Math.PI * 2, radius: r });
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+    const points = new THREE.Points(
+      geo,
+      new THREE.PointsMaterial({
+        color: color ?? 0xffd75a,
+        size: 0.04,
+        transparent: true,
+        opacity: 0.6,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+      })
+    );
+    g.add(points);
+    g.userData.particles = { points, data: particles };
+  }
+
   createItemMesh(color, kind = "crate") {
     const g = new THREE.Group();
     const mat = this._lootMat(kind, color);
@@ -1056,6 +1085,14 @@ export class World {
     if (kind === "trophy") {
       const pedestal = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.22, 0.14, 10), gold);
       pedestal.position.y = 0.14;
+      // raios/spikes ao redor do pedestal
+      for (let i = 0; i < 6; i++) {
+        const a = (i / 6) * Math.PI * 2;
+        const spike = new THREE.Mesh(new THREE.ConeGeometry(0.02, 0.12, 4), gold);
+        spike.position.set(Math.cos(a) * 0.2, 0.18, Math.sin(a) * 0.2);
+        spike.rotation.z = -a - Math.PI / 2;
+        g.add(spike);
+      }
       const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.08, 0.18, 8), gold);
       stem.position.y = 0.3;
       const gem = new THREE.Mesh(new THREE.OctahedronGeometry(0.26, 0), mat);
@@ -1063,20 +1100,49 @@ export class World {
       const gem2 = new THREE.Mesh(new THREE.OctahedronGeometry(0.14, 0), accent);
       gem2.position.y = 0.72;
       gem2.rotation.y = Math.PI / 4;
-      g.add(pedestal, stem, gem, gem2);
+      // PointLight dourada no topo
+      const trophyLight = new THREE.PointLight(0xd4a84a, 0.8, 3.5, 1.8);
+      trophyLight.position.y = 0.72;
+      g.add(pedestal, stem, gem, gem2, trophyLight);
       g.userData.pulse = [gem, gem2];
+      g.userData.light = trophyLight;
+      // partículas douradas girando ao redor
+      this._addLootParticles(g, 0xd4a84a, 5);
     } else if (kind === "ammo") {
       const box = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.16, 0.28), mat);
       box.position.y = 0.14;
       const rim = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.04, 0.3), dark);
       rim.position.y = 0.24;
-      g.add(box, rim);
+      // trava/fecho na frente
+      const latch = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.08, 0.02), dark);
+      latch.position.set(0, 0.18, 0.15);
+      const lock = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.03, 6), accent);
+      lock.rotation.x = Math.PI / 2;
+      lock.position.set(0, 0.2, 0.16);
+      g.add(box, rim, latch, lock);
+      const shells = [];
       for (let i = 0; i < 4; i++) {
-        const shell = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.2, 6), accent);
+        const shell = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.035, 0.035, 0.2, 6),
+          new THREE.MeshStandardMaterial({
+            color: color ?? 0xffd75a,
+            roughness: 0.35,
+            metalness: 0.35,
+            emissive: color ?? 0xffd75a,
+            emissiveIntensity: 0.6,
+          })
+        );
         shell.rotation.x = Math.PI / 2;
         shell.position.set(-0.1 + i * 0.07, 0.3, 0);
         g.add(shell);
+        shells.push(shell);
       }
+      // PointLight fraca
+      const ammoLight = new THREE.PointLight(color ?? 0xffd75a, 0.5, 2.5, 2);
+      ammoLight.position.y = 0.3;
+      g.add(ammoLight);
+      g.userData.pulse = shells;
+      g.userData.light = ammoLight;
     } else if (kind === "trap") {
       const body = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.24, 0.1, 12), mat);
       body.position.y = 0.08;
@@ -1092,8 +1158,17 @@ export class World {
         })
       );
       light.position.y = 0.22;
-      g.add(body, top, light);
+      // antena/sensor no topo
+      const antenna = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.14, 5), dark);
+      antenna.position.y = 0.29;
+      const sensor = new THREE.Mesh(new THREE.SphereGeometry(0.018, 6, 5), accent);
+      sensor.position.y = 0.37;
+      // PointLight vermelha sutil
+      const trapLight = new THREE.PointLight(0xff2020, 0.3, 1.5, 2);
+      trapLight.position.y = 0.22;
+      g.add(body, top, light, antenna, sensor, trapLight);
       g.userData.pulse = [light];
+      g.userData.light = trapLight;
     } else if (kind === "medkit") {
       const pack = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.22, 0.26), mat);
       pack.position.y = 0.18;
@@ -1144,8 +1219,12 @@ export class World {
       cap.position.y = 0.38;
       const handle = new THREE.Mesh(new THREE.TorusGeometry(0.1, 0.015, 5, 12, Math.PI), dark);
       handle.position.y = 0.44;
-      g.add(base, glass, cap, handle);
+      // PointLight laranja dentro do vidro
+      const lanternLight = new THREE.PointLight(0xff9a3c, 0.6, 2.5, 1.6);
+      lanternLight.position.y = 0.24;
+      g.add(base, glass, cap, handle, lanternLight);
       g.userData.pulse = [glass];
+      g.userData.light = lanternLight;
     } else if (kind === "compass") {
       const body = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.06, 16), gold);
       body.position.y = 0.1;
@@ -1205,7 +1284,26 @@ export class World {
       lid.position.y = 0.35;
       const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.07, 0.07), accent);
       stripe.position.y = 0.22;
-      g.add(box, lid, stripe);
+      // dobradiças/fechos metálicos nas laterais
+      for (const [hx, hz] of [
+        [-0.18, 0.18],
+        [0.18, 0.18],
+      ]) {
+        const hinge = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.06, 0.04), dark);
+        hinge.position.set(hx, 0.32, hz);
+        g.add(hinge);
+      }
+      // fecho frontal
+      const clasp = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.05, 0.02), dark);
+      clasp.position.set(0, 0.35, 0.19);
+      // marcação "X" na tampa
+      const markX1 = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.03, 0.03), accent);
+      markX1.rotation.y = Math.PI / 4;
+      markX1.position.set(0, 0.38, 0);
+      const markX2 = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.03, 0.03), accent);
+      markX2.rotation.y = -Math.PI / 4;
+      markX2.position.set(0, 0.38, 0);
+      g.add(box, lid, stripe, clasp, markX1, markX2);
       for (const [sx, sy, sz] of [
         [0.17, 0.2, 0.17],
         [-0.17, 0.2, 0.17],
@@ -1437,6 +1535,19 @@ export class World {
       }
       if (it.mesh.userData.spin) {
         it.mesh.userData.spin.rotation.y = elapsed * 3;
+      }
+      // animar partículas (movimento circular suave)
+      if (it.mesh.userData.particles) {
+        const p = it.mesh.userData.particles;
+        const pos = p.points.geometry.attributes.position;
+        for (let i = 0; i < p.data.length; i++) {
+          const d = p.data[i];
+          const t = elapsed * 0.8 + d.phase;
+          pos.setX(i, Math.cos(t) * d.radius);
+          pos.setY(i, 0.2 + Math.sin(elapsed * 1.5 + d.phase) * 0.3);
+          pos.setZ(i, Math.sin(t) * d.radius);
+        }
+        pos.needsUpdate = true;
       }
       if (!it.discovered && playerPos && playerPos.distanceTo(it.pos) < 22) {
         it.discovered = true;
@@ -2105,6 +2216,12 @@ export class World {
       pos.y = this.groundHeight(pos.x, pos.z) + 0.15;
       const wdef = row.weaponId ? CONFIG.weapons[row.weaponId] : null;
       const ammoType = row.ammoType || (wdef?.ammoType && row.amount ? wdef.ammoType : null);
+      // suporte a range de quantidade: amount: [min, max]
+      let amt = row.amount || 0;
+      if (Array.isArray(amt) && amt.length === 2) {
+        const [min, max] = amt;
+        amt = Math.floor(min + Math.random() * (max - min + 1));
+      }
       this.spawnGroundLoot({
         name:
           row.name ||
@@ -2115,9 +2232,9 @@ export class World {
         pos,
         weaponId: row.weaponId || null,
         ammoType,
-        ammoAmount: row.amount || 0,
+        ammoAmount: amt,
         trapId: row.trapId || null,
-        trapAmount: row.trapId ? row.amount || 1 : 0,
+        trapAmount: row.trapId ? amt || 1 : 0,
         countsForWin: false,
         discovered: true,
       });
@@ -2196,10 +2313,10 @@ export class World {
       map: T.metal || null,
       bumpMap: T.metalBump || null,
       bumpScale: 0.06,
-      roughness: 0.45,
-      metalness: 0.55,
+      roughness: 0.35,
+      metalness: 0.65,
       emissive: color ?? 0xc8d0d8,
-      emissiveIntensity: 0.18,
+      emissiveIntensity: 0.22,
     });
     const wood = new THREE.MeshStandardMaterial({
       color: 0x6b4423,
@@ -2224,9 +2341,15 @@ export class World {
       const limb = new THREE.Mesh(new THREE.TorusGeometry(0.32, 0.035, 6, 14, Math.PI), wood);
       limb.rotation.y = Math.PI / 2;
       limb.position.y = 0.4;
+      // glow azulado sutil nas cordas
       const string = new THREE.Mesh(
         new THREE.CylinderGeometry(0.01, 0.01, 0.6, 4),
-        new THREE.MeshBasicMaterial({ color: 0xf0e8d8 })
+        new THREE.MeshStandardMaterial({
+          color: 0xa8d0ff,
+          emissive: 0x4080c0,
+          emissiveIntensity: 0.4,
+          roughness: 0.3,
+        })
       );
       string.position.y = 0.4;
       const arrow = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.55, 5), wood);
@@ -2257,6 +2380,13 @@ export class World {
       hilt.position.y = 0.1;
       g.add(blade, hilt);
     }
+    // PointLight da cor da arma
+    const weaponLight = new THREE.PointLight(color ?? 0xc8d0d8, 0.4, 2, 1.8);
+    weaponLight.position.y = 0.3;
+    g.add(weaponLight);
+    g.userData.light = weaponLight;
+    // partículas sutis ao redor da arma
+    this._addLootParticles(g, color ?? 0xc8d0d8, 4);
     this._addLootGlow(g, color, 0.4);
     g.traverse((m) => {
       if (m.isMesh && !m.userData.isGlow) {
