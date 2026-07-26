@@ -28,6 +28,13 @@ Primeira versão **oficial** (`release/v1.0`, tag `v1.0.0`).
 
 ## [Unreleased]
 
+## [gh72] - 2026-07-26
+### Added
+- **Melhorias visuais de pickups**: Geometria mais detalhada (dobradiças, fechos, antenas), PointLights emissivas em itens-chave (munição, armadilhas, troféus, lanternas, armas), e sistema de partículas flutuantes sutis ao redor de armas e troféus para maior destaque visual
+
+### Changed
+- **Balanceamento de drops**: Redução significativa na quantidade e chance de munição dropada por inimigos eliminados (~40-50% menos munição), com suporte a ranges variáveis de quantidade ([min, max])
+
 Trabalho na branch `develop` após `v1.0.0` (cache **`gh71`**).  
 Resumo narrativo: [`docs/DEVELOP-ATE-GH63.md`](docs/DEVELOP-ATE-GH63.md).
 

@@ -181,7 +181,7 @@ export const CONFIG = {
       drops: [
         { weaponId: "spear", chance: 1, name: "Lança de gelo", color: 0xa8e8ff },
         { weaponId: "bow", chance: 0.45, name: "Arco", color: 0x9be07a, amount: 4 },
-        { ammoType: "arrow", amount: 3, chance: 0.4, name: "Flechas", color: 0x9be07a },
+        { ammoType: "arrow", amount: [1, 2], chance: 0.25, name: "Flechas", color: 0x9be07a },
         { trapId: "mine", chance: 0.5, amount: 1, name: "Mina", color: 0x6a6a6a },
       ],
     },
@@ -202,7 +202,7 @@ export const CONFIG = {
       spawnStagger: 28,
       faction: "wildlife",
       drops: [
-        { ammoType: "arrow", amount: 2, chance: 0.55, name: "Flechas", color: 0x9be07a },
+        { ammoType: "arrow", amount: 1, chance: 0.3, name: "Flechas", color: 0x9be07a },
         { trapId: "bait", chance: 0.4, amount: 1, name: "Isca", color: 0xc48a5a },
         { weaponId: "torch", chance: 0.25, name: "Tocha", color: 0xff9a3c },
       ],
@@ -227,7 +227,7 @@ export const CONFIG = {
       faction: "occult",
       drops: [
         { weaponId: "ak47", chance: 1, name: "AK-47", color: 0x6a5a3a },
-        { ammoType: "bullet", amount: 8, chance: 0.65, name: "Balas", color: 0xd8c25a },
+        { ammoType: "bullet", amount: [4, 5], chance: 0.4, name: "Balas", color: 0xd8c25a },
       ],
     },
     mula: {
@@ -250,7 +250,7 @@ export const CONFIG = {
       faction: "occult",
       drops: [
         { weaponId: "shotgun", chance: 1, name: "Escopeta", color: 0xb87848 },
-        { ammoType: "shell", amount: 3, chance: 0.7, name: "Cartuchos", color: 0xe08a5a },
+        { ammoType: "shell", amount: 2, chance: 0.45, name: "Cartuchos", color: 0xe08a5a },
       ],
     },
     slender: {
@@ -273,7 +273,7 @@ export const CONFIG = {
       drops: [
         { weaponId: "crossbow", chance: 1, name: "Besta", color: 0x8a9ab0 },
         { weaponId: "grenade", chance: 0.7, name: "Granada", color: 0x5a7a4a, amount: 1 },
-        { ammoType: "grenade", amount: 1, chance: 0.55, name: "Granadas", color: 0x5a7a4a },
+        { ammoType: "grenade", amount: 1, chance: 0.35, name: "Granadas", color: 0x5a7a4a },
       ],
     },
     chuck: {
@@ -294,8 +294,8 @@ export const CONFIG = {
       faction: "chaos",
       drops: [
         { weaponId: "revolver", chance: 1, name: "Revólver", color: 0xd8c25a },
-        { ammoType: "bullet", amount: 5, chance: 0.55, name: "Balas", color: 0xd8c25a },
-        { ammoType: "arrow", amount: 3, chance: 0.35, name: "Flechas", color: 0x9be07a },
+        { ammoType: "bullet", amount: [2, 3], chance: 0.35, name: "Balas", color: 0xd8c25a },
+        { ammoType: "arrow", amount: [1, 2], chance: 0.2, name: "Flechas", color: 0x9be07a },
         { trapId: "bait", chance: 0.6, amount: 1, name: "Isca", color: 0xc87840 },
         { trapId: "fence", chance: 0.5, amount: 1, name: "Cerca", color: 0x8a6a40 },
       ],
@@ -323,7 +323,7 @@ export const CONFIG = {
       drops: [
         { weaponId: "claymore", chance: 1, name: "Claymore", color: 0xd0d8e8 },
         { weaponId: "shotgun", chance: 0.85, name: "Escopeta", color: 0xb87848 },
-        { ammoType: "shell", amount: 4, chance: 0.7, name: "Cartuchos", color: 0xe08a5a },
+        { ammoType: "shell", amount: 2, chance: 0.45, name: "Cartuchos", color: 0xe08a5a },
         { trapId: "mine", chance: 0.7, amount: 2, name: "Minas", color: 0x6a6a6a },
       ],
     },
@@ -346,7 +346,7 @@ export const CONFIG = {
       faction: "occult",
       drops: [
         { weaponId: "ak47", chance: 1, name: "AK-47", color: 0x6a5a3a },
-        { ammoType: "bullet", amount: 12, chance: 0.7, name: "Balas", color: 0xd8c25a },
+        { ammoType: "bullet", amount: [4, 5], chance: 0.45, name: "Balas", color: 0xd8c25a },
         { weaponId: "grenade", chance: 0.55, name: "Granada", color: 0x5a7a4a, amount: 1 },
         { trapId: "bait", chance: 0.7, amount: 2, name: "Iscas", color: 0xc87840 },
       ],
@@ -373,7 +373,7 @@ export const CONFIG = {
       drops: [
         { weaponId: "ak47", chance: 1, name: "AK-47", color: 0x6a5a3a },
         { weaponId: "revolver", chance: 1, name: "Revólver", color: 0xd8c25a },
-        { ammoType: "bullet", amount: 18, chance: 0.75, name: "Balas", color: 0xd8c25a },
+        { ammoType: "bullet", amount: [6, 7], chance: 0.5, name: "Balas", color: 0xd8c25a },
         { weaponId: "claymore", chance: 0.75, name: "Claymore", color: 0xd0d8e8 },
       ],
     },
@@ -399,7 +399,7 @@ export const CONFIG = {
       trophyColor: 0xff7ab8,
       drops: [
         { weaponId: "crossbow", chance: 1, name: "Besta", color: 0x8a9ab0 },
-        { ammoType: "arrow", amount: 6, chance: 0.7, name: "Flechas", color: 0x9be07a },
+        { ammoType: "arrow", amount: [3, 4], chance: 0.45, name: "Flechas", color: 0x9be07a },
         { weaponId: "spear", chance: 0.9, name: "Lança de gelo", color: 0xa8e8ff },
       ],
     },
