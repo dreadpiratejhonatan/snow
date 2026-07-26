@@ -134,8 +134,10 @@ export function endCinematic(skipped) {
   if (a.game.state === "cutscene") {
     a.game.state = a.prevState === "cutscene" ? "playing" : a.prevState;
   }
-  if (a.game.state === "playing" && !a.game.input?.mobile) {
-    a.game.requestPointerLock?.();
+  // não força pointer lock aqui — Chrome bloqueia logo após exit; o clique no canvas relocka
+  if (a.game.state === "playing" && !a.game.input?.mobile && a.game.clickHint) {
+    a.game.clickHint.hidden = false;
+    a.game.clickHint.textContent = "Clique para continuar mirando";
   }
   a.onEnd?.(!!skipped);
 }
