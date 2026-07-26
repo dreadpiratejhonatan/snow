@@ -47,44 +47,49 @@ jobs:
             gh pr ready "$PR"
           fi
 
-          echo "Waiting for checks on PR #$PR…"
-          # Give CI a moment to register.
-          sleep 20
+          echo "Waiting for CI on PR #$PR (ignoring this auto-merge workflow)…"
+          sleep 15
           deadline=$((SECONDS + 900))
           while [ "$SECONDS" -lt "$deadline" ]; do
-            # Capture checks; gh exits non-zero when any check fails or none exist.
             set +e
+            # TSV: name, state, conclusion... — drop our own jobs to avoid deadlock.
             out=$(gh pr checks "$PR" 2>&1)
             code=$?
             set -e
-            echo "$out"
+            filtered=$(echo "$out" | grep -viE 'Auto-merge Cursor PRs|^merge\b|deploy-hostgator|deploy-pages' || true)
+            echo "Relevant checks:"
+            echo "$filtered"
 
-            if echo "$out" | grep -qiE '\b(fail|failure|cancelled)\b'; then
-              echo "A check failed — not merging"
+            if [ -z "$filtered" ]; then
+              if [ "$SECONDS" -lt 180 ]; then
+                echo "CI not registered yet — waiting…"
+                sleep 15
+                continue
+              fi
+              echo "No external checks after wait — proceeding"
+              break
+            fi
+
+            if echo "$filtered" | grep -qiE 'fail|failure|cancelled'; then
+              echo "A CI check failed — not merging"
               exit 1
             fi
 
-            # Pending / in-progress
-            if echo "$out" | grep -qiE '\b(pending|queued|in_progress|running)\b'; then
-              echo "Checks still running…"
+            if echo "$filtered" | grep -qiE 'pending|queued|in_progress|running'; then
+              echo "CI still running…"
               sleep 15
               continue
             fi
 
-            # All reported checks look done (pass/skip) or there are no checks yet.
-            if [ "$code" -eq 0 ] || ! echo "$out" | grep -qiE '\b(pending|queued|in_progress|running|fail|failure)\b'; then
-              # If CI has not started, keep waiting a bit longer.
-              if ! echo "$out" | grep -qiE 'CI|smoke|Deploy|build'; then
-                if [ "$SECONDS" -lt 120 ]; then
-                  echo "No CI checks visible yet — waiting…"
-                  sleep 15
-                  continue
-                fi
-              fi
-              break
-            fi
-            sleep 15
+            # Remaining rows look finished (pass / skip / success).
+            echo "CI looks green (gh exit $code)"
+            break
           done
+
+          if [ "$SECONDS" -ge "$deadline" ]; then
+            echo "Timed out waiting for CI"
+            exit 1
+          fi
 
           echo "Squash-merging PR #$PR into develop"
           gh pr merge "$PR" --squash --delete-branch --subject "Auto-merge cursor PR #${PR}"
