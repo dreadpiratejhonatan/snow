@@ -227,10 +227,13 @@ try {
   const mule = world.spawnEnemyNow("mula");
   if (!mule.cfg.mount) throw new Error("mount: mula deveria ser montável");
   mule.mesh.position.set(10, world.groundHeight(10, 10), 10);
-  mule.hp = Math.round(mule.maxHp * 0.3);
+  // gh85: domar com ~72% HP (antes exigia <=40%)
+  mule.hp = Math.round(mule.maxHp * 0.65);
   const nearPos = new THREE.Vector3(10, mule.mesh.position.y, 11);
   const offer = mounts.nearest(nearPos);
-  if (!offer || offer.kind !== "tame") throw new Error("mount: deveria oferecer domar");
+  if (!offer || offer.kind !== "tame") throw new Error("mount: deveria oferecer domar a 65% HP");
+  mule.update(0.016, 0, nearPos, {});
+  if (mule.state === "chase") throw new Error("mount: enfraquecido não deveria perseguir");
   mounts.tame(mule);
   if (!mule.tamed || mule.state !== "tamed") throw new Error("mount: tame falhou");
   if (mounts.nearest(nearPos)?.kind !== "ride") throw new Error("mount: deveria oferecer montar");
@@ -282,7 +285,7 @@ try {
   for (const t of ["horse", "dromedary", "pony"]) {
     const beast = world.spawnEnemyNow(t);
     if (!beast?.cfg?.mount) throw new Error(`mount: ${t} deveria ser montável`);
-    beast.hp = Math.round(beast.maxHp * 0.25);
+    beast.hp = Math.round(beast.maxHp * 0.7);
     mounts.tame(beast);
     if (!beast.tamed) throw new Error(`mount: falha ao domar ${t}`);
   }

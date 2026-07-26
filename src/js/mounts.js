@@ -1,12 +1,19 @@
 /**
- * Montarias estilo ARK: mula sem cabeça e panda podem ser domados
- * (E com o animal enfraquecido), montados (E de novo) e equipados
- * com armadura de placas (craft na fogueira → E no animal domado).
+ * Montarias estilo ARK: mula, panda, cavalo, dromedário e pônei podem
+ * ser domados (E com o animal enfraquecido), montados (E de novo) e
+ * equipados com armadura (craft na fogueira → E no animal).
  */
 import * as THREE from "three";
+import { CONFIG } from "./config.js";
 
-const TAME_HP_FRAC = 0.4; // só doma com HP <= 40%
-const INTERACT_DIST = 3.6;
+/** Fração máxima de vida para oferecer "Domar" (mais alto = mais fácil). */
+export function tameHpFrac() {
+  return CONFIG.mountTame?.hpFrac ?? 0.72;
+}
+
+function interactDist() {
+  return CONFIG.mountTame?.interactDist ?? 4.8;
+}
 
 export class MountManager {
   constructor(world, scene) {
@@ -23,9 +30,10 @@ export class MountManager {
   }
 
   /** Interação disponível perto de `p`: domar, montar ou equipar armadura. */
-  nearest(p, maxDist = INTERACT_DIST) {
+  nearest(p, maxDist = interactDist()) {
     let best = null;
     let bestD = maxDist;
+    const frac = tameHpFrac();
     for (const e of this.world.enemies) {
       if (!e.alive || !e.cfg.mount) continue;
       const d = e.mesh.position.distanceTo(p);
@@ -33,7 +41,7 @@ export class MountManager {
       let kind = null;
       if (e.tamed) {
         kind = !e.mountArmor && this.armorStock > 0 ? "armor" : "ride";
-      } else if (e.hp / e.maxHp <= TAME_HP_FRAC) {
+      } else if (e.hp / e.maxHp <= frac) {
         kind = "tame";
       }
       if (kind) {
