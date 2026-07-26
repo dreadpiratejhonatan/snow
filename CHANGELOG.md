@@ -28,10 +28,11 @@ Primeira versão **oficial** (`release/v1.0`, tag `v1.0.0`).
 
 ## [Unreleased]
 
-Trabalho na branch `develop` após `v1.0.0` (cache **`gh86`**).  
+Trabalho na branch `develop` após `v1.0.0` (cache **`gh87`**).  
 Resumo narrativo: [`docs/DEVELOP-ATE-GH63.md`](docs/DEVELOP-ATE-GH63.md) · [`DEVELOP-GH64-ATE-GH73.md`](docs/DEVELOP-GH64-ATE-GH73.md).
 
 ### Added
+- **Personagem MEGA BRAIN (gh87)**: skin jogável com rosto em `faces/mega_brain.png`
 - **Tutorial/ajuda: montarias (gh86)**: passo 6/7 ensina a domar; FAQ e controles mencionam mula, cavalo, pônei, dromedário e panda
 
 ### Changed
