@@ -262,8 +262,10 @@ export class World {
     // tinta de estação: primavera/verão/outono trocam o "skin" do chão.
     // picos altos ficam nevados o ano todo → reduz a tinta com a altitude.
     const tintMul = this.season?.groundTintMul ?? 0;
-    if (tintMul > 0 && this.season?.groundTint != null) {
-      c.tint.setHex(this.season.groundTint);
+    const gt = this.season?.groundTint;
+    if (tintMul > 0 && gt != null) {
+      if (typeof gt === "number") c.tint.setHex(gt);
+      else c.tint.copy(gt);
       out.lerp(c.tint, tintMul * (1 - t3 * 0.85));
     }
     return out;
@@ -646,14 +648,22 @@ export class World {
   }
 
   /** Aplica visual da estação (neve, gelo, copas). */
-  applySeason(season) {
+  /**
+   * Aplica o visual da estação. `season` pode ser um estado *interpolado*
+   * (transição gradual) — os campos caros (vertex-colors do terreno + minimapa)
+   * só recalculam quando `recolorTerrain` é true (main throttle isso).
+   */
+  applySeason(season, { recolorTerrain = true } = {}) {
     if (!season) return;
-    const prevId = this.season?.id;
     this.season = season;
     const snowMul = season.snowMul ?? 1;
     if (this.ice?.material) {
       this.ice.material.opacity = season.iceOpacity ?? 0.96;
-      if (season.iceColor != null) this.ice.material.color.setHex(season.iceColor);
+      if (season.iceColor != null) {
+        // iceColor pode vir como número (hex) ou THREE.Color já interpolado
+        if (typeof season.iceColor === "number") this.ice.material.color.setHex(season.iceColor);
+        else this.ice.material.color.copy(season.iceColor);
+      }
       this.ice.material.transparent = true;
       this.ice.material.needsUpdate = true;
     }
@@ -661,44 +671,52 @@ export class World {
       this.snow.visible = snowMul > 0.04;
       this.snow.material.opacity = Math.max(0.08, 0.9 * snowMul);
     }
-    // caps de neve (árvores + telhado) só com neve de verdade
+    // caps de neve (árvores + telhado) surgem/somem gradualmente com a neve
     const showCaps = snowMul > 0.45;
-    if (this.trees) {
-      for (const tree of this.trees) {
-        tree.traverse((m) => {
-          if (m.isMesh && m.material === this.snowCapMat) m.visible = showCaps;
-        });
+    if (showCaps !== this._capsShown) {
+      this._capsShown = showCaps;
+      if (this.trees) {
+        for (const tree of this.trees) {
+          tree.traverse((m) => {
+            if (m.isMesh && m.material === this.snowCapMat) m.visible = showCaps;
+          });
+        }
+      }
+      for (const cap of this.snowCaps || []) {
+        if (cap) cap.visible = showCaps;
       }
     }
-    for (const cap of this.snowCaps || []) {
-      if (cap) cap.visible = showCaps;
-    }
 
-    // "skin" do mundo por estação: solo, folhas e grama
+    // "skin" do mundo por estação: folhas e grama (barato — todo frame ok)
     this.recolorVegetation(season);
-    if (prevId !== season.id) this.recolorTerrain();
+    if (recolorTerrain) this.recolorTerrain();
+  }
+
+  /** Tinta como número (hex) ou THREE.Color já interpolado. */
+  _asColor(tint, tmp) {
+    if (tint == null) return null;
+    if (typeof tint === "number") return tmp.setHex(tint);
+    return tmp.copy(tint);
   }
 
   /** Tinge folhas dos pinheiros e a grama conforme a estação. */
   recolorVegetation(season) {
     const tmp = this._seasonTmpColor || (this._seasonTmpColor = new THREE.Color());
     const leafMul = season.leafTintMul ?? 0;
+    const leafTint = this._asColor(season.leafTint, tmp);
     if (this.leafMats && this._leafBase) {
       for (let i = 0; i < this.leafMats.length; i++) {
         const mat = this.leafMats[i];
         mat.color.setHex(this._leafBase[i]);
-        if (leafMul > 0 && season.leafTint != null) {
-          mat.color.lerp(tmp.setHex(season.leafTint), leafMul);
-        }
+        if (leafMul > 0 && leafTint) mat.color.lerp(leafTint, leafMul);
         mat.needsUpdate = true;
       }
     }
     if (this.grassMat) {
       const grassMul = season.grassTintMul ?? 0;
+      const grassTint = this._asColor(season.grassTint, tmp);
       this.grassMat.color.setHex(0xffffff);
-      if (grassMul > 0 && season.grassTint != null) {
-        this.grassMat.color.lerp(tmp.setHex(season.grassTint), grassMul);
-      }
+      if (grassMul > 0 && grassTint) this.grassMat.color.lerp(grassTint, grassMul);
       this.grassMat.needsUpdate = true;
     }
   }
