@@ -6,9 +6,11 @@ Documentação completa: [`docs/V1-OFICIAL.md`](docs/V1-OFICIAL.md) · Tag Git: 
 
 ## Atualizações recentes (pós-v1.0)
 
+### [gh91] — Hotbar mobile de volta (26 jul 2026)
+- Barra de armas volta a aparecer no celular, acima do stick/botões (sem cobrir os controles)
+
 ### [gh90] — HUD mobile sem sobreposição (26 jul 2026)
-- Tutorial, barras de vida/frio, hotbar e controles touch não se empilham mais no celular
-- Hotbar de armas começa fechada no touch (abre em **⋯ → 🎒**)
+- Tutorial, barras de vida/frio e controles touch não se empilham mais no celular
 
 ### [gh89] — Roster e solo sazonal (26 jul 2026)
 - Removidos **Neymar** e **MEGA BRAIN** do seletor (ficam Natan, Jorge Bolado, Caio, Lorenzo e ZÉ)
