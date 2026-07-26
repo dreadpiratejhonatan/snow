@@ -903,13 +903,15 @@ class Game {
         urgent: false,
         failed: false,
       });
-    } else {
+    } else if (!this.input?.mobile) {
       this.hud.setGhost({
         label: "Sem recorde ainda",
         countdown: "Seja o 1º!",
         urgent: false,
         failed: false,
       });
+    } else {
+      this.hud.setGhost({ hidden: true });
     }
   }
 
@@ -1066,7 +1068,7 @@ class Game {
   }
 
   refreshTrapUI() {
-    this.hud.setTraps(this.traps.statusLine());
+    this.hud.setTraps(this.traps.statusLine({ mobile: !!this.input?.mobile }));
   }
 
   cycleTrap() {
@@ -1097,7 +1099,9 @@ class Game {
     this.refreshTrapUI();
     this.persistSave();
     this.hud.showMsg(
-      `Craft: 1 cerca (${this.winProgress()}/${this.world.itemsTotal} no progresso). Coloque com F.`,
+      this.input.mobile
+        ? `Craft: 1 cerca (${this.winProgress()}/${this.world.itemsTotal} no progresso). Coloque com ⋯ → ✚.`
+        : `Craft: 1 cerca (${this.winProgress()}/${this.world.itemsTotal} no progresso). Coloque com F.`,
       3600
     );
     this.tutorial?.notify("trap");
@@ -1170,6 +1174,11 @@ class Game {
   updateGhostHud() {
     const sr = this.speedrun;
     if (sr.recordMs == null) {
+      // No celular some o placeholder — só ocupa espaço e atrapalha
+      if (this.input?.mobile) {
+        this.hud.setGhost({ hidden: true });
+        return;
+      }
       if (!sr.started) return;
       this.hud.setGhost({
         label: "Sem recorde",
@@ -2244,7 +2253,11 @@ class Game {
       const open = this.hud.toggleInventoryExpanded();
       // evita tecla B presa (pointer lock / keyup perdido)
       this.input.releaseKeys("KeyB");
-      this.hud.showMsg(open ? "Armas abertas — B ou ✕ esconde" : "Armas escondidas — B mostra", 1600);
+      if (this.input.mobile) {
+        this.hud.showMsg(open ? "Armas — toque ✕ para fechar" : "Armas escondidas — ⋯ → 🎒", 1600);
+      } else {
+        this.hud.showMsg(open ? "Armas abertas — B ou ✕ esconde" : "Armas escondidas — B mostra", 1600);
+      }
       this.tutorial?.notify("inventory");
       // no desktop, solta o mouse um instante para clicar nos slots
       if (open && !this.input.mobile && document.pointerLockElement) {
@@ -2402,7 +2415,12 @@ class Game {
             );
           }
         } else if (gotTrap) {
-          this.hud.showMsg(`+ armadilha: ${item.name} · perto da fogueira [G] tipo [F] colocar`, 3200);
+          this.hud.showMsg(
+            this.input.mobile
+              ? `+ armadilha: ${item.name} · fogueira → ⋯ Trap / ✚`
+              : `+ armadilha: ${item.name} · perto da fogueira [G] tipo [F] colocar`,
+            3200
+          );
         } else if (loot.ammoGained > 0 || item.ammoType) {
           const at = CONFIG.ammoTypes[item.ammoType];
           const wName = loot.weaponId ? CONFIG.weapons[loot.weaponId]?.name : null;
@@ -2413,7 +2431,9 @@ class Game {
           );
         } else if (item.countsForWin !== false) {
           this.hud.showMsg(
-            `Suprimento: ${item.name} — leve ao baú (E) · ${this.carried} na mochila`,
+            this.input.mobile
+              ? `Suprimento: ${item.name} — leve ao baú (◉) · ${this.carried} na mochila`
+              : `Suprimento: ${item.name} — leve ao baú (E) · ${this.carried} na mochila`,
             3000
           );
         } else {

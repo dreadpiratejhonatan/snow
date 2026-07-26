@@ -45,7 +45,7 @@ Sobrevivência 3D na neve no navegador (Three.js). Explore, colete suprimentos, 
 | N | novidades |
 | Esc | pausa |
 
-No celular: stick + botões.
+No celular: stick + 4 ações (correr / interagir / pular / atacar); **⋯** abre o resto.
 
 ---
 

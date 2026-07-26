@@ -41,13 +41,14 @@ export class TrapInventory {
     return CONFIG.traps[this.selected] || CONFIG.traps.mine;
   }
 
-  statusLine() {
+  statusLine({ mobile = false } = {}) {
     const parts = this.order.map((id) => {
       const t = CONFIG.traps[id];
       const n = this.counts[id] ?? 0;
       const mark = id === this.selected ? "▸" : "";
       return `${mark}${t?.icon || "?"}${n}`;
     });
+    if (mobile) return `Armadilha: ${parts.join(" · ")}`;
     return `Armadilha: ${parts.join(" · ")} · [G] tipo · [F] colocar · [C] craft cerca na fogueira`;
   }
 }

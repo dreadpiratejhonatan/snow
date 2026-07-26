@@ -1,17 +1,19 @@
+import { isTouchDevice } from "./touch.js";
+
 const STORAGE_KEY = "neveTutorialDone";
 
-const SKIP_HINT = " · Esc/P pular";
+const SKIP_HINT_DESKTOP = " · Esc/P pular";
 
-const STEPS = [
+const STEPS_DESKTOP = [
   {
     id: "move",
-    hint: "Tutorial 1/6 — Use WASD (ou o stick) para se mover",
+    hint: "Tutorial 1/6 — Use WASD para se mover",
     check: (g) =>
       g.input.moveForward || g.input.moveBack || g.input.moveLeft || g.input.moveRight,
   },
   {
     id: "pickup",
-    hint: "Tutorial 2/6 — Aproxime-se de um item brilhante e pressione E (◉)",
+    hint: "Tutorial 2/6 — Aproxime-se de um item brilhante e pressione E",
     check: (g, ev) => ev === "pickup",
   },
   {
@@ -31,7 +33,41 @@ const STEPS = [
   },
   {
     id: "attack",
-    hint: "Tutorial 6/6 — Clique (ou ⚔) para atacar · H abre a ajuda",
+    hint: "Tutorial 6/6 — Clique para atacar · H abre a ajuda",
+    check: (g, ev) => ev === "attack",
+  },
+];
+
+const STEPS_TOUCH = [
+  {
+    id: "move",
+    hint: "1/6 — Use o stick à esquerda para se mover",
+    check: (g) =>
+      g.input.moveForward || g.input.moveBack || g.input.moveLeft || g.input.moveRight,
+  },
+  {
+    id: "pickup",
+    hint: "2/6 — Chegue perto de um item brilhante e toque ◉",
+    check: (g, ev) => ev === "pickup",
+  },
+  {
+    id: "deposit",
+    hint: "3/6 — Leve o item ao baú na base e toque ◉",
+    check: (g, ev) => ev === "deposit",
+  },
+  {
+    id: "inventory",
+    hint: "4/6 — Toque ⋯ e depois 🎒 para ver as armas",
+    check: (g, ev) => ev === "inventory" || ev === "equip",
+  },
+  {
+    id: "trap",
+    hint: "5/6 — Perto da fogueira: ⋯ → Trap / ✚ para armadilhas",
+    check: (g, ev) => ev === "trap",
+  },
+  {
+    id: "attack",
+    hint: "6/6 — Toque ⚔ para atacar · ⋯ → ? abre a ajuda",
     check: (g, ev) => ev === "attack",
   },
 ];
@@ -57,6 +93,8 @@ export class Tutorial {
     this.game = game;
     this.active = !isTutorialDone();
     this.step = 0;
+    this.mobile = isTouchDevice() || !!game.input?.mobile;
+    this.steps = this.mobile ? STEPS_TOUCH : STEPS_DESKTOP;
     this.banner = document.getElementById("tutorial-banner");
     this.hintEl = document.getElementById("tutorial-hint");
     this.skipBtn = document.getElementById("tutorial-skip");
@@ -91,36 +129,39 @@ export class Tutorial {
 
   showStep() {
     if (!this.active || !this.banner) return;
-    const s = STEPS[this.step];
+    const s = this.steps[this.step];
     if (!s) {
       this.finish();
       return;
     }
     this.banner.hidden = false;
-    if (this.hintEl) this.hintEl.textContent = s.hint + SKIP_HINT;
+    const text = this.mobile ? s.hint : s.hint + SKIP_HINT_DESKTOP;
+    if (this.hintEl) this.hintEl.textContent = text;
     if (this.skipBtn) {
       this.skipBtn.hidden = false;
-      this.skipBtn.textContent = "Pular (Esc)";
+      this.skipBtn.textContent = this.mobile ? "Pular" : "Pular (Esc)";
+      this.skipBtn.title = this.mobile ? "Pular tutorial" : "Esc ou P";
     }
-    this.game.hud?.showMsg(s.hint + SKIP_HINT, 4500);
+    // No celular o banner já basta — showMsg duplicava e poluía a tela
+    if (!this.mobile) this.game.hud?.showMsg(text, 4500);
   }
 
   notify(ev) {
     if (!this.active) return;
-    const s = STEPS[this.step];
+    const s = this.steps[this.step];
     if (!s) return;
     if (s.check(this.game, ev)) this.advance();
   }
 
   update() {
     if (!this.active) return;
-    const s = STEPS[this.step];
+    const s = this.steps[this.step];
     if (s?.check(this.game, null)) this.advance();
   }
 
   advance() {
     this.step++;
-    if (this.step >= STEPS.length) this.finish();
+    if (this.step >= this.steps.length) this.finish();
     else this.showStep();
   }
 
@@ -135,8 +176,12 @@ export class Tutorial {
     window.removeEventListener("keydown", this._onSkipKey, true);
     this.game.hud?.showMsg(
       skipped
-        ? "Tutorial pulado. Pressione H se tiver dúvidas!"
-        : "Tutorial concluído. H = ajuda a qualquer momento.",
+        ? this.mobile
+          ? "Tutorial pulado. ⋯ → ? se tiver dúvidas."
+          : "Tutorial pulado. Pressione H se tiver dúvidas!"
+        : this.mobile
+          ? "Tutorial concluído. ⋯ → ? abre a ajuda."
+          : "Tutorial concluído. H = ajuda a qualquer momento.",
       3600
     );
     // Depois de pular/concluir, libera captura do mouse no próximo clique

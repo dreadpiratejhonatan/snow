@@ -1,5 +1,5 @@
 // Controles touch para celular: joystick à esquerda, olhar à direita,
-// botões de ação (pular, interagir, atacar, correr, câmera).
+// 4 ações primárias + menu ⋯ com o restante (HUD limpo no celular).
 
 /** Celular/tablet de verdade — NÃO usar ontouchstart (Chrome no PC sempre tem). */
 export function isTouchDevice() {
@@ -15,6 +15,7 @@ export class TouchControls {
     this.input = input;
     this.enabled = false;
     this.lookSens = 0.42;
+    this.moreOpen = false;
 
     this._joyActive = false;
     this._joyId = null;
@@ -26,6 +27,8 @@ export class TouchControls {
     this.stick = document.getElementById("touch-stick");
     this.knob = document.getElementById("touch-knob");
     this.zoneLook = document.getElementById("touch-look");
+    this.morePanel = document.getElementById("touch-more");
+    this.moreBtn = document.getElementById("btn-more");
 
     if (!this.root) return;
 
@@ -43,6 +46,43 @@ export class TouchControls {
     this.bindJoystick();
     this.bindLook();
     this.bindButtons();
+    this.bindMoreMenu();
+  }
+
+  setMoreOpen(open) {
+    this.moreOpen = !!open;
+    document.body.classList.toggle("touch-more-open", this.moreOpen);
+    if (this.morePanel) this.morePanel.hidden = !this.moreOpen;
+    if (this.moreBtn) {
+      this.moreBtn.classList.toggle("is-open", this.moreOpen);
+      this.moreBtn.setAttribute("aria-expanded", this.moreOpen ? "true" : "false");
+    }
+  }
+
+  bindMoreMenu() {
+    if (!this.moreBtn) return;
+    const toggle = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this.setMoreOpen(!this.moreOpen);
+      this.moreBtn.classList.add("is-down");
+    };
+    const up = (e) => {
+      e.preventDefault();
+      this.moreBtn.classList.remove("is-down");
+    };
+    this.moreBtn.addEventListener("touchstart", toggle, { passive: false });
+    this.moreBtn.addEventListener("touchend", up, { passive: false });
+    this.moreBtn.addEventListener("touchcancel", up, { passive: false });
+
+    // Fechar ao tocar fora (look / stick)
+    this.zoneLook?.addEventListener(
+      "touchstart",
+      () => {
+        if (this.moreOpen) this.setMoreOpen(false);
+      },
+      { passive: true }
+    );
   }
 
   bindJoystick() {
@@ -50,6 +90,7 @@ export class TouchControls {
     if (!zone) return;
 
     const onStart = (e) => {
+      if (this.moreOpen) this.setMoreOpen(false);
       const t = e.changedTouches[0];
       this._joyId = t.identifier;
       this._joyActive = true;
@@ -91,7 +132,7 @@ export class TouchControls {
   updateStick(x, y) {
     const dx = x - this._origin.x;
     const dy = y - this._origin.y;
-    const max = 48;
+    const max = 40;
     const len = Math.hypot(dx, dy) || 1;
     const clamped = Math.min(len, max);
     const nx = (dx / len) * clamped;
@@ -110,7 +151,13 @@ export class TouchControls {
 
     const onStart = (e) => {
       // ignora botões e o joystick (eles ficam por cima, mas por garantia)
-      if (e.target.closest(".touch-btn") || e.target.closest("#touch-stick")) return;
+      if (
+        e.target.closest(
+          ".touch-btn, #touch-stick, .touch__util, .touch__more, .touch__actions"
+        )
+      ) {
+        return;
+      }
       const t = e.changedTouches[0];
       this._lookId = t.identifier;
       this._lookLast = { x: t.clientX, y: t.clientY };
@@ -167,7 +214,7 @@ export class TouchControls {
     hold("btn-sprint", "ShiftLeft");
 
     // tap (um frame)
-    const tap = (id, fn) => {
+    const tap = (id, fn, { closeMore = false } = {}) => {
       const el = document.getElementById(id);
       if (!el) return;
       el.addEventListener(
@@ -175,6 +222,7 @@ export class TouchControls {
         (e) => {
           e.preventDefault();
           el.classList.add("is-down");
+          if (closeMore) this.setMoreOpen(false);
           fn();
         },
         { passive: false }
@@ -192,31 +240,10 @@ export class TouchControls {
       // remove no próximo frame via flag
       this.input._tapE = true;
     });
-    // Ataque: segurar = carga (arco/besta) / automático; soltar = dispara carga
-    {
-      const el = document.getElementById("btn-attack");
-      if (el) {
-        el.addEventListener(
-          "touchstart",
-          (e) => {
-            e.preventDefault();
-            this.input.leftClicked = true;
-            this.input.leftHeld = true;
-            this.input.mouseDown = true;
-            el.classList.add("is-down");
-          },
-          { passive: false }
-        );
-        const up = (e) => {
-          e.preventDefault();
-          this.input.leftHeld = false;
-          this.input.mouseDown = false;
-          el.classList.remove("is-down");
-        };
-        el.addEventListener("touchend", up, { passive: false });
-        el.addEventListener("touchcancel", up, { passive: false });
-      }
-    }
+    tap("btn-attack", () => {
+      this.input.leftClicked = true;
+      this.input.mouseDown = true;
+    });
     // 👁: toque curto = 1ª/3ª; segurar + arrastar look = orbitar (ver o rosto)
     {
       const el = document.getElementById("btn-camera");
@@ -229,6 +256,7 @@ export class TouchControls {
             downAt = performance.now();
             this.input._orbitHold = true;
             el.classList.add("is-down");
+            this.setMoreOpen(false);
           },
           { passive: false }
         );
@@ -243,19 +271,31 @@ export class TouchControls {
       }
     }
     tap("btn-pause", () => {
+      this.setMoreOpen(false);
       this.input._tapEsc = true;
     });
     tap("btn-weapon", () => {
       this.input._tapWeapon = true;
-    });
+    }, { closeMore: true });
     tap("btn-inv", () => {
       this.input._tapInv = true;
-    });
+    }, { closeMore: true });
     tap("btn-trap-cycle", () => {
       this.input._tapTrapCycle = true;
-    });
+    }, { closeMore: true });
     tap("btn-trap-place", () => {
       this.input._tapTrapPlace = true;
-    });
+    }, { closeMore: true });
+
+    // Ajuda / novidades / chat são ligados no main/chat — só fecha o painel ⋯
+    for (const id of ["btn-help", "btn-release-touch", "btn-chat-touch"]) {
+      const el = document.getElementById(id);
+      if (!el) continue;
+      el.addEventListener(
+        "touchstart",
+        () => this.setMoreOpen(false),
+        { passive: true, capture: true }
+      );
+    }
   }
 }

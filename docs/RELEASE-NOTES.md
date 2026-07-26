@@ -1,6 +1,6 @@
 # Novidades — v1.0 oficial (jul 2026)
 
-Primeira versão oficial do **Neve Selvagem**. No jogo: botão **N** (ao lado do `?`; touch no celular) ou **O que mudou** no pause.
+Primeira versão oficial do **Neve Selvagem**. No jogo: botão **N** (ao lado do `?`; no celular: **⋯ → N**) ou **O que mudou** no pause.
 
 Documentação completa: [`docs/V1-OFICIAL.md`](docs/V1-OFICIAL.md) · Tag Git: `v1.0.0` · Branch: `release/v1.0`
 
@@ -48,6 +48,12 @@ Documentação completa: [`docs/V1-OFICIAL.md`](docs/V1-OFICIAL.md) · Tag Git: 
 ## Inventário e ranking
 - Tecla **B** mostra/esconde a barra de armas
 - Ranking online (**T**) via HostGator; filtros anti-tempo-falso
+
+## Celular (HUD touch)
+- Só **4 ações** na tela: correr, interagir, pular, atacar (+ stick)
+- Pause e **⋯** no canto; câmera, armas, armadilhas, chat, ajuda e novidades no menu
+- Tutorial e dicas usam ícones de toque (não WASD/Esc)
+- Minimapa/status/timer compactos; legenda de teclado escondida
 
 ## Board de sugestões
 - `/tickets/` em cards estilo Jira — ideias públicas; admin muda status

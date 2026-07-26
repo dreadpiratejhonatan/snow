@@ -164,12 +164,11 @@
         <span id="chat-prefix" class="chat-prefix">(TODOS)</span>
         <input id="chat-input" class="chat-input" type="text" maxlength="80" autocomplete="off" spellcheck="false" aria-label="Mensagem do chat" />
       </div>
-      <button type="button" id="btn-chat-touch" class="hud__chat-btn" title="Chat (Y)" aria-label="Abrir chat">💬</button>
       <div id="damage-flash" class="hud__flash"></div>
 
       <div id="tutorial-banner" class="tutorial-banner" hidden>
         <p id="tutorial-hint" class="tutorial-banner__hint">Tutorial</p>
-        <button type="button" id="tutorial-skip" class="tutorial-banner__skip" title="Esc ou P">Pular (Esc)</button>
+        <button type="button" id="tutorial-skip" class="tutorial-banner__skip" title="Esc ou P">Pular</button>
       </div>
 
       <div id="demo-banner" class="demo-banner" hidden aria-hidden="true">
@@ -189,25 +188,31 @@
       </div>
     </div>
 
-    <!-- Controles touch (visíveis só no celular) -->
+    <!-- Controles touch (visíveis só no celular) — primários sempre; ⋯ abre o resto -->
     <div id="touch-controls" class="touch" hidden>
       <div id="touch-look" class="touch__look"></div>
       <div id="touch-stick" class="touch__stick" aria-label="Mover">
         <div id="touch-knob" class="touch__knob"></div>
       </div>
+      <div class="touch__util">
+        <button type="button" id="btn-pause" class="touch-btn touch-btn--util" title="Pausar" aria-label="Pausar">Ⅱ</button>
+        <button type="button" id="btn-more" class="touch-btn touch-btn--util" title="Mais ações" aria-label="Mais ações" aria-expanded="false" aria-controls="touch-more">⋯</button>
+      </div>
+      <div id="touch-more" class="touch__more" hidden>
+        <button type="button" id="btn-help" class="touch-btn touch-btn--more" title="Ajuda">?</button>
+        <button type="button" id="btn-release-touch" class="touch-btn touch-btn--more" title="Novidades" aria-label="Novidades">N</button>
+        <button type="button" id="btn-chat-touch" class="touch-btn touch-btn--more" title="Chat" aria-label="Abrir chat">💬</button>
+        <button type="button" id="btn-camera" class="touch-btn touch-btn--more" title="Câmera">👁</button>
+        <button type="button" id="btn-inv" class="touch-btn touch-btn--more" title="Armas">🎒</button>
+        <button type="button" id="btn-weapon" class="touch-btn touch-btn--more" title="Trocar arma">⚔</button>
+        <button type="button" id="btn-trap-cycle" class="touch-btn touch-btn--more" title="Tipo de armadilha">Trap</button>
+        <button type="button" id="btn-trap-place" class="touch-btn touch-btn--more" title="Colocar armadilha">✚</button>
+      </div>
       <div class="touch__actions">
-        <button type="button" id="btn-pause" class="touch-btn touch-btn--small">Ⅱ</button>
-        <button type="button" id="btn-help" class="touch-btn touch-btn--small">?</button>
-        <button type="button" id="btn-release-touch" class="touch-btn touch-btn--small" title="Novidades" aria-label="Novidades">N</button>
-        <button type="button" id="btn-camera" class="touch-btn touch-btn--small">👁</button>
-        <button type="button" id="btn-inv" class="touch-btn touch-btn--small">🎒</button>
-        <button type="button" id="btn-weapon" class="touch-btn touch-btn--small">⚔</button>
-        <button type="button" id="btn-trap-cycle" class="touch-btn touch-btn--small">Trap</button>
-        <button type="button" id="btn-trap-place" class="touch-btn touch-btn--small">F</button>
-        <button type="button" id="btn-sprint" class="touch-btn">🏃</button>
-        <button type="button" id="btn-interact" class="touch-btn">◉</button>
-        <button type="button" id="btn-jump" class="touch-btn touch-btn--big">⤒</button>
-        <button type="button" id="btn-attack" class="touch-btn touch-btn--big touch-btn--attack">⚔</button>
+        <button type="button" id="btn-sprint" class="touch-btn" title="Correr" aria-label="Correr">🏃</button>
+        <button type="button" id="btn-interact" class="touch-btn" title="Interagir" aria-label="Interagir">◉</button>
+        <button type="button" id="btn-jump" class="touch-btn touch-btn--big" title="Pular" aria-label="Pular">⤒</button>
+        <button type="button" id="btn-attack" class="touch-btn touch-btn--big touch-btn--attack" title="Atacar" aria-label="Atacar">⚔</button>
       </div>
     </div>
 
@@ -393,7 +398,9 @@
           <li><strong>6 personagens</strong> com rostos: Natan, Jhonatan, Jorge Bolado, Caio, Lorenzo e <strong>ZÉ</strong> — escolha obrigatória com preview 3D girável</li>
           <li><strong>Ordem aleatória</strong> dos cards a cada abertura do picker</li>
           <li>Rosto só na <strong>frente</strong> da cabeça; em 3ª pessoa use o botão <strong>Ver skin</strong> ou <kbd>Alt</kbd> + setas para orbitar e ver o personagem</li>
-          <li>Barra de armas (<kbd>B</kbd>) mostra e esconde de verdade (com ✕)</li>
+          <li><strong>Celular</strong>: HUD limpo — stick + 4 botões (correr / interagir / pular / atacar); o resto fica em <strong>⋯</strong> (armas, armadilhas, câmera, chat, ajuda, novidades)</li>
+          <li>Tutorial e dicas no touch usam ícones (◉ / ⚔), sem teclas de PC</li>
+          <li>Barra de armas (<kbd>B</kbd> ou <strong>⋯ → 🎒</strong> no celular) mostra e esconde de verdade (com ✕)</li>
           <li>Ranking online (<kbd>T</kbd>) via HostGator — tempos falsos filtrados</li>
           <li><strong>Board de sugestões</strong> — envie ideias em cards (estilo Jira); a comunidade vê tudo</li>
           <li><strong>Estações</strong> do ano ciclam (neve/gelo/frio mudam) · cobertura atrás de pedras/baú bloqueia ataques</li>
@@ -453,6 +460,7 @@
           <li><kbd>Y</kbd> ou <kbd>Enter</kbd> chat (estilo CS) · <kbd>Esc</kbd> cancela o chat</li>
           <li>Tutorial: botão <strong>Pular</strong>, <kbd>Esc</kbd> ou <kbd>P</kbd> — depois o mouse captura no clique</li>
           <li><kbd>H</kbd> esta ajuda · <kbd>T</kbd> ranking · <kbd>Esc</kbd> pausar</li>
+          <li><strong>Celular</strong>: stick mover · 🏃 correr · ◉ interagir · ⤒ pular · ⚔ atacar · <strong>⋯</strong> abre armas/armadilhas/câmera/chat/ajuda/novidades</li>
         </ul>
         <h3 class="help-overlay__h">Perguntas frequentes</h3>
         <dl class="help-overlay__faq">

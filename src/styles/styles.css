@@ -55,21 +55,14 @@ body {
   pointer-events: none;
 }
 
+/* No celular a legenda de teclado some — trap fica no menu ⋯ */
 body.is-touch .hud__traps {
-  bottom: max(12.5rem, calc(env(safe-area-inset-bottom) + 11.5rem));
-  font-size: 0.65rem;
-  max-width: 94vw;
-  white-space: normal;
-  text-align: center;
+  display: none;
 }
 
 /* Hotbar aberta (1 linha): armadilhas sobem um pouco */
 .hud:has(.inv-bar.is-open) .hud__traps {
   bottom: 8.6rem;
-}
-
-body.is-touch .hud:has(.inv-bar.is-open) .hud__traps {
-  bottom: max(14.8rem, calc(env(safe-area-inset-bottom) + 13.8rem));
 }
 
 .tutorial-banner {
@@ -87,6 +80,23 @@ body.is-touch .hud:has(.inv-bar.is-open) .hud__traps {
   background: rgba(12, 22, 34, 0.88);
   border: 1px solid rgba(120, 180, 220, 0.35);
   pointer-events: auto;
+}
+
+body.is-touch .tutorial-banner {
+  top: max(4.6rem, calc(env(safe-area-inset-top) + 3.8rem));
+  max-width: min(88vw, 340px);
+  padding: 0.4rem 0.55rem;
+  gap: 0.45rem;
+}
+
+body.is-touch .tutorial-banner__hint {
+  font-size: 0.72rem;
+  line-height: 1.25;
+}
+
+body.is-touch .tutorial-banner__skip {
+  font-size: 0.65rem;
+  padding: 0.3rem 0.45rem;
 }
 
 .tutorial-banner[hidden] {
@@ -1435,8 +1445,10 @@ kbd {
 }
 
 body.is-touch .inv-bar {
-  bottom: max(9.2rem, calc(env(safe-area-inset-bottom) + 8.2rem));
-  max-width: 96vw;
+  /* Acima dos botões primários, sem cobrir o stick */
+  bottom: max(7.2rem, calc(env(safe-area-inset-bottom) + 6.4rem));
+  max-width: min(92vw, 360px);
+  z-index: 22;
 }
 
 body.is-touch .inv-slot {
@@ -2078,25 +2090,9 @@ body.is-touch .inv-slot__icon {
   font-size: 0.95rem;
 }
 
+/* Chat no celular: botão 💬 fica no menu ⋯ (não flutuante) */
 .hud__chat-btn {
   display: none;
-  position: absolute;
-  right: 0.65rem;
-  bottom: 5.5rem;
-  z-index: 7;
-  width: 2.4rem;
-  height: 2.4rem;
-  border: none;
-  border-radius: 8px;
-  background: rgba(0, 0, 0, 0.45);
-  color: #fff;
-  font-size: 1.1rem;
-  cursor: pointer;
-  pointer-events: auto;
-}
-
-body.is-touch .hud__chat-btn {
-  display: block;
 }
 
 body.is-touch .chat-log {
@@ -2108,6 +2104,7 @@ body.is-touch .chat-log {
 body.is-touch .chat-bar {
   width: min(88vw, 420px);
   bottom: 4.8rem;
+  z-index: 22;
 }
 
 .hud__flash {
@@ -2199,10 +2196,10 @@ textarea,
 
 .touch__stick {
   position: absolute;
-  left: max(1rem, env(safe-area-inset-left));
-  bottom: max(1.4rem, env(safe-area-inset-bottom));
-  width: 130px;
-  height: 130px;
+  left: max(0.7rem, env(safe-area-inset-left));
+  bottom: max(1rem, env(safe-area-inset-bottom));
+  width: 104px;
+  height: 104px;
   border-radius: 50%;
   background: rgba(0, 0, 0, 0.28);
   border: 2px solid rgba(255, 255, 255, 0.28);
@@ -2215,8 +2212,8 @@ textarea,
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 54px;
-  height: 54px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.45);
   border: 2px solid rgba(255, 255, 255, 0.55);
@@ -2224,26 +2221,59 @@ textarea,
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
 }
 
+/* Pause + ⋯ no canto superior direito (compacto) */
+.touch__util {
+  position: absolute;
+  top: max(0.55rem, env(safe-area-inset-top));
+  right: max(0.55rem, env(safe-area-inset-right));
+  display: flex;
+  gap: 0.35rem;
+  pointer-events: auto;
+  z-index: 4;
+}
+
+.touch__more {
+  position: absolute;
+  top: max(3.1rem, calc(env(safe-area-inset-top) + 2.55rem));
+  right: max(0.55rem, env(safe-area-inset-right));
+  display: grid;
+  grid-template-columns: repeat(4, 44px);
+  gap: 0.35rem;
+  padding: 0.4rem;
+  border-radius: 12px;
+  background: rgba(8, 14, 22, 0.72);
+  border: 1px solid rgba(200, 220, 235, 0.18);
+  backdrop-filter: blur(8px);
+  pointer-events: auto;
+  z-index: 4;
+}
+
+.touch__more[hidden] {
+  display: none !important;
+}
+
+/* 4 ações primárias: sprint / interagir / pular / atacar */
 .touch__actions {
   position: absolute;
-  right: max(0.8rem, env(safe-area-inset-right));
-  bottom: max(1.2rem, env(safe-area-inset-bottom));
+  right: max(0.65rem, env(safe-area-inset-right));
+  bottom: max(1rem, env(safe-area-inset-bottom));
   display: grid;
-  grid-template-columns: repeat(3, 64px);
-  gap: 0.55rem;
+  grid-template-columns: repeat(2, 56px);
+  gap: 0.45rem;
   pointer-events: auto;
   justify-items: center;
+  align-items: end;
   z-index: 3;
 }
 
 .touch-btn {
-  width: 64px;
-  height: 64px;
+  width: 56px;
+  height: 56px;
   border: 2px solid rgba(255, 255, 255, 0.35);
   border-radius: 50%;
   background: rgba(0, 0, 0, 0.4);
   color: #fff;
-  font-size: 1.35rem;
+  font-size: 1.2rem;
   line-height: 1;
   pointer-events: auto;
   touch-action: manipulation;
@@ -2252,15 +2282,33 @@ textarea,
 }
 
 .touch-btn--big {
-  width: 74px;
-  height: 74px;
-  font-size: 1.55rem;
+  width: 64px;
+  height: 64px;
+  font-size: 1.4rem;
+}
+
+.touch-btn--util {
+  width: 40px;
+  height: 40px;
+  font-size: 1rem;
+  opacity: 0.9;
+}
+
+.touch-btn--util.is-open {
+  background: rgba(255, 255, 255, 0.22);
+  border-color: rgba(255, 255, 255, 0.55);
+}
+
+.touch-btn--more {
+  width: 44px;
+  height: 44px;
+  font-size: 0.95rem;
 }
 
 .touch-btn--small {
-  width: 48px;
-  height: 48px;
-  font-size: 1rem;
+  width: 44px;
+  height: 44px;
+  font-size: 0.95rem;
   opacity: 0.85;
 }
 
@@ -2274,56 +2322,115 @@ textarea,
   transform: scale(0.94);
 }
 
+/* HUD acima do look (pointer-events:none no .hud) para tutorial/inv receberem toque */
+body.is-touch .hud {
+  z-index: 18;
+}
+
 body.is-touch .hud__controls {
   display: none;
 }
 
+/* Pointer-lock é só desktop; no touch some o aviso genérico */
+body.is-touch .hud__hint {
+  display: none !important;
+}
+
 body.is-touch .hud__minimap {
-  width: 110px;
-  height: 110px;
-  top: max(0.6rem, env(safe-area-inset-top));
-  left: max(0.6rem, env(safe-area-inset-left));
+  width: 72px;
+  height: 72px;
+  top: max(0.5rem, env(safe-area-inset-top));
+  left: max(0.5rem, env(safe-area-inset-left));
+  border-width: 1px;
+  border-radius: 8px;
 }
 
 body.is-touch .hud__status {
   bottom: auto;
-  top: max(0.6rem, env(safe-area-inset-top));
+  top: max(0.5rem, env(safe-area-inset-top));
   left: auto;
-  right: max(0.6rem, env(safe-area-inset-right));
-  width: 150px;
+  /* reserva espaço para pause/⋯ */
+  right: max(5.4rem, calc(env(safe-area-inset-right) + 4.8rem));
+  width: 118px;
+  gap: 0.28rem;
+}
+
+body.is-touch .hud__bar-track {
+  height: 9px;
+}
+
+body.is-touch .hud__bar-label {
+  width: 1.1rem;
+  font-size: 0.8rem;
+}
+
+body.is-touch .hud__items {
+  font-size: 0.72rem;
+  padding: 0.2rem 0.45rem;
 }
 
 body.is-touch .hud__camera {
   display: none;
 }
 
-/* No celular o botão Ver skin fica visível (label 3ª pessoa some) */
+/* Ver skin some do canto — câmera fica no menu ⋯ */
 body.is-touch .hud__camera-row {
-  bottom: max(17.5rem, calc(env(safe-area-inset-bottom) + 16.5rem));
-  right: max(0.8rem, env(safe-area-inset-right));
+  display: none;
 }
 
+/* Relógio some; timer fica discreto sob o status */
 body.is-touch .hud__time {
-  top: auto;
-  bottom: max(11rem, calc(env(safe-area-inset-bottom) + 10rem));
-  right: max(0.8rem, env(safe-area-inset-right));
-  font-size: 0.75rem;
+  display: none;
 }
 
 body.is-touch .hud__timer {
-  top: auto;
-  bottom: max(13.2rem, calc(env(safe-area-inset-bottom) + 12.2rem));
-  right: max(0.8rem, env(safe-area-inset-right));
-  font-size: 0.8rem;
+  top: max(3.55rem, calc(env(safe-area-inset-top) + 2.95rem));
+  right: max(5.4rem, calc(env(safe-area-inset-right) + 4.8rem));
+  bottom: auto;
+  font-size: 0.7rem;
+  padding: 0.18rem 0.4rem;
 }
 
 body.is-touch .hud__ghost {
-  top: auto;
-  bottom: max(15.6rem, calc(env(safe-area-inset-bottom) + 14.6rem));
-  right: max(0.8rem, env(safe-area-inset-right));
+  top: max(5.35rem, calc(env(safe-area-inset-top) + 4.75rem));
+  right: max(5.4rem, calc(env(safe-area-inset-right) + 4.8rem));
+  bottom: auto;
+  min-width: 0;
+  padding: 0.25rem 0.4rem;
+  font-size: 0.65rem;
 }
 
-/* No celular o N fica nos botões touch (camada acima do look) */
+body.is-touch .hud__ghost-count {
+  font-size: 0.72rem;
+}
+
+body.is-touch .hud__bear {
+  top: max(0.5rem, env(safe-area-inset-top));
+  width: min(46vw, 160px);
+  padding: 0.22rem 0.45rem;
+  font-size: 0.7rem;
+}
+
+body.is-touch .hud__interact {
+  top: 48%;
+  font-size: 0.78rem;
+  padding: 0.35rem 0.7rem;
+}
+
+body.is-touch .hud__msg {
+  top: 18%;
+  max-width: min(86vw, 320px);
+  font-size: 0.82rem;
+  padding: 0.4rem 0.75rem;
+}
+
+/* Banner do tutorial já mostra o texto — esconde toast enquanto ele está aberto */
+body.is-touch:has(#tutorial-banner:not([hidden])) .hud__msg {
+  opacity: 0 !important;
+  visibility: hidden;
+}
+
+/* No celular o N/? ficam no menu ⋯ */
 body.is-touch .hud__corner-btns {
   display: none;
 }
@@ -2332,9 +2439,52 @@ body.is-touch .hud__bottom {
   display: none;
 }
 
+/* Com menu ⋯ aberto, dim sutil no jogo (painel já tem fundo) */
+body.touch-more-open .touch__look {
+  background: rgba(0, 0, 0, 0.12);
+}
+
 @media (max-width: 700px) {
   .hud__minimap {
     width: 110px;
     height: 110px;
+  }
+
+  body.is-touch .hud__minimap {
+    width: 72px;
+    height: 72px;
+  }
+}
+
+/* Telas bem estreitas: stick e botões um pouco menores */
+@media (max-width: 380px) {
+  body.is-touch .touch__stick {
+    width: 92px;
+    height: 92px;
+  }
+
+  body.is-touch .touch__actions {
+    grid-template-columns: repeat(2, 50px);
+    gap: 0.35rem;
+  }
+
+  body.is-touch .touch-btn {
+    width: 50px;
+    height: 50px;
+    font-size: 1.1rem;
+  }
+
+  body.is-touch .touch-btn--big {
+    width: 58px;
+    height: 58px;
+  }
+
+  body.is-touch .touch__more {
+    grid-template-columns: repeat(4, 40px);
+  }
+
+  body.is-touch .touch-btn--more {
+    width: 40px;
+    height: 40px;
   }
 }

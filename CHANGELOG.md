@@ -38,6 +38,11 @@ Resumo narrativo: [`docs/DEVELOP-ATE-GH63.md`](docs/DEVELOP-ATE-GH63.md).
 - **Dungeon secreta**: caverna escondida em posição aleatória por seed (sem marcador no mapa) — ondas de inimigos, parkour, Guardião do Abismo e a arma exclusiva **Relíquia do Abismo** + conquista "Segredo do Abismo" (solo only; morrer reseta a dungeon)
 - Botão **Ativar som** no mobile quando o AudioContext ainda está suspenso
 
+### Changed
+- HUD mobile redesenhado: só 4 ações na tela (correr, interagir, pular, atacar); resto no menu ⋯ (inclui chat)
+- Tutorial e dicas no celular usam ícones de toque em vez de teclas WASD/E/Esc
+- Minimapa, barras e timer compactos; legenda de armadilha/teclado escondida no touch
+
 ### Fixed
 - Áudio no **Android Chrome**: `unlockFromGesture()` síncrono (resume sem await), trilha procedural dedicada no mobile (sem HTMLAudio/MediaElementSource que silenciava), volumes um pouco mais altos
 - Áudio no mobile: desbloqueio em todo toque; aviso só some com o som rodando de verdade
