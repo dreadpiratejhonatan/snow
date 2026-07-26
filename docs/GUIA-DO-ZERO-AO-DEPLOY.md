@@ -228,7 +228,69 @@ Produção serve o **bundle**, não os módulos:
 3. Buscar módulos individuais dá **404** — normal, não existe `src/js/*.js` solto
    em produção.
 
-## 9. Segurança
+## 9. Desenvolvimento pelo celular (Cursor Cloud Agent)
+
+O projeto também aceita mudanças feitas **direto do celular**, usando o app do
+[Cursor](https://cursor.com) com **Cloud Agents** — sem abrir o notebook. A mudança
+feita no telefone chega em produção sozinha.
+
+### Como funciona
+
+1. No app do Cursor no celular, você abre o repositório e pede a mudança em
+   linguagem natural (ex.: "diminua o dano do lobo").
+2. O Cloud Agent trabalha numa VM própria, numa branch `cursor/*`, e abre um
+   **Pull Request** no GitHub.
+3. Um workflow dedicado (`.github/workflows/auto-merge-cursor.yml`,
+   "Auto-merge Cursor PRs") assume a partir daí:
+   - Só age em branches que começam com `cursor/` (PRs humanos não são tocados)
+   - Retargeteia o PR para `develop` se ele veio apontando para outra base
+   - Marca PRs draft como prontos
+   - **Espera o CI ficar verde** (polling nos check-runs, timeout de 15 min);
+     se o CI falhar, o PR fica aberto para correção — nada é mergeado quebrado
+   - Faz **squash-merge** na `develop` e apaga a branch
+   - Dispara os deploys (HostGator + Pages) via `workflow_dispatch`
+4. Minutos depois, a mudança está no site.
+
+### Detalhe técnico importante
+
+Merges feitos com o `GITHUB_TOKEN` **não disparam** workflows de push (proteção do
+GitHub contra loops infinitos). Por isso o workflow chama os deploys explicitamente:
+
+```bash
+gh workflow run "Deploy HostGator" --ref develop
+gh workflow run "Deploy GitHub Pages" --ref develop
+```
+
+Sem essas duas linhas, o auto-merge funcionaria mas o site nunca atualizaria.
+
+### Permissões do workflow
+
+```yaml
+permissions:
+  contents: write        # mergear
+  pull-requests: write   # retarget / ready / merge do PR
+  checks: read           # ler status do CI
+  actions: write         # disparar os workflows de deploy
+```
+
+### Armadilha pós-renomeação de branch
+
+Depois de renomear `master` → `main`, o environment `github-pages` continuou
+permitindo deploy **apenas da `master`** — todo deploy do Pages falhava na hora.
+Correção única (dá para fazer pelo próprio celular): *Settings → Environments →
+github-pages → Deployment branches* → adicionar `main` e `develop`.
+
+### Resumo do fluxo mobile
+
+```
+celular (app Cursor) → Cloud Agent → branch cursor/* → PR
+     → auto-merge (espera CI) → squash na develop
+     → dispatch deploys → HostGator + Pages atualizados
+```
+
+Guia detalhado no repositório: [`MOBILE-AUTO-PROD.md`](MOBILE-AUTO-PROD.md).
+
+## 10. Segurança
 
 - **Nenhuma credencial no código nem no histórico do Git.** Auditoria feita com
   busca por `password`, `secret`, `key`, `admin` etc. em todos os arquivos.
@@ -238,18 +300,20 @@ Produção serve o **bundle**, não os módulos:
   imediatamente** na origem e atualizar o secret.
 - `.htaccess` protege `data/rooms/`; JSONs vivos nunca são clobberados pelo deploy.
 
-## 10. Problemas reais encontrados (e soluções)
+## 11. Problemas reais encontrados (e soluções)
 
 | Problema | Causa | Solução |
 |----------|-------|---------|
 | Deploy FTP "sobe" mas nada muda | `.ftp-deploy-sync-state.json` obsoleto após mexida manual no servidor | Apagar o arquivo de estado via FTP; próximo deploy ressincroniza tudo |
+| Pages falha após renomear branch | Environment `github-pages` só permitia deploy da `master` antiga | Settings → Environments → github-pages → adicionar `main`/`develop` |
+| Merge do bot não dispara deploy | Merges com `GITHUB_TOKEN` não geram eventos de push | Disparar os workflows via `gh workflow run` (workflow_dispatch) |
 | Usuários vendo versão antiga | Falta de cache busting | `?v=ghXX` em CSS/JS + `no-cache` para HTML no `.htaccess` |
 | Job do Pages falhando na `develop` | Pages só publica da `main` | Ignorar (esperado) ou restringir o workflow à `main` |
 | 404 ao buscar módulos em produção | Produção serve bundle único | Validar pelo `bundle.js`, não pelos módulos |
 | Conflito de CHANGELOG/cache | Duas frentes usando a mesma versão `ghXX` | Combinar entradas e subir versão nova |
 | Push rejeitado (non-fast-forward) | Trabalho paralelo na `develop` | `git pull`, resolver, subir de novo |
 
-## 11. Processo de release
+## 12. Processo de release
 
 1. Feature pronta na `develop` (build + smoke verdes, cache incrementado)
 2. `CHANGELOG.md` e `docs/RELEASE-NOTES.md` atualizados
@@ -258,7 +322,7 @@ Produção serve o **bundle**, não os módulos:
 5. Quando estável: merge `develop` → `main` (atualiza o GitHub Pages) e, em
    marcos, criar branch `release/vX.Y` + tag
 
-## 12. Documentação do projeto
+## 13. Documentação do projeto
 
 | Doc | Conteúdo |
 |-----|----------|
@@ -273,7 +337,7 @@ Produção serve o **bundle**, não os módulos:
 
 ---
 
-## Resumo em 10 passos
+## Resumo em 11 passos
 
 1. `npm init` + Three.js + esbuild + serve
 2. Código em módulos ES, `index.html` com importmap para dev sem build
@@ -283,5 +347,6 @@ Produção serve o **bundle**, não os módulos:
 6. Primeira publicação manual via cPanel/FTP (backup de `data/` sempre!)
 7. Secrets do FTP no GitHub Actions
 8. Workflows: CI (build+smoke), deploy FTP na `develop`, Pages na `main`
-9. Todo deploy: incrementar `ghXX`, buildar, testar, push, validar produção
-10. Documentar tudo (`CHANGELOG`, release notes, docs narrativos)
+9. Auto-merge de PRs `cursor/*` para editar pelo celular (Cursor Cloud Agent)
+10. Todo deploy: incrementar `ghXX`, buildar, testar, push, validar produção
+11. Documentar tudo (`CHANGELOG`, release notes, docs narrativos)
