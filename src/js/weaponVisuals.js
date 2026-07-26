@@ -143,6 +143,28 @@ export function buildHeldWeaponMesh(weaponId) {
     tip.position.y = 1.15;
     g.add(shaft, tip);
     g.scale.setScalar(1.15);
+  } else if (weaponId === "relic") {
+    // lâmina de cristal do Abismo: cabo escuro + cristal roxo com brilho próprio
+    const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.035, 0.35, 6), dark);
+    handle.position.y = 0.1;
+    const guard = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.05, 0.06), metal);
+    guard.position.y = 0.28;
+    const crystal = new THREE.Mesh(
+      new THREE.OctahedronGeometry(0.14),
+      new THREE.MeshStandardMaterial({
+        color: 0x9a5aff,
+        emissive: 0x7a3aef,
+        emissiveIntensity: 0.7,
+        roughness: 0.25,
+        metalness: 0.3,
+      })
+    );
+    crystal.scale.set(0.55, 3.4, 0.55);
+    crystal.position.y = 0.78;
+    const glow = new THREE.PointLight(0x9a5aff, 0.6, 4);
+    glow.position.y = 0.78;
+    g.add(handle, guard, crystal, glow);
+    g.scale.setScalar(1.15);
   } else if (weaponId === "claymore") {
     const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.035, 0.35, 6), wood);
     handle.position.y = 0.1;

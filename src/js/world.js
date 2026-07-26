@@ -34,6 +34,8 @@ export class World {
     this.bounds = this.half - 4;
     this.waterLevel = CONFIG.world.waterLevel;
     this.colliders = []; // troncos/rochas/base: { x, z, y, r }
+    this.dungeonZone = null; // bolso da dungeon secreta (setado pela SecretDungeon)
+    this.dungeonActive = false; // player está dentro da arena
     this.trees = [];
     this.snowCaps = []; // neve do telhado etc. (visibilidade por estação)
     this.diff = getDifficulty("medium");
@@ -131,12 +133,23 @@ export class World {
     return h;
   }
 
+  /** Dentro do "bolso" da dungeon secreta (x≈400)? Chão vira o piso da arena. */
+  inDungeonZone(x, z) {
+    const d = this.dungeonZone;
+    if (!d) return false;
+    const dx = x - d.x;
+    const dz = z - d.z;
+    return dx * dx + dz * dz < d.r * d.r;
+  }
+
   // altura onde se pisa: o gelo cobre o lago
   groundHeight(x, z) {
+    if (this.inDungeonZone(x, z)) return this.dungeonZone.floorY;
     return Math.max(this.getHeight(x, z), this.waterLevel);
   }
 
   isOnIce(x, z) {
+    if (this.inDungeonZone(x, z)) return false;
     if (this.getHeight(x, z) >= this.waterLevel) return false;
     // Verão / gelo quase invisível: água sem física de gelo
     const iceOp = this.season?.iceOpacity;
@@ -1628,6 +1641,20 @@ export class World {
     this.enemies.push(enemy);
     if (type === "bear_elite" || !this.bear) this.bear = enemy;
     this.onEnemySpawned?.(enemy);
+    return enemy;
+  }
+
+  /** Spawna um inimigo em posição exata (usado pela dungeon secreta). */
+  spawnEnemyAt(type, x, z, opts = {}) {
+    const cfg = CONFIG.enemies[type];
+    if (!cfg) return null;
+    const mesh = this._meshForEnemy(cfg);
+    mesh.position.set(x, this.groundHeight(x, z), z);
+    this.scene.add(mesh);
+    const enemy = new Enemy(type, mesh, new THREE.Vector3(x, 0, z), this);
+    enemy.netId = this._nextNetId++;
+    if (opts.dungeon) enemy.dungeon = true;
+    this.enemies.push(enemy);
     return enemy;
   }
 
