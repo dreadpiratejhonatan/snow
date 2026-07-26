@@ -8,7 +8,7 @@ import { execSync } from "node:child_process";
 process.chdir(path.dirname(path.dirname(fileURLToPath(import.meta.url))));
 const DIST = "dist";
 const HOST = path.join("release", "hostgator-snow");
-const CACHE = "gh80";
+const CACHE = "gh81";
 
 /** Arquivos de dados vivos no servidor — nunca clobber no pacote HostGator. */
 const PRESERVE_DATA = new Set(["leaderboard.json", "tickets.json", "tickets-rate.json", "tickets-admin.key"]);
@@ -112,18 +112,21 @@ if (fs.existsSync("api")) {
 }
 copyDataDir(DIST);
 
-fs.writeFileSync(
-  path.join(DIST, ".htaccess"),
-  [
-    "AddType text/javascript .js .mjs",
-    "<IfModule mod_headers.c>",
-    '  <FilesMatch "\\.(html)$">',
-    '    Header set Cache-Control "no-cache"',
-    "  </FilesMatch>",
-    "</IfModule>",
-    "",
-  ].join("\n")
-);
+const htaccess = [
+  "AddType text/javascript .js .mjs",
+  "<IfModule mod_headers.c>",
+  // HTML sempre fresco — evita cliente preso em ?v=gh77
+  '  <FilesMatch "\\.(html)$">',
+  '    Header set Cache-Control "no-cache, no-store, must-revalidate"',
+  "  </FilesMatch>",
+  // JS/CSS versionados (?v=): 1h basta; query string invalida ao subir build
+  '  <FilesMatch "\\.(js|mjs|css)$">',
+  '    Header set Cache-Control "public, max-age=3600"',
+  "  </FilesMatch>",
+  "</IfModule>",
+  "",
+].join("\n");
+fs.writeFileSync(path.join(DIST, ".htaccess"), htaccess);
 
 // GitHub Pages: evita que o Jekyll ignore pastas/arquivos
 fs.writeFileSync(path.join(DIST, ".nojekyll"), "");
@@ -180,6 +183,8 @@ hostHtml = hostHtml
     `<script type="module" src="src/js/bundle.js?v=${CACHE}"></script>`
   );
 fs.writeFileSync(path.join(HOST, "index.html"), hostHtml);
+// mesmo .htaccess do dist — HTML sem cache (clientes parados em builds velhos)
+fs.writeFileSync(path.join(HOST, ".htaccess"), htaccess);
 
 fs.writeFileSync(
   path.join(HOST, "LEIA-ME.txt"),
