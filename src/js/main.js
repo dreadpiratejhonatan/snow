@@ -39,6 +39,12 @@ import { dailySeed, dailyLabel, isDailyMode, setDailyMode } from "./daily.js";
 import { unlockAchievement, listAchievements } from "./achievements.js";
 import { playBotoCutscene, updateCinematic, isCinematicActive } from "./cutscene.js";
 import { GameChat } from "./chat.js";
+import {
+  DemoBot,
+  wantsDemoFromUrl,
+  clearDemoFlag,
+  armDemoFromMenu,
+} from "./demoBot.js";
 
 // Vinheta cinematográfica suave nas bordas da tela
 const VignetteShader = {
@@ -90,6 +96,8 @@ class Game {
     this.weapons = new WeaponInventory();
     this.traps = new TrapInventory();
     this.tutorial = null;
+    this.demoBot = null;
+    this.demoMode = false;
     this.speedrun = new SpeedrunTimer();
     this.leaderboard = [];
     this.touch = null;
@@ -135,6 +143,12 @@ class Game {
     this.hud.hide();
     this.setTouchUiVisible(false);
     this.ensureLoop();
+
+    if (wantsDemoFromUrl()) {
+      await this.beginDemoRun({ fromUrl: true });
+      return;
+    }
+
     await runSplash({ minMs: 4200, maxMs: 10000, fadeMs: 800 });
     this.state = "skin";
     // Sempre exige escolher um personagem (rosto visível + preview girável)
@@ -153,6 +167,11 @@ class Game {
     this.difficulty = getDifficulty(this.difficultyId);
 
     const coopChoice = await this.promptCoopMenu();
+    if (coopChoice.mode === "demo") {
+      await this.beginDemoRun({ fromMenu: true });
+      return;
+    }
+
     let resumeSave = null;
 
     if (coopChoice.mode === "solo") {
@@ -206,6 +225,65 @@ class Game {
     this.start();
   }
 
+  /** Partida solo automática (espectável). */
+  async beginDemoRun() {
+    clearDemoFlag();
+    clearMidRunSave();
+    setDailyMode(false);
+    this.demoMode = true;
+    this.coop = null;
+    this.coopRoom = null;
+    void this.ambience.start();
+    this.setDifficulty("easy");
+    applySkinToPlayer(this.player, "natan");
+    const seed = (Math.random() * 0xffffffff) >>> 0;
+    this.recreateWorld(seed, true, {
+      difficulty: "easy",
+      thinPickups: false,
+    });
+    applySkinToPlayer(this.player, "natan");
+    this.setCameraMode("third");
+    this.tutorial = new Tutorial(this);
+    this.tutorial.skip();
+    this.refreshTrapUI();
+    this.bindWorldCombatHooks();
+    this.world.onEnemySpawned = (enemy) => {
+      if (enemy?.type === "boto") playBotoCutscene(this);
+    };
+    this.demoBot = new DemoBot(this);
+    this.start();
+    this.setDemoBanner(true);
+    this.hud.showMsg("DEMO automática — assista · Esc cancela", 5000);
+    this.input.locked = true;
+  }
+
+  setDemoBanner(on) {
+    const el = document.getElementById("demo-banner");
+    if (!el) return;
+    el.hidden = !on;
+    el.setAttribute("aria-hidden", on ? "false" : "true");
+    if (on) {
+      const sub = el.querySelector(".demo-banner__status");
+      if (sub) sub.textContent = this.demoBot?.status || "Rodando…";
+    }
+  }
+
+  refreshDemoBanner() {
+    if (!this.demoMode) return;
+    const sub = document.querySelector("#demo-banner .demo-banner__status");
+    if (sub && this.demoBot) sub.textContent = this.demoBot.status;
+  }
+
+  /** Esc / cancelar: para o bot e pausa (jogador assume). */
+  cancelDemo() {
+    if (!this.demoMode) return;
+    this.demoMode = false;
+    this.demoBot = null;
+    this.setDemoBanner(false);
+    this.input.clearKeys();
+    this.hud.showMsg("Demo cancelada — você controla agora.", 3500);
+  }
+
   /** Guest co-op: dano local vira evento para o host aplicar. */
   bindWorldCombatHooks() {
     if (!this.world) return;
@@ -251,6 +329,7 @@ class Game {
     const stepFriends = document.getElementById("coop-step-friends");
     const btnSolo = document.getElementById("btn-coop-solo");
     const btnDaily = document.getElementById("btn-coop-daily");
+    const btnDemo = document.getElementById("btn-coop-demo");
     const btnFriends = document.getElementById("btn-coop-friends");
     const btnBack = document.getElementById("btn-coop-back");
     const btnCreate = document.getElementById("btn-coop-create");
@@ -286,6 +365,7 @@ class Game {
       if (btnFriends) btnFriends.disabled = false;
       if (btnSolo) btnSolo.disabled = false;
       if (btnDaily) btnDaily.disabled = false;
+      if (btnDemo) btnDemo.disabled = false;
       if (btnRehost) btnRehost.disabled = false;
       if (btnRejoin) btnRejoin.disabled = false;
     };
@@ -316,6 +396,7 @@ class Game {
         btnPaste?.removeEventListener("click", onPaste);
         btnSolo?.removeEventListener("click", onSolo);
         btnDaily?.removeEventListener("click", onDaily);
+        btnDemo?.removeEventListener("click", onDemo);
         btnFriends?.removeEventListener("click", onFriends);
         btnBack?.removeEventListener("click", onBack);
         btnCreate?.removeEventListener("click", onCreate);
@@ -333,6 +414,11 @@ class Game {
         setDailyMode(true);
         cleanup();
         resolve({ mode: "solo", daily: true, seed: dailySeed() });
+      };
+      const onDemo = () => {
+        armDemoFromMenu();
+        cleanup();
+        resolve({ mode: "demo" });
       };
       const onFriends = () => showFriends();
       const onBack = () => {
@@ -540,6 +626,7 @@ class Game {
       btnPaste?.addEventListener("click", onPaste);
       btnSolo?.addEventListener("click", onSolo);
       btnDaily?.addEventListener("click", onDaily);
+      btnDemo?.addEventListener("click", onDemo);
       btnFriends?.addEventListener("click", onFriends);
       btnBack?.addEventListener("click", onBack);
       btnCreate?.addEventListener("click", onCreate);
@@ -1814,6 +1901,12 @@ class Game {
           this.closeHelp();
           return;
         }
+        if (this.state === "playing" && this.demoMode) {
+          e.preventDefault();
+          this.cancelDemo();
+          this.pause();
+          return;
+        }
         if (this.state === "playing" && this.tutorial?.active) {
           e.preventDefault();
           this.tutorial.skip();
@@ -1826,6 +1919,7 @@ class Game {
     const unlock = () => {
       if (
         this.state === "playing" &&
+        !this.demoMode &&
         !this.helpOpen &&
         !this.rankOpen &&
         !this.releaseOpen &&
@@ -2017,12 +2111,29 @@ class Game {
     // Esc no desktop: bindUI. Tap pause no celular:
     if (this.input._tapEsc) {
       this.input._tapEsc = false;
-      if (this.tutorial?.active) this.tutorial.skip();
+      if (this.demoMode) {
+        this.cancelDemo();
+        this.pause();
+      } else if (this.tutorial?.active) this.tutorial.skip();
       else this.pause();
     }
 
+    // Demo automática: sintetiza input (após checar Esc do usuário)
+    if (this.demoMode && this.demoBot) {
+      if (this.input.pausePressed) {
+        this.cancelDemo();
+        this.pause();
+        this.input.endFrame();
+        return;
+      }
+      this.demoBot.drive(this.input, dt);
+      this.refreshDemoBanner();
+      // espectador não usa touch UI
+      this.setTouchUiVisible(false);
+    }
+
     this._saveAcc = (this._saveAcc || 0) + dt;
-    if (this._saveAcc >= 25) {
+    if (!this.demoMode && this._saveAcc >= 25) {
       this._saveAcc = 0;
       this.persistSave();
     }

@@ -119,6 +119,49 @@ body.is-touch .hud:has(.inv-bar.is-open) .hud__traps {
   background: rgba(80, 60, 24, 0.98);
 }
 
+.demo-banner {
+  position: absolute;
+  top: max(0.8rem, env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 21;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  max-width: min(92vw, 420px);
+  padding: 0.55rem 0.9rem;
+  border-radius: 10px;
+  background: rgba(18, 28, 22, 0.9);
+  border: 1px solid rgba(180, 210, 140, 0.4);
+  pointer-events: none;
+  text-align: center;
+}
+
+.demo-banner[hidden] {
+  display: none !important;
+}
+
+.demo-banner__title {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #e8f5c8;
+}
+
+.demo-banner__status {
+  margin: 0;
+  font-size: 0.78rem;
+  color: rgba(220, 235, 200, 0.9);
+}
+
+.demo-banner__hint {
+  margin: 0;
+  font-size: 0.7rem;
+  color: rgba(180, 200, 160, 0.75);
+}
+
 /* ---------- Splash / launcher ---------- */
 
 .splash {
@@ -559,6 +602,11 @@ body.is-touch .hud:has(.inv-bar.is-open) .hud__traps {
 
 .boot-choice--alt {
   border-color: rgba(110, 196, 212, 0.28);
+}
+
+.boot-choice--demo {
+  border-color: rgba(212, 168, 90, 0.4);
+  grid-column: 1 / -1;
 }
 
 .boot-choice__title {

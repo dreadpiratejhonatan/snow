@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="src/styles/styles.css?v=gh65" />
+  <link rel="stylesheet" href="src/styles/styles.css?v=gh66" />
   <script type="importmap">
   {
     "imports": {
@@ -161,6 +161,12 @@
         <button type="button" id="tutorial-skip" class="tutorial-banner__skip" title="Esc ou P">Pular (Esc)</button>
       </div>
 
+      <div id="demo-banner" class="demo-banner" hidden aria-hidden="true">
+        <p class="demo-banner__title">DEMO automática</p>
+        <p class="demo-banner__status">Rodando…</p>
+        <p class="demo-banner__hint">Esc cancela e você assume o controle</p>
+      </div>
+
       <!-- N = novidades (ao lado do ?). No celular também existe nos botões touch. -->
       <div class="hud__corner-btns">
         <button type="button" id="btn-release-notes" class="hud__nerd-notes" title="O que mudou (novidades)" aria-label="Abrir novidades">N</button>
@@ -216,6 +222,10 @@
             <button id="btn-coop-friends" type="button" class="boot-choice boot-choice--alt">
               <span class="boot-choice__title">Com amigos</span>
               <span class="boot-choice__desc">2 a 4 jogadores — mesma tempestade</span>
+            </button>
+            <button id="btn-coop-demo" type="button" class="boot-choice boot-choice--demo">
+              <span class="boot-choice__title">Assistir demo</span>
+              <span class="boot-choice__desc">Player automático — veja o jogo sozinho (Esc cancela)</span>
             </button>
           </div>
         </div>
@@ -473,6 +483,6 @@
     </div>
   </div>
 
-  <script type="module" src="src/js/main.js?v=gh65"></script>
+  <script type="module" src="src/js/main.js?v=gh66"></script>
 </body>
 </html>

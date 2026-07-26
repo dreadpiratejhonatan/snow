@@ -59,6 +59,8 @@ npm run start:win   # Windows
 
 Abra http://127.0.0.1:5173/
 
+**Demo automática (espectável):** menu **Assistir demo**, ou `http://127.0.0.1:5173/?demo=1` — player robô joga sozinho em 3ª pessoa (Esc cancela).
+
 ## Build, testes e deploy
 
 ```bash
