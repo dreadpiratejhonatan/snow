@@ -138,7 +138,7 @@ Referência completa: [`API.md`](API.md).
 | `api/signal.php` | co-op signaling + relay |
 | `api/tickets.php` | sugestões / bugs |
 
-Pasta `data/` no servidor: **não apagar** em deploys. Ver [`../DEPLOY-SEGURO.md`](../DEPLOY-SEGURO.md).
+Pasta `data/` no servidor: **não apagar** em deploys. Ver [`DEPLOY-SEGURO.md`](DEPLOY-SEGURO.md).
 
 ---
 
@@ -176,12 +176,12 @@ Zip local típico: `release/snow.zip`
 | Arquivo | Conteúdo |
 | --- | --- |
 | [`../README.md`](../README.md) | visão geral + como rodar |
-| [`../RELEASE-NOTES.md`](../RELEASE-NOTES.md) | changelog jogável v1 |
+| [`RELEASE-NOTES.md`](RELEASE-NOTES.md) | changelog jogável v1 |
 | [`../CHANGELOG.md`](../CHANGELOG.md) | histórico versionado |
 | [`COOP.md`](COOP.md) | multiplayer |
 | [`API.md`](API.md) | contratos HTTP |
-| [`../DEPLOY-SEGURO.md`](../DEPLOY-SEGURO.md) | HostGator sem perder dados |
-| [`../GITHUB-PAGES.md`](GITHUB-PAGES.md) | publicação Pages |
+| [`DEPLOY-SEGURO.md`](DEPLOY-SEGURO.md) | HostGator sem perder dados |
+| [`GITHUB-PAGES.md`](GITHUB-PAGES.md) | publicação Pages |
 | [`FASE2-BACKLOG.md`](FASE2-BACKLOG.md) | ideias pós-v1 |
 
 ---

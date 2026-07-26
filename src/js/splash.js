@@ -64,7 +64,9 @@ export function runSplash({
       img.addEventListener(
         "error",
         () => {
-          if (!img.src.includes("splash_screen.jpeg")) img.src = "splash_screen.jpeg";
+          if (!img.src.includes("splash_screen.jpeg")) {
+            img.src = "assets/splash/splash_screen.jpeg";
+          }
         },
         { once: true }
       );

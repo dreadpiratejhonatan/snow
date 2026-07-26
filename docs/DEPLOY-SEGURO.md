@@ -2,7 +2,7 @@
 
 Com jogadores no ranking / tickets, **nunca apague** `data/leaderboard.json` nem `data/tickets.json` no servidor.
 
-Cache do cliente atual: **`?v=gh63`**.
+Cache do cliente atual: **`?v=gh64`**.
 
 Pacote local: `release/snow.zip` (ou pasta `release/hostgator-snow/`).  
 Preparar de novo: `npm run build` ou `powershell -File scripts/prepare-hostgator-deploy.ps1`.
@@ -33,14 +33,15 @@ O upload **não** sobrescreve `data/leaderboard.json`, `tickets.json`, `tickets-
 2. **Backup:** baixe `data/leaderboard.json` e `data/tickets.json` (se existir) para o PC  
    (guarde em `release/deploy-backup/` se quiser)
 3. **Deixe a pasta** `data/` **intacta**
-4. Apague apenas: `index.html`, `src/`, `api/`, `music/`, `faces/`, `tickets/`, `splash_screen.*`, `sc1.jpeg`…`sc4.jpeg`
+4. Apague apenas: `index.html`, `src/`, `api/`, `music/`, `faces/`, `tickets/`, `assets/`  
+   (e, se ainda existirem na raiz: `splash_screen.*`, `sc1.jpeg`…`sc4.jpeg`)
 5. Extraia o `snow.zip` novo ali (Upload → Extract)
 6. Se o zip trouxe `data/` sem `leaderboard.json` / `tickets.json`, está correto — o PHP cria se faltar
 7. Se por engano sobrescreveu o JSON, restaure o backup do passo 2
 8. Permissões da pasta `data/`: **755** ou **775**
 9. Permissões de `data/rooms/`: **755** ou **775** (co-op)
 10. **Tickets admin:** crie `data/tickets-admin.key` com **uma linha** = senha secreta (não versionar). Sem isso, mudar status falha de propósito.
-11. Abra o site e force **Ctrl+F5** (cache `?v=gh62`)
+11. Abra o site e force **Ctrl+F5** (cache `?v=gh64`)
 12. Teste ranking: zerar → digitar nome → Enviar → tecla **T**
 13. Co-op: criar sala 2–4 jogadores. Guia: `docs/COOP.md`
 14. Tickets: abra `/snow/tickets/` → envie um bug de teste → na seção Moderar, use a senha do `.key`

@@ -20,7 +20,7 @@ Primeira versão **oficial** (`release/v1.0`, tag `v1.0.0`).
 - OST procedural estilo aventura 16-bit
 - Scroll do mouse para ciclar armas
 - Deploy GitHub Pages + pacote HostGator (`release/snow.zip`)
-- Documentação: `docs/V1-OFICIAL.md`, `docs/API.md`, `docs/COOP.md`, `DEPLOY-SEGURO.md`
+- Documentação: `docs/V1-OFICIAL.md`, `docs/API.md`, `docs/COOP.md`, `docs/DEPLOY-SEGURO.md`
 
 ### Known limits
 - Co-op máximo 2 jogadores; sessão cai se o host sair
@@ -28,8 +28,11 @@ Primeira versão **oficial** (`release/v1.0`, tag `v1.0.0`).
 
 ## [Unreleased]
 
-Trabalho na branch `develop` após `v1.0.0` (cache **`gh63`**).  
+Trabalho na branch `develop` após `v1.0.0` (cache **`gh64`**).  
 Resumo narrativo: [`docs/DEVELOP-ATE-GH63.md`](docs/DEVELOP-ATE-GH63.md).
+
+### Changed
+- Organização do repositório: artes do splash em `assets/splash/`; guias `DEPLOY-SEGURO`, `GITHUB-PAGES` e `RELEASE-NOTES` em `docs/`
 
 ### Added
 - Desafio do dia (seed UTC) + conquistas locais

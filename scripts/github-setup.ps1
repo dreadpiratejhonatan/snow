@@ -37,7 +37,7 @@ if (-not $git) {
     winget install --id Git.Git -e --source winget --accept-package-agreements --accept-source-agreements
   } catch {
     Write-Host "Instale o Git manualmente: https://git-scm.com/download/win"
-    Write-Host "Depois rode este script de novo, ou siga GITHUB-PAGES.md"
+    Write-Host "Depois rode este script de novo, ou siga docs/GITHUB-PAGES.md"
     exit 1
   }
   $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "User")
@@ -76,7 +76,7 @@ if ($Repo) {
   Write-Host "   git push -u origin main"
 }
 Write-Host "3. Settings → Pages → Source: GitHub Actions"
-Write-Host "4. Leia GITHUB-PAGES.md"
+Write-Host "4. Leia docs/GITHUB-PAGES.md"
 Write-Host ""
 
 if ($Repo) {

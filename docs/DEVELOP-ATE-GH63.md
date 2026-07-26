@@ -22,7 +22,7 @@ Cada bump força o navegador a baixar JS/CSS novos após o deploy. Não é semve
 | Zip HostGator | `release/snow.zip` |
 | Pasta pronta | `release/hostgator-snow/` |
 | Build | `npm run build` ou `scripts/prepare-hostgator-deploy.ps1` |
-| Guia seguro | [`DEPLOY-SEGURO.md`](../DEPLOY-SEGURO.md) |
+| Guia seguro | [`DEPLOY-SEGURO.md`](DEPLOY-SEGURO.md) |
 | Co-op | [`COOP.md`](COOP.md) |
 | TURN (VPS) | [`TURN-VPS.md`](TURN-VPS.md) |
 | Backlog Fase 2 | [`FASE2-BACKLOG.md`](FASE2-BACKLOG.md) |

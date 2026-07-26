@@ -110,4 +110,4 @@ UI: `/tickets/` (board estilo Jira).
 | `data/tickets-admin.key` | senha moderação (só servidor) |
 | `data/rooms/` | salas co-op (efêmeras) |
 
-Ver [`../DEPLOY-SEGURO.md`](../DEPLOY-SEGURO.md).
+Ver [`DEPLOY-SEGURO.md`](DEPLOY-SEGURO.md).
