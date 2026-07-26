@@ -45,6 +45,7 @@ Resumo narrativo: [`docs/DEVELOP-ATE-GH63.md`](docs/DEVELOP-ATE-GH63.md) · [`DE
 - **Privacidade (gh76)**: nenhum domínio/host fica no repositório — APIs same-origin por padrão, hosts estáticos usam `SNOW_API_BASE` (secret injetado no build); docs com placeholders; smoke do relay só roda com `SIGNAL_URL` definido
 
 ### Added
+- **Estações mudam o visual do mundo**: o chão troca de "skin" por estação (primavera verde, verão viçoso, outono dourado, inverno nevado) e a vegetação acompanha — folhas dos pinheiros e grama tingidas; minimapa recolorido junto
 - **Modos de mapa (gh75)**: seletor no boot após a dificuldade — **Classic** (layout fixo atual) e **Random** (terreno, lago, base e spawn derivados da seed). Persistido no mid-run save; no co-op o modo viaja no bit 31 da seed da sala (daily continua sempre Classic)
 - **Raridade de loot**: anéis rare/epic nos pickups + partículas (armas/troféus)
 - **Crafting na fogueira (C)**: materiais (corda, latas, isqueiro, mapa, bússola, rádio) → munição/armadilhas; cerca clássica como fallback

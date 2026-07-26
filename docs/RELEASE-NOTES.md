@@ -64,7 +64,7 @@ Documentação completa: [`docs/V1-OFICIAL.md`](docs/V1-OFICIAL.md) · Tag Git: 
 - Preview 3D; cards em ordem aleatória; rosto só na frente da cabeça
 
 ## Mundo e áudio
-- **Estações** ciclam (neve/gelo/frio)
+- **Estações** ciclam e mudam o visual: chão e vegetação trocam de cor (primavera verde, verão viçoso, outono dourado, inverno nevado)
 - Trilha procedural estilo aventura 16-bit (desbloqueia no clique dos menus)
 
 ## Inventário e ranking
