@@ -36,6 +36,8 @@ export const CONFIG = {
     dayLength: 140,
     /** Dias de jogo (ciclos dia/noite) por estação. */
     seasonDays: 2,
+    /** Fração final da estação usada na transição gradual do visual. */
+    seasonTransition: 0.45,
     seasons: [
       {
         id: "spring",
@@ -46,6 +48,14 @@ export const CONFIG = {
         iceOpacity: 0.4,
         iceColor: 0x5a9ab8,
         fogTint: 0xa8d4b0,
+        /** Cor do solo: neve derretendo, grama nova aparecendo. */
+        groundTint: 0x6f9a55,
+        groundTintMul: 0.5,
+        /** Vegetação: folhas viçosas, grama verde-clara. */
+        leafTint: 0x6fae4f,
+        leafTintMul: 0.55,
+        grassTint: 0x7cb257,
+        grassTintMul: 0.6,
       },
       {
         id: "summer",
@@ -56,6 +66,13 @@ export const CONFIG = {
         iceOpacity: 0.18,
         iceColor: 0x2a6a8a,
         fogTint: 0xb0d0f0,
+        /** Campo verde sem neve. */
+        groundTint: 0x4d7a38,
+        groundTintMul: 0.75,
+        leafTint: 0x3f7a30,
+        leafTintMul: 0.7,
+        grassTint: 0x5aa03a,
+        grassTintMul: 0.8,
       },
       {
         id: "autumn",
@@ -66,6 +83,14 @@ export const CONFIG = {
         iceOpacity: 0.55,
         iceColor: 0x7aa8c0,
         fogTint: 0xd4a878,
+        /** Solo dourado/marrom de folhas secas. */
+        groundTint: 0x9a7038,
+        groundTintMul: 0.62,
+        /** Folhagem alaranjada/dourada e grama seca. */
+        leafTint: 0xc47a2e,
+        leafTintMul: 0.72,
+        grassTint: 0xb08a3a,
+        grassTintMul: 0.7,
       },
       {
         id: "winter",
@@ -79,6 +104,13 @@ export const CONFIG = {
         /** Whiteout: névoa mais densa + neve mais rápida */
         fogDensityMul: 1.35,
         blizzardMul: 1.3,
+        /** Neve pura — sem tinta no solo; pinheiros verdes com neve. */
+        groundTint: 0xffffff,
+        groundTintMul: 0,
+        leafTint: 0x2f4f38,
+        leafTintMul: 0.35,
+        grassTint: 0xdce8f2,
+        grassTintMul: 0.45,
       },
     ],
   },
@@ -638,26 +670,8 @@ export const CONFIG = {
       skin: 0xf0d4b8,
       tie: 0x2a1a10,
     },
-    mega_brain: {
-      id: "mega_brain",
-      name: "MEGA BRAIN",
-      face: "faces/mega_brain.png",
-      suit: 0x0a2838,
-      shirt: 0x28a8c0,
-      skin: 0xf0e0d0,
-      tie: 0xe8c040,
-    },
-    neymar: {
-      id: "neymar",
-      name: "Neymar",
-      face: "faces/neymar.png",
-      suit: 0x1a3a18,
-      shirt: 0xe8d030,
-      skin: 0xc48c60,
-      tie: 0x0e2810,
-    },
   },
-  skinOrder: ["natan", "jorge", "caio", "lorenzo", "ze", "mega_brain", "neymar"],
+  skinOrder: ["natan", "jorge", "caio", "lorenzo", "ze"],
   /** IDs antigos → personagem (localStorage / saves). */
   skinAlias: {
     classic: "natan",
@@ -668,6 +682,8 @@ export const CONFIG = {
     ghost: "natan",
     rita: "natan",
     bruno: "natan",
+    mega_brain: "natan",
+    neymar: "natan",
   },
   weapons: {
     fists: {

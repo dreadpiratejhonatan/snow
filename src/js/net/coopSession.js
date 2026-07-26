@@ -191,7 +191,11 @@ export class CoopSession {
     if (typeof msg.dayTime === "number") g.dayTime = msg.dayTime;
     if (typeof msg.seasonIndex === "number" && msg.seasonIndex !== g.seasonIndex) {
       g.seasonIndex = msg.seasonIndex;
-      g.world?.applySeason?.(g.getSeason?.());
+      if (typeof g.applySeasonVisual === "function" && typeof g.computeSeasonVisual === "function") {
+        g.applySeasonVisual(g.computeSeasonVisual());
+      } else {
+        g.world?.applySeason?.(g.getSeason?.());
+      }
     }
     if (typeof msg.seasonDayAcc === "number") g.seasonDayAcc = msg.seasonDayAcc;
     if (typeof msg.deposited === "number") {

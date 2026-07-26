@@ -128,7 +128,11 @@ export function applyGameState(game, data) {
   if (data.seasonIndex != null) game.seasonIndex = data.seasonIndex;
   if (data.seasonDayAcc != null) game.seasonDayAcc = data.seasonDayAcc;
   game._prevDayTime = game.dayTime;
-  game.world?.applySeason?.(game.getSeason?.() || null);
+  if (typeof game.applySeasonVisual === "function" && typeof game.computeSeasonVisual === "function") {
+    game.applySeasonVisual(game.computeSeasonVisual());
+  } else {
+    game.world?.applySeason?.(game.getSeason?.() || null);
+  }
   game.health = data.health ?? game.health;
   game.warmth = data.warmth ?? game.warmth;
   game.carried = data.carried ?? 0;

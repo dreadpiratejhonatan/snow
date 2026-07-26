@@ -28,18 +28,19 @@ Primeira versão **oficial** (`release/v1.0`, tag `v1.0.0`).
 
 ## [Unreleased]
 
-Trabalho na branch `develop` após `v1.0.0` (cache **`gh88`**).  
+Trabalho na branch `develop` após `v1.0.0` (cache **`gh89`**).  
 Resumo narrativo: [`docs/DEVELOP-ATE-GH63.md`](docs/DEVELOP-ATE-GH63.md) · [`DEVELOP-GH64-ATE-GH73.md`](docs/DEVELOP-GH64-ATE-GH73.md).
 
 ### Added
-- **Personagem Neymar (gh88)**: skin jogável com rosto em `faces/neymar.png`
-- **Personagem MEGA BRAIN (gh87)**: skin jogável com rosto em `faces/mega_brain.png`
+- **Solo sazonal (gh89)**: chão e vegetação (grama/folhas) mudam de cor com as estações — gradual, Classic e Random; desktop também (material + vertex tint)
 - **Tutorial/ajuda: montarias (gh86)**: passo 6/7 ensina a domar; FAQ e controles mencionam mula, cavalo, pônei, dromedário e panda
 
 ### Changed
+- **Roster (gh89)**: removidos **Neymar** e **MEGA BRAIN** do seletor (voltam a 5 personagens)
 - **Domar montarias mais fácil (gh85)**: basta ~28% de dano (HP ≤ 72%); ao enfraquecer o animal para de atacar; alcance de interação maior; mula/cavalo/dromedário/pônei/panda um pouco mais fracos
 
 ### Fixed
+- **Solo no desktop (gh89)**: neve/grama do chão agora acompanham a estação (antes só gelo/flocos mudavam)
 - **ESC no pause (gh84)**: apertar Esc de novo (ou o botão de pause no celular) retoma o jogo — não só o botão Continuar
 - **Pointer lock (gh83)**: não tenta capturar o mouse logo após Esc (evita `SecurityError` no Chrome); promise tratada; hint “Clique para mirar”
 
