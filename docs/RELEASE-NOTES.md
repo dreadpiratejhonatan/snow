@@ -6,6 +6,10 @@ Documentação completa: [`docs/V1-OFICIAL.md`](docs/V1-OFICIAL.md) · Tag Git: 
 
 ## Atualizações recentes (pós-v1.0)
 
+### [gh90] — HUD mobile sem sobreposição (26 jul 2026)
+- Tutorial, barras de vida/frio, hotbar e controles touch não se empilham mais no celular
+- Hotbar de armas começa fechada no touch (abre em **⋯ → 🎒**)
+
 ### [gh89] — Roster e solo sazonal (26 jul 2026)
 - Removidos **Neymar** e **MEGA BRAIN** do seletor (ficam Natan, Jorge Bolado, Caio, Lorenzo e ZÉ)
 - **Solo e vegetação** mudam de cor com as estações (primavera/verão/outono/inverno), também no desktop
