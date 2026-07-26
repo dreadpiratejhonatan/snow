@@ -517,17 +517,8 @@ export const CONFIG = {
       skin: 0xf0d4b8,
       tie: 0x2a1a10,
     },
-    herobrine: {
-      id: "herobrine",
-      name: "HEROBRINE",
-      face: "faces/herobrine.png",
-      suit: 0x1a2a1a,
-      shirt: 0x3a6a5a,
-      skin: 0xe8d4b8,
-      tie: 0x0a1810,
-    },
   },
-  skinOrder: ["natan", "jhonatan", "jorge", "caio", "lorenzo", "ze", "herobrine"],
+  skinOrder: ["natan", "jhonatan", "jorge", "caio", "lorenzo", "ze"],
   /** IDs antigos → personagem (localStorage / saves). */
   skinAlias: {
     classic: "natan",
@@ -538,8 +529,6 @@ export const CONFIG = {
     ghost: "natan",
     rita: "natan",
     bruno: "natan",
-    jonathan: "herobrine",
-    jonathan_herobrine: "herobrine",
   },
   weapons: {
     fists: {
