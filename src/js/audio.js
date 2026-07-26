@@ -89,11 +89,53 @@ export class Ambience {
   }
 
   /**
+   * Desbloqueio SÍNCRONO no gesto do usuário (Android Chrome / mobile).
+   * Não pode depender de await nem do mutex de start() — cada toque precisa
+   * chamar ctx.resume() dentro da stack do gesto atual.
+   */
+  unlockFromGesture() {
+    const c = ensureContext();
+    if (!c) return false;
+    if (c.state === "suspended") {
+      try {
+        // sem await: precisa ficar na stack do pointerdown/touchstart
+        const p = c.resume();
+        if (p && typeof p.catch === "function") p.catch(() => {});
+      } catch {
+        /* ainda bloqueado */
+      }
+    }
+    // “prime” silencioso — força a pipeline de áudio no Android
+    try {
+      const buf = c.createBuffer(1, 1, c.sampleRate || 44100);
+      const src = c.createBufferSource();
+      src.buffer = buf;
+      src.connect(c.destination);
+      src.start(0);
+    } catch {
+      /* ignore */
+    }
+    // Continua o boot (vento/trilha) sem bloquear o gesto
+    void this.start();
+    return c.state === "running";
+  }
+
+  /**
    * Precisa ser chamado a partir de um gesto real (click/touch).
    * Eventos sintéticos (CustomEvent) NÃO desbloqueiam o AudioContext.
    * @returns {Promise<boolean>}
    */
   async start() {
+    // Sempre tenta resume síncrono — mesmo com start() em voo
+    try {
+      const c = ensureContext();
+      if (c?.state === "suspended") {
+        const p = c.resume();
+        if (p && typeof p.catch === "function") p.catch(() => {});
+      }
+    } catch {
+      /* ignore */
+    }
     if (this._starting) return this._starting;
     this._starting = this._startInner().finally(() => {
       this._starting = null;
@@ -126,7 +168,8 @@ export class Ambience {
     lowFilter.type = "lowpass";
     lowFilter.frequency.value = 240;
     this.windLow = ctx.createGain();
-    this.windLow.gain.value = 0.014; // trilha sobressai no celular
+    // Um pouco mais presente no mobile — senão parece “sem som”
+    this.windLow.gain.value = 0.028;
     low.connect(lowFilter).connect(this.windLow).connect(master);
     low.start();
 
@@ -139,7 +182,7 @@ export class Ambience {
     this.whistleFilter.frequency.value = 760;
     this.whistleFilter.Q.value = 7;
     this.windHigh = ctx.createGain();
-    this.windHigh.gain.value = 0.004;
+    this.windHigh.gain.value = 0.01;
     high.connect(this.whistleFilter).connect(this.windHigh).connect(master);
     high.start();
 
