@@ -34,6 +34,7 @@ export class World {
     this.waterLevel = CONFIG.world.waterLevel;
     this.colliders = []; // troncos/rochas/base: { x, z, y, r }
     this.trees = [];
+    this.snowCaps = []; // neve do telhado etc. (visibilidade por estação)
     this.diff = getDifficulty("medium");
     this._diffSpawnScaled = false;
     this._diffLootThinned = false;
@@ -501,14 +502,17 @@ export class World {
       this.snow.visible = snowMul > 0.04;
       this.snow.material.opacity = Math.max(0.08, 0.9 * snowMul);
     }
-    // caps de neve nas árvores só no inverno (e quase)
-    if (this.snowCapMat && this.trees) {
-      const showCaps = snowMul > 0.45;
+    // caps de neve (árvores + telhado) só com neve de verdade
+    const showCaps = snowMul > 0.45;
+    if (this.trees) {
       for (const tree of this.trees) {
         tree.traverse((m) => {
           if (m.isMesh && m.material === this.snowCapMat) m.visible = showCaps;
         });
       }
+    }
+    for (const cap of this.snowCaps || []) {
+      if (cap) cap.visible = showCaps;
     }
   }
 
@@ -849,14 +853,17 @@ export class World {
     const body = new THREE.Mesh(new THREE.BoxGeometry(4, 2.6, 3.2), this.woodMat);
     body.position.y = 1.3;
     g.add(body);
-    const roof = new THREE.Mesh(new THREE.ConeGeometry(3.2, 1.7, 4), this.woodDarkMat);
+    // neve filha do telhado (mesmo eixo) — evita “tampa” branca flutuando
+    const roof = new THREE.Group();
     roof.position.y = 3.35;
     roof.rotation.y = Math.PI / 4;
+    const roofWood = new THREE.Mesh(new THREE.ConeGeometry(3.2, 1.7, 4), this.woodDarkMat);
+    roof.add(roofWood);
+    const roofSnow = new THREE.Mesh(new THREE.ConeGeometry(2.95, 1.52, 4), this.snowCapMat);
+    roofSnow.position.y = 0.14; // tip quase alinhado ao da madeira
+    roof.add(roofSnow);
     g.add(roof);
-    const roofSnow = new THREE.Mesh(new THREE.ConeGeometry(2.4, 0.7, 4), this.snowCapMat);
-    roofSnow.position.y = 4.05;
-    roofSnow.rotation.y = Math.PI / 4;
-    g.add(roofSnow);
+    this.snowCaps.push(roofSnow);
     const door = new THREE.Mesh(new THREE.BoxGeometry(0.9, 1.7, 0.08), this.woodDarkMat);
     door.position.set(0.8, 0.85, 1.62);
     g.add(door);
