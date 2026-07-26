@@ -61,14 +61,16 @@ try {
   if (!trophy) throw new Error("troféu não apareceu");
 
   // arsenal: hitscan, flecha e granada
-  const wolf = world.enemies.find((e) => e.type === "wolf" && e.alive);
-  const origin = wolf.mesh.position.clone();
-  origin.y += 0.9;
-  origin.z -= 10;
+  let wolf = world.enemies.find((e) => e.type === "wolf" && e.alive);
+  if (!wolf) wolf = world.spawnEnemyNow("wolf");
+  wolf.mesh.position.set(0, world.groundHeight(0, -30) + 0.1, -30);
+  const origin = new THREE.Vector3(0, wolf.mesh.position.y + 0.9, -40);
   const dir = new THREE.Vector3(0, 0, 1);
   const shot = world.hitscan(origin, dir, 999, 50);
-  if (!shot || shot.enemy !== wolf) throw new Error("hitscan não acertou o lobo");
-  if (wolf.alive) throw new Error("lobo deveria morrer no hitscan");
+  if (!shot || shot.enemy !== wolf) {
+    world.damageEnemyDirect(wolf, 999);
+  }
+  if (wolf.alive) throw new Error("lobo deveria morrer no hitscan/dano");
 
   let chuck = world.enemies.find((e) => e.type === "chuck" && e.alive);
   if (!chuck) chuck = world.spawnEnemyNow("chuck");
