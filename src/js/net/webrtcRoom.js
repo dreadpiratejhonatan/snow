@@ -484,10 +484,14 @@ export class WebRtcRoom {
     }
     this._outQueue.push(obj);
     if (this._outQueue.length > 16) {
-      // Mantém eventos/hello; descarta poses/snaps antigos
-      const events = this._outQueue.filter((m) => m.t === "event" || m.t === "hello");
-      const rest = this._outQueue.filter((m) => m.t !== "event" && m.t !== "hello");
-      this._outQueue = [...rest.slice(-(16 - Math.min(events.length, 8))), ...events.slice(-8)];
+      // Mantém eventos/hello/chat; descarta poses/snaps antigos
+      const keep = this._outQueue.filter(
+        (m) => m.t === "event" || m.t === "hello" || m.t === "chat"
+      );
+      const rest = this._outQueue.filter(
+        (m) => m.t !== "event" && m.t !== "hello" && m.t !== "chat"
+      );
+      this._outQueue = [...rest.slice(-(16 - Math.min(keep.length, 8))), ...keep.slice(-8)];
     }
     this._scheduleFlush();
   }
@@ -547,7 +551,13 @@ export class WebRtcRoom {
       console.warn("relay send", e);
       // requeue latest pose/snap only
       for (const m of batch) {
-        if (m.t === "pose" || m.t === "snap" || m.t === "hello" || m.t === "event") {
+        if (
+          m.t === "pose" ||
+          m.t === "snap" ||
+          m.t === "hello" ||
+          m.t === "event" ||
+          m.t === "chat"
+        ) {
           this._enqueueRelay(m);
         }
       }

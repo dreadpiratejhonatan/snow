@@ -28,7 +28,7 @@ Primeira versão **oficial** (`release/v1.0`, tag `v1.0.0`).
 
 ## [Unreleased]
 
-Trabalho na branch `develop` após `v1.0.0` (cache `gh50`).
+Trabalho na branch `develop` após `v1.0.0` (cache `gh51`).
 
 ### Added
 - Desafio do dia (seed UTC) + conquistas locais
@@ -39,6 +39,7 @@ Trabalho na branch `develop` após `v1.0.0` (cache `gh50`).
 - Co-op até 3 jogadores (relay HTTPS)
 - Host reconnect (`hostKey`) + guest reconnect (`guestKey` / `rejoinGuest`)
 - Status claros no menu (P2P / relay / host offline / sala sumiu)
+- Chat in-game estilo CS (`Y` / `Enter`) no co-op
 - TURN próprio via `window.NEVE_TURN` / `NEVE_ICE_SERVERS`
 - CI GitHub Actions (build + smokes)
 

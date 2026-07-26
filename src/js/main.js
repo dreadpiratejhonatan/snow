@@ -38,6 +38,7 @@ import {
 import { dailySeed, dailyLabel, isDailyMode, setDailyMode } from "./daily.js";
 import { unlockAchievement, listAchievements } from "./achievements.js";
 import { playBotoCutscene } from "./cutscene.js";
+import { GameChat } from "./chat.js";
 
 // Vinheta cinematográfica suave nas bordas da tela
 const VignetteShader = {
@@ -104,6 +105,7 @@ class Game {
     this.clock = new THREE.Clock();
     this.initThree();
     this.bindUI();
+    this.chat = new GameChat(this);
     window.addEventListener("beforeunload", () => this.persistSave());
     if (isTouchDevice()) {
       this.touch = new TouchControls(this.input);
@@ -1148,6 +1150,11 @@ class Game {
     const status = document.getElementById("score-status");
     const btn = document.getElementById("btn-submit-score");
     const name = (input?.value || "").trim() || "Sobrevivente";
+    try {
+      localStorage.setItem("nevePlayerName", name.slice(0, 16));
+    } catch {
+      /* ignore */
+    }
     const ms = this.speedrun.finalMs ?? this.speedrun.ms;
     if (btn) btn.disabled = true;
     if (status) {
@@ -1624,8 +1631,21 @@ class Game {
     );
 
     document.addEventListener("keydown", (e) => {
-      // Desktop: nunca roubar teclas enquanto o foco está num input (código co-op / nome)
+      // Desktop: nunca roubar teclas enquanto o foco está num input (código co-op / nome / chat)
       if (Input.isTypingTarget(e.target) || Input.isTypingNow()) return;
+      if (this.chat?.open) return;
+      // Y / Enter — chat estilo CS (U fica no look IJKL)
+      if (
+        (e.code === "KeyY" || e.code === "Enter" || e.code === "NumpadEnter") &&
+        this.state === "playing" &&
+        !this.helpOpen &&
+        !this.rankOpen &&
+        !this.releaseOpen
+      ) {
+        e.preventDefault();
+        this.chat?.begin("say");
+        return;
+      }
       if (e.code === "KeyT") {
         if (
           this.state === "playing" ||
@@ -1676,7 +1696,8 @@ class Game {
         this.state === "playing" &&
         !this.helpOpen &&
         !this.rankOpen &&
-        !this.releaseOpen
+        !this.releaseOpen &&
+        !this.chat?.open
       ) {
         this.requestPointerLock();
         this.speedrun.start();
@@ -1758,6 +1779,7 @@ class Game {
 
   pause() {
     if (this.state !== "playing") return;
+    this.chat?.close(false);
     this.state = "paused";
     this.speedrun.pause();
     this.persistSave();

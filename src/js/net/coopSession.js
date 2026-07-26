@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { CONFIG } from "../config.js";
 import { Player } from "../player.js";
 import { applySkinToPlayer } from "../skins.js";
 import {
@@ -74,11 +75,13 @@ export class CoopSession {
   onConnected() {
     this.ensureRemote();
     const skin = this.game.player.skinId || "natan";
+    const name =
+      this.game.chat?.displayName?.() || CONFIG.skins?.[skin]?.name || "Player";
     this.room.send({
       t: "hello",
       role: this.role,
       skin,
-      name: "Player",
+      name,
     });
     const via =
       this.room.transport === "http"
@@ -115,6 +118,10 @@ export class CoopSession {
     }
     if (msg.t === "snap" && this.isGuest) {
       this.applySnapshot(msg);
+      return;
+    }
+    if (msg.t === "chat") {
+      this.game.chat?.onRemote(msg);
       return;
     }
     if (msg.t === "event") {
