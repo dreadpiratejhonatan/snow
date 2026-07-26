@@ -28,11 +28,12 @@ Primeira versão **oficial** (`release/v1.0`, tag `v1.0.0`).
 
 ## [Unreleased]
 
-Trabalho na branch `develop` após `v1.0.0` (cache `gh62`).
+Trabalho na branch `develop` após `v1.0.0` (cache **`gh63`**).  
+Resumo narrativo: [`docs/DEVELOP-ATE-GH63.md`](docs/DEVELOP-ATE-GH63.md).
 
 ### Added
 - Desafio do dia (seed UTC) + conquistas locais
-- Inimigo pterodáctilo (IA flyer)
+- Inimigo pterodáctilo (IA flyer) + **raposa-da-neve**
 - Cutscene cinematográfica do Boto (caminho de câmera + Esc)
 - Ranking por temporada mensal (`Y-m`) + export JSON
 - Tickets admin: bulk status nos cards Abertos
@@ -44,10 +45,15 @@ Trabalho na branch `develop` após `v1.0.0` (cache `gh62`).
 - TURN próprio via `window.NEVE_TURN` / `NEVE_ICE_SERVERS` + `docs/TURN-VPS.md`
 - CI GitHub Actions (build + smokes)
 - Sussurros sintéticos bem esporádicos na ambiência (mais à noite)
-- Hotbar de armas estilo Minecraft (1 linha)
+- Hotbar de armas estilo Minecraft (1 linha); inventário abre ao jogar
 - Mira ADS (segurar botão direito): zoom FOV + vignette + ponto
-- Raposa-da-neve + whiteout de inverno
+- Winter whiteout (neve/névoa mais fortes no inverno)
 - OST ambient em arquivo (`music/*.wav` + `manifest.json`)
+- Sons de armas (tiro/melee/dry-fire/recarga) + puxar corda
+- Carga de arco/besta (segurar LMB → barra na mira → soltar atira mais forte)
+- Tutorial pulável (Esc / P / botão)
+- Aviso de munição crítica na HUD
+- Guia deploy HostGator atualizado + `scripts/prepare-hostgator-deploy.ps1`
 
 ### Changed
 - Difícil mais punitivo (loot/munição/frio/spawns)
@@ -55,3 +61,7 @@ Trabalho na branch `develop` após `v1.0.0` (cache `gh62`).
 - Munição mais escassa no mapa e nos drops
 - Hitscan/projéteis alinhados à crosshair
 - Trilha procedural ambient (baixa) + prioridade a arquivos em `music/`
+
+### Fixed
+- Placa branca flutuante no telhado da cabana (cone de neve)
+- Inventário de armas “sumido” (agora visível por padrão na partida)

@@ -3,6 +3,7 @@
 Sobrevivência 3D na neve no navegador (Three.js). Explore, colete suprimentos, enfrente criaturas e chefs, dispute o ranking e jogue co-op com um amigo.
 
 **Documentação completa da v1:** [`docs/V1-OFICIAL.md`](docs/V1-OFICIAL.md)  
+**Ciclo pós-v1 (até gh63):** [`docs/DEVELOP-ATE-GH63.md`](docs/DEVELOP-ATE-GH63.md)  
 **Changelog:** [`CHANGELOG.md`](CHANGELOG.md) · **Novidades in-game:** [`RELEASE-NOTES.md`](RELEASE-NOTES.md)
 
 | Jogar | URL |
@@ -70,6 +71,7 @@ npm run preview           # dist/ em :5180
 - **HostGator (seguro):** [`DEPLOY-SEGURO.md`](DEPLOY-SEGURO.md) — zip em `release/snow.zip`  
 - **GitHub Pages:** [`GITHUB-PAGES.md`](GITHUB-PAGES.md)  
 - **Co-op:** [`docs/COOP.md`](docs/COOP.md)  
+- **Pós-v1 / o que foi feito:** [`docs/DEVELOP-ATE-GH63.md`](docs/DEVELOP-ATE-GH63.md)  
 - **APIs:** [`docs/API.md`](docs/API.md)
 
 O pacote **não inclui** ranking/tickets vivos — preserve `data/` no servidor.
