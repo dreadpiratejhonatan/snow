@@ -514,15 +514,6 @@ export const CONFIG = {
       skin: 0xe8c8a8,
       tie: 0x2a1810,
     },
-    arctic: {
-      id: "arctic",
-      name: "Ártico",
-      face: "faces/arctic.png",
-      suit: 0x1a3a6a,
-      shirt: 0x2a6ab0,
-      skin: 0xf0dcc8,
-      tie: 0x0e2848,
-    },
     jorge: {
       id: "jorge",
       name: "Jorge Bolado",
@@ -560,10 +551,11 @@ export const CONFIG = {
       tie: 0x2a1a10,
     },
   },
-  skinOrder: ["natan", "arctic", "jorge", "caio", "lorenzo", "ze"],
+  skinOrder: ["natan", "jorge", "caio", "lorenzo", "ze"],
   /** IDs antigos → personagem (localStorage / saves). */
   skinAlias: {
     classic: "natan",
+    arctic: "natan",
     hunter: "jorge",
     night: "caio",
     blaze: "lorenzo",

@@ -45,7 +45,7 @@ Sobrevivência 3D na neve (Three.js no navegador). Explore, colete suprimentos, 
 
 ### Personagens
 
-Natan, Ártico, Jorge Bolado, Caio, Lorenzo, **ZÉ** — rostos em `faces/`, cards embaralhados no picker.
+Natan, Jorge Bolado, Caio, Lorenzo, **ZÉ** — rostos em `faces/`, cards embaralhados no picker.
 
 ### Dificuldade
 
