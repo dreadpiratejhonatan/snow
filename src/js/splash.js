@@ -28,6 +28,15 @@ function probeSlide(img) {
   });
 }
 
+/** Esconde o launcher imediatamente (ex.: modo demo). */
+export function dismissSplash() {
+  const el = document.getElementById("splash");
+  if (!el) return;
+  el.classList.remove("is-hiding");
+  el.hidden = true;
+  el.setAttribute("aria-hidden", "true");
+}
+
 export function runSplash({
   minMs = 4200,
   maxMs = 10000,
