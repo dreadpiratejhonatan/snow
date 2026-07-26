@@ -1,8 +1,9 @@
-# Auto-merge Cursor Cloud Agent PRs into develop, then deploy production.
+# Auto-merge Cursor Cloud Agent PRs into develop, then kick production deploys.
 # Phone / cloud-agent branches: cursor/**
 #
-# Note: merges done with GITHUB_TOKEN do not trigger other workflows, so this
-# file also runs HostGator + GitHub Pages deploy after a successful merge.
+# Merges with GITHUB_TOKEN do not create push-triggered workflow runs, but
+# workflow_dispatch is an allowed exception — so we dispatch the existing
+# Deploy HostGator + Deploy GitHub Pages workflows after merge.
 name: Auto-merge Cursor PRs
 
 on:
@@ -14,8 +15,7 @@ permissions:
   contents: write
   pull-requests: write
   checks: read
-  pages: write
-  id-token: write
+  actions: write
 
 concurrency:
   group: auto-merge-cursor-${{ github.event.pull_request.number }}
@@ -25,16 +25,11 @@ jobs:
   merge:
     if: startsWith(github.head_ref, 'cursor/')
     runs-on: ubuntu-latest
-    outputs:
-      merged: ${{ steps.merge.outputs.merged }}
     steps:
       - name: Checkout (needed for gh)
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      - name: Retarget to develop, wait for CI, squash-merge
-        id: merge
+      - name: Retarget to develop, wait for CI, squash-merge, dispatch deploys
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR: ${{ github.event.pull_request.number }}
@@ -58,16 +53,14 @@ jobs:
           sleep 10
           deadline=$((SECONDS + 900))
           while [ "$SECONDS" -lt "$deadline" ]; do
-            # Use Checks API — avoid parsing prose from `gh pr checks`.
             json=$(gh api "repos/${REPO}/commits/${HEAD_SHA}/check-runs" --paginate)
-            echo "$json" | jq -r '.check_runs[] | "\(.name)\t\(.status)\t\(.conclusion // "-")\t\(.app.name // "-")"' \
-              | grep -viE '^(merge|deploy-hostgator|build-pages|deploy-pages)\t' \
+            echo "$json" | jq -r '.check_runs[] | "\(.name)\t\(.status)\t\(.conclusion // "-")"' \
+              | grep -viE '^(merge)\t' \
               | tee /tmp/checks.tsv || true
 
-            # Fail if any non-auto-merge check concluded failure/cancelled.
             if awk -F'\t' '
               BEGIN { pending=0; failed=0; seen=0 }
-              $1 ~ /^(merge|deploy-hostgator|build-pages|deploy-pages)$/ { next }
+              $1 == "merge" { next }
               {
                 seen=1
                 if ($2 != "completed") pending=1
@@ -93,7 +86,6 @@ jobs:
                 sleep 15
                 continue
               fi
-              # rc 4: no external checks yet
               if [ "$SECONDS" -lt 180 ]; then
                 echo "CI not registered yet — waiting…"
                 sleep 15
@@ -111,85 +103,9 @@ jobs:
 
           echo "Squash-merging PR #$PR into develop"
           gh pr merge "$PR" --squash --delete-branch --subject "Auto-merge cursor PR #${PR}"
-          echo "merged=true" >> "$GITHUB_OUTPUT"
 
-  deploy-hostgator:
-    needs: merge
-    if: needs.merge.outputs.merged == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout develop
-        uses: actions/checkout@v4
-        with:
-          ref: develop
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-          cache: npm
-
-      - name: Install
-        run: npm ci
-
-      - name: Build
-        run: npm run build
-
-      - name: FTP upload (preserve live data/)
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
-        with:
-          server: ${{ secrets.HOSTGATOR_FTP_HOST }}
-          username: ${{ secrets.HOSTGATOR_FTP_USER }}
-          password: ${{ secrets.HOSTGATOR_FTP_PASSWORD }}
-          local-dir: ./release/hostgator-snow/
-          server-dir: ${{ secrets.HOSTGATOR_FTP_DIR }}
-          dangerous-clean-slate: false
-          exclude: |
-            **/.git*
-            **/.git*/**
-            data/leaderboard.json
-            data/tickets.json
-            data/tickets-admin.key
-            data/tickets-rate.json
-            data/rooms/**
-            data/rooms/**/*
-
-  # upload-pages-artifact and deploy-pages must be separate jobs.
-  build-pages:
-    needs: merge
-    if: needs.merge.outputs.merged == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout develop
-        uses: actions/checkout@v4
-        with:
-          ref: develop
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-          cache: npm
-
-      - name: Install
-        run: npm ci
-
-      - name: Build
-        run: npm run build
-
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: dist
-
-  deploy-pages:
-    needs: build-pages
-    if: needs.build-pages.result == 'success'
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+          # workflow_dispatch is allowed to start new runs even from GITHUB_TOKEN.
+          echo "Dispatching production deploys on develop…"
+          gh workflow run "Deploy HostGator" --ref develop
+          gh workflow run "Deploy GitHub Pages" --ref develop
+          echo "Done — watch Actions for HostGator + Pages."
