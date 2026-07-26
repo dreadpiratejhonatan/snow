@@ -4,6 +4,7 @@ import * as THREE from "three";
 import { World } from "../src/js/world.js";
 import { Player } from "../src/js/player.js";
 import { CONFIG } from "../src/js/config.js";
+import { SecretDungeon } from "../src/js/dungeon.js";
 
 try {
   const scene = new THREE.Scene();
@@ -163,6 +164,29 @@ try {
   }
   player.orbitYaw = 0;
   console.log("Aim/crosshair OK");
+
+  // Dungeon secreta: entrada seeded fora do gelo, longe da base/spawn; bolso com chão próprio
+  const dungeon = new SecretDungeon(world, scene);
+  const ep = dungeon.entrancePos;
+  if (!ep) throw new Error("dungeon: entrada não foi colocada");
+  if (world.getHeight(ep.x, ep.z) < world.waterLevel + 1) {
+    throw new Error("dungeon: entrada caiu no gelo/lago");
+  }
+  if (Math.hypot(ep.x - world.basePos.x, ep.z - world.basePos.z) < 40) {
+    throw new Error("dungeon: entrada perto demais da base");
+  }
+  if (Math.hypot(ep.x, ep.z) < 50) throw new Error("dungeon: entrada perto demais do spawn");
+  if (world.groundHeight(400, 0) !== 30) throw new Error("dungeon: chão da arena não responde");
+  if (world.isOnIce(400, 0)) throw new Error("dungeon: arena não deveria ser gelo");
+  const dwolf = world.spawnEnemyAt("wolf", 400, 8, { dungeon: true });
+  if (!dwolf?.dungeon) throw new Error("dungeon: spawnEnemyAt falhou");
+  if (!CONFIG.enemies.dungeon_boss || CONFIG.enemies.dungeon_boss.count !== 0) {
+    throw new Error("dungeon: dungeon_boss deveria existir com count 0");
+  }
+  if (!CONFIG.weapons.relic || !CONFIG.weaponOrder.includes("relic")) {
+    throw new Error("dungeon: arma relic ausente");
+  }
+  console.log("Dungeon OK — entrada:", ep.x.toFixed(1), ep.z.toFixed(1));
 
   for (let i = 0; i < 60; i++) {
     world.update(0.016, i * 0.016, 0.5, 0.1, player.position);

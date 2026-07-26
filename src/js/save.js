@@ -110,6 +110,8 @@ export function captureGameState(game) {
     speedrunMs: game.speedrun?.ms ?? 0,
     speedrunStarted: !!game.speedrun?.started,
     difficulty: game.difficultyId || "medium",
+    // dungeon secreta: só a flag persiste (morrer/sair no meio reseta a run)
+    dungeonCleared: !!game.dungeon?.cleared,
   };
 }
 
@@ -196,6 +198,8 @@ export function applyGameState(game, data) {
     game.speedrun.started = true;
     game.speedrun.running = false;
   }
+
+  if (data.dungeonCleared) game.dungeon?.markCleared();
 
   game.hud.setHealth(game.health, s.maxHealth);
   game.hud.setWarmth(game.warmth, s.maxWarmth);

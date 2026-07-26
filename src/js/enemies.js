@@ -776,7 +776,8 @@ export class Enemy {
     if (this.knockVel.lengthSq() > 0.01) {
       const nx = m.position.x + this.knockVel.x * dt;
       const nz = m.position.z + this.knockVel.z * dt;
-      const bounds = this.world.bounds;
+      // inimigos da dungeon vivem no bolso fora do mapa (paredes da arena seguram)
+      const bounds = this.dungeon ? 1e9 : this.world.bounds;
       m.position.x = THREE.MathUtils.clamp(nx, -bounds, bounds);
       m.position.z = THREE.MathUtils.clamp(nz, -bounds, bounds);
       m.position.y = this.world.groundHeight(m.position.x, m.position.z);
@@ -1303,7 +1304,7 @@ export class Enemy {
 
   moveToward(target, speed, dt, elapsed) {
     const m = this.mesh;
-    const bounds = this.world.bounds;
+    const bounds = this.dungeon ? 1e9 : this.world.bounds;
     const dx = target.x - m.position.x;
     const dz = target.z - m.position.z;
     const d = Math.hypot(dx, dz);
