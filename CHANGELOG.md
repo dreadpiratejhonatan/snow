@@ -28,7 +28,7 @@ Primeira versão **oficial** (`release/v1.0`, tag `v1.0.0`).
 
 ## [Unreleased]
 
-Trabalho na branch `develop` após `v1.0.0` (cache `gh48`).
+Trabalho na branch `develop` após `v1.0.0` (cache `gh50`).
 
 ### Added
 - Desafio do dia (seed UTC) + conquistas locais
@@ -36,9 +36,12 @@ Trabalho na branch `develop` após `v1.0.0` (cache `gh48`).
 - Cutscene leve ao spawn do Boto
 - Ranking por temporada mensal (`Y-m`) + export JSON
 - Tickets admin: bulk status nos cards Abertos
-- Co-op até 3 jogadores (relay HTTPS); host reconnect (`hostKey` / `rejoinHost`)
+- Co-op até 3 jogadores (relay HTTPS)
+- Host reconnect (`hostKey`) + guest reconnect (`guestKey` / `rejoinGuest`)
+- Status claros no menu (P2P / relay / host offline / sala sumiu)
 - TURN próprio via `window.NEVE_TURN` / `NEVE_ICE_SERVERS`
 - CI GitHub Actions (build + smokes)
 
 ### Changed
 - Difícil mais punitivo (loot/munição/frio/spawns)
+- Cast só amigos (Rita/Bruno removidos)

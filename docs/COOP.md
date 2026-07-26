@@ -15,10 +15,19 @@
 | 2 jogadores | WebRTC P2P → failover relay | Padrão |
 | 3 jogadores | **Relay HTTPS** obrigatório | Estrela no servidor (`relayMode`) |
 
-## Host reconnect
+## Reconnect (mesmo aparelho)
 
-Ao criar a sala, o host recebe `hostKey` (guardada em `sessionStorage` neste aparelho).  
-Se a aba cair: **Com amigos → Reconectar como host** com o mesmo código — `action=rejoinHost`.
+| Papel | Chave | Botão no menu |
+|-------|--------|----------------|
+| Host | `hostKey` em `sessionStorage` | **Reconectar como host** → `rejoinHost` |
+| Guest | `guestKey` em `sessionStorage` | **Reconectar como convidado** → `rejoinGuest` |
+
+O código da última sala fica em `neveLastRoom` (preenche o campo).  
+Não é possível “virar host” em outro PC — a chave não sai do browser.
+
+## Status no menu
+
+Mensagens típicas: “Conectando P2P…”, “Relay ativo (via servidor)…”, “Host parece offline…”, “Sala sumiu…”.
 
 ## TURN próprio (opcional)
 
@@ -41,7 +50,7 @@ Ver `src/js/net/iceConfig.js`.
 
 No cPanel, confirme:
 
-1. Existe `public_html/snow/api/signal.php` (com `ping`, `rejoinHost`, `relay`, `maxPlayers`)
+1. Existe `public_html/snow/api/signal.php` (com `ping`, `rejoinHost`, `rejoinGuest`, `relay`, `maxPlayers`)
 2. Pasta `public_html/snow/data/rooms/` com permissão **755/775** gravável
 3. Health check (POST JSON): `{"action":"ping"}` → `ok` + `roomsWritable`
 4. Create smoke: `{"action":"create","seed":1,"maxPlayers":2}` → `code` + `hostKey`
@@ -53,7 +62,7 @@ No cPanel, confirme:
 - Máx. **3** jogadores por sala (3P só via relay)
 - Relay HTTPS tem latência maior que P2P
 - Salas expiram em **30 min** (TTL renovado enquanto há poll)
-- `hostKey` só existe no browser que criou a sala
+- `hostKey` / `guestKey` só no browser que criou / entrou
 
 ## Robustez
 

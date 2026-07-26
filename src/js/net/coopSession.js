@@ -30,7 +30,11 @@ export class CoopSession {
 
     room.onMessage = (msg) => this.onMessage(msg);
     room.onClose = (why) => {
-      game.hud?.showMsg(`Co-op desconectado (${why})`, 4000);
+      const tip =
+        this.isHost
+          ? "Reinicie e use “Reconectar como host” com o mesmo código."
+          : "Reinicie e use “Reconectar como convidado” (mesmo aparelho).";
+      game.hud?.showMsg(`Co-op caiu (${why}). ${tip}`, 7000);
       this.disposeRemote();
     };
   }
@@ -77,12 +81,14 @@ export class CoopSession {
       name: "Player",
     });
     const via =
-      this.room.transport === "http" ? " (via servidor — firewall OK)" : "";
+      this.room.transport === "http"
+        ? " Relay HTTPS (firewall OK, um pouco mais de lag)."
+        : " P2P direto.";
     this.game.hud?.showMsg(
       this.isHost
         ? `Co-op ativo — sala ${this.code}. Você é o host.${via}`
-        : `Co-op ativo — conectado ao host.${via}`,
-      4500
+        : `Co-op ativo — ligado ao host.${via}`,
+      5000
     );
   }
 

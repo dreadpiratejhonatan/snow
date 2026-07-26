@@ -35,6 +35,23 @@ async function main() {
 
   const joined = await post({ action: "join", code });
   assert(joined.code === code, "join code mismatch");
+  // guestKey só existe após deploy do PHP novo — skip se API antiga
+  if (joined.guestKey) {
+    const reGuest = await post({
+      action: "rejoinGuest",
+      code,
+      guestKey: joined.guestKey,
+    });
+    assert(reGuest.ok && reGuest.role === "guest", "rejoinGuest falhou");
+  }
+  if (created.hostKey) {
+    const reHost = await post({
+      action: "rejoinHost",
+      code,
+      hostKey: created.hostKey,
+    });
+    assert(reHost.ok && reHost.role === "host", "rejoinHost falhou");
+  }
 
   await post({
     action: "publish",

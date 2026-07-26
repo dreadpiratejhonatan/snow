@@ -248,6 +248,7 @@ class Game {
     const btnBack = document.getElementById("btn-coop-back");
     const btnCreate = document.getElementById("btn-coop-create");
     const btnRehost = document.getElementById("btn-coop-rehost");
+    const btnRejoin = document.getElementById("btn-coop-rejoin");
     const btnJoin = document.getElementById("btn-coop-join");
     const btnPaste = document.getElementById("btn-coop-paste");
     const maxPlayersEl = document.getElementById("coop-max-players");
@@ -278,15 +279,23 @@ class Game {
       if (btnFriends) btnFriends.disabled = false;
       if (btnSolo) btnSolo.disabled = false;
       if (btnDaily) btnDaily.disabled = false;
+      if (btnRehost) btnRehost.disabled = false;
+      if (btnRejoin) btnRejoin.disabled = false;
     };
     const showFriends = () => {
       if (stepMode) stepMode.hidden = true;
       if (stepFriends) stepFriends.hidden = false;
       if (status) {
         status.textContent =
-          "Crie a sala ou cole o código. 3 jogadores usam sync via servidor.";
+          "Crie a sala ou cole o código. Status: P2P → se falhar, relay HTTPS. 3P = só relay.";
       }
       if (joinBlock) joinBlock.hidden = false;
+      try {
+        const last = sessionStorage.getItem("neveLastRoom") || "";
+        if (last && codeInput && !codeInput.value) codeInput.value = last;
+      } catch {
+        /* ignore */
+      }
       requestAnimationFrame(() => this.focusCoopCodeInput());
     };
     showMode();
@@ -304,6 +313,7 @@ class Game {
         btnBack?.removeEventListener("click", onBack);
         btnCreate?.removeEventListener("click", onCreate);
         btnRehost?.removeEventListener("click", onRehost);
+        btnRejoin?.removeEventListener("click", onRejoin);
         btnJoin?.removeEventListener("click", onJoin);
         btnCopy?.removeEventListener("click", onCopy);
       };
@@ -328,8 +338,9 @@ class Game {
         if (btnPaste) btnPaste.disabled = true;
         if (btnBack) btnBack.disabled = true;
         if (btnRehost) btnRehost.disabled = true;
+        if (btnRejoin) btnRejoin.disabled = true;
         if (joinBlock) joinBlock.hidden = true;
-        if (status) status.textContent = "Criando sala…";
+        if (status) status.textContent = "Criando sala no servidor…";
         try {
           const room = new WebRtcRoom();
           room.onStatus = (m) => {
@@ -355,6 +366,7 @@ class Game {
           if (btnPaste) btnPaste.disabled = false;
           if (btnBack) btnBack.disabled = false;
           if (btnRehost) btnRehost.disabled = false;
+          if (btnRejoin) btnRejoin.disabled = false;
           if (joinBlock) joinBlock.hidden = false;
           this.focusCoopCodeInput();
         }
@@ -372,12 +384,17 @@ class Game {
           /* ignore */
         }
         if (!hostKey) {
-          if (status) status.textContent = "hostKey não encontrada neste aparelho (só quem criou a sala).";
+          if (status) {
+            status.textContent =
+              "Chave de host não encontrada neste aparelho — só quem criou a sala pode reconectar.";
+          }
           return;
         }
         btnCreate.disabled = true;
         btnJoin.disabled = true;
         if (btnRehost) btnRehost.disabled = true;
+        if (btnRejoin) btnRejoin.disabled = true;
+        if (status) status.textContent = "Reconectando host…";
         try {
           const room = new WebRtcRoom();
           room.onStatus = (m) => {
@@ -392,6 +409,48 @@ class Game {
           btnCreate.disabled = false;
           btnJoin.disabled = false;
           if (btnRehost) btnRehost.disabled = false;
+          if (btnRejoin) btnRejoin.disabled = false;
+        }
+      };
+      const onRejoin = async () => {
+        const code = (codeInput?.value || codeDisplay?.textContent || "").trim().toUpperCase();
+        if (code.length < 4) {
+          if (status) status.textContent = "Informe o código da sala para reconectar o convidado.";
+          return;
+        }
+        let guestKey = "";
+        try {
+          guestKey = sessionStorage.getItem("neveGuestKey:" + code) || "";
+        } catch {
+          /* ignore */
+        }
+        if (!guestKey) {
+          if (status) {
+            status.textContent =
+              "Chave de convidado não encontrada — só no aparelho que entrou antes. Use Entrar de novo.";
+          }
+          return;
+        }
+        btnCreate.disabled = true;
+        btnJoin.disabled = true;
+        if (btnRehost) btnRehost.disabled = true;
+        if (btnRejoin) btnRejoin.disabled = true;
+        if (status) status.textContent = "Reconectando convidado…";
+        try {
+          const room = new WebRtcRoom();
+          room.onStatus = (m) => {
+            if (status) status.textContent = m;
+          };
+          const joined = await room.resumeGuest(code, guestKey);
+          await this.waitForRoomOpen(room);
+          cleanup();
+          resolve({ mode: "guest", room, seed: joined.seed, code: joined.code });
+        } catch (err) {
+          if (status) status.textContent = err.message || "Falha ao reconectar convidado";
+          btnCreate.disabled = false;
+          btnJoin.disabled = false;
+          if (btnRehost) btnRehost.disabled = false;
+          if (btnRejoin) btnRejoin.disabled = false;
         }
       };
       const onJoin = async () => {
@@ -405,8 +464,10 @@ class Game {
         btnJoin.disabled = true;
         if (btnPaste) btnPaste.disabled = true;
         if (btnBack) btnBack.disabled = true;
+        if (btnRehost) btnRehost.disabled = true;
+        if (btnRejoin) btnRejoin.disabled = true;
         if (codeInput) codeInput.disabled = true;
-        if (status) status.textContent = "Entrando…";
+        if (status) status.textContent = "Entrando na sala…";
         try {
           const room = new WebRtcRoom();
           room.onStatus = (m) => {
@@ -422,6 +483,8 @@ class Game {
           btnJoin.disabled = false;
           if (btnPaste) btnPaste.disabled = false;
           if (btnBack) btnBack.disabled = false;
+          if (btnRehost) btnRehost.disabled = false;
+          if (btnRejoin) btnRejoin.disabled = false;
           if (codeInput) codeInput.disabled = false;
           this.focusCoopCodeInput();
         }
@@ -474,6 +537,7 @@ class Game {
       btnBack?.addEventListener("click", onBack);
       btnCreate?.addEventListener("click", onCreate);
       btnRehost?.addEventListener("click", onRehost);
+      btnRejoin?.addEventListener("click", onRejoin);
       btnJoin?.addEventListener("click", onJoin);
     });
   }
@@ -488,7 +552,7 @@ class Game {
         room.close("timeout");
         reject(
           new Error(
-            "Tempo esgotado na conexão. Confira o código e se a HostGator (api/signal.php) está no ar."
+            "Tempo esgotado. Confira o código, a rede e se a HostGator (api/signal.php) está atualizada."
           )
         );
       }, timeoutMs);
@@ -502,7 +566,11 @@ class Game {
       room.onClose = (why) => {
         clearTimeout(timer);
         prevClose?.(why);
-        reject(new Error(`Conexão fechada (${why}). Tente criar sala nova.`));
+        const hint =
+          why === "room-gone"
+            ? "Sala sumiu — peça ao host criar outra."
+            : `Conexão fechada (${why}). Tente Entrar de novo ou Reconectar.`;
+        reject(new Error(hint));
       };
     });
   }

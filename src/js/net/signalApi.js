@@ -20,6 +20,9 @@ function mapSignalError(status, errMsg) {
   if (status === 409 || /2 jogadores|cheia/i.test(msg)) {
     return "Sala cheia — peça ao host criar uma sala nova (ou tente de novo em alguns segundos).";
   }
+  if (status === 403 || /hostKey|guestKey/i.test(msg)) {
+    return "Chave de reconexão inválida — só funciona no mesmo aparelho que entrou antes.";
+  }
   if (status === 404 || /não encontrada|expirou/i.test(msg)) {
     return "Sala não encontrada ou expirou (30 min). Confira o código.";
   }
@@ -111,6 +114,14 @@ export async function rejoinHost(code, hostKey) {
     action: "rejoinHost",
     code: String(code || "").trim().toUpperCase(),
     hostKey: String(hostKey || ""),
+  });
+}
+
+export async function rejoinGuest(code, guestKey) {
+  return signalRequest({
+    action: "rejoinGuest",
+    code: String(code || "").trim().toUpperCase(),
+    guestKey: String(guestKey || ""),
   });
 }
 

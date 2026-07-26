@@ -237,6 +237,9 @@ if ($action === 'create') {
     'hostReady' => false,
     'guestJoined' => false,
     'hostOnline' => true,
+    'hostLastSeen' => time(),
+    'guestKey' => null,
+    'guestKeys' => [],
     'offer' => null,
     'answer' => null,
     'hostIce' => [],
@@ -275,6 +278,7 @@ if ($action === 'join') {
     $max = (int)($room['maxPlayers'] ?? 2);
     $guests = (int)($room['guestCount'] ?? 0);
     $maxGuests = max(1, $max - 1);
+    $guestKey = bin2hex(random_bytes(8));
     // Sala 2P: rejoin substitui guest. Sala 3P: até 2 guests via relay.
     if ($max <= 2) {
       if (!empty($room['guestJoined'])) {
@@ -290,18 +294,21 @@ if ($action === 'join') {
       }
       $room['guestJoined'] = true;
       $room['guestCount'] = 1;
+      $room['guestKey'] = $guestKey;
       $slot = 0;
     } else {
       if ($guests >= $maxGuests && empty($room['needsHostRestart'])) {
         return ['__error' => [409, 'Sala cheia (máx. ' . $max . ' jogadores)']];
       }
       if ($guests >= $maxGuests) {
-        // replace last slot
         $slot = $maxGuests - 1;
       } else {
         $slot = $guests;
         $room['guestCount'] = $guests + 1;
       }
+      if (!isset($room['guestKeys']) || !is_array($room['guestKeys'])) $room['guestKeys'] = [];
+      $room['guestKeys'][(string)$slot] = $guestKey;
+      $room['guestKey'] = $guestKey; // último guest (compat)
       $room['guestJoined'] = true;
       $room['relayMode'] = true;
       $room['needsHostRestart'] = false;
@@ -312,6 +319,7 @@ if ($action === 'join') {
       'seed' => $room['seed'],
       'role' => 'guest',
       'slot' => $slot,
+      'guestKey' => $guestKey,
       'maxPlayers' => $max,
       'relayMode' => !empty($room['relayMode']),
     ];
@@ -340,6 +348,8 @@ if ($action === 'rejoinHost') {
     $room['guestIceNextId'] = 1;
     $room['hostIce'] = [];
     $room['hostIceNextId'] = 1;
+    $room['relay'] = [];
+    $room['relayNextId'] = 1;
     if (($room['maxPlayers'] ?? 2) >= 3) $room['relayMode'] = true;
     return [
       'ok' => true,
@@ -348,6 +358,79 @@ if ($action === 'rejoinHost') {
       'role' => 'host',
       'hostKey' => $expected,
       'maxPlayers' => (int)($room['maxPlayers'] ?? 2),
+      'relayMode' => !empty($room['relayMode']),
+    ];
+  });
+  if (isset($out['__error'])) {
+    http_response_code($out['__error'][0]);
+    echo json_encode(['error' => $out['__error'][1]]);
+    exit;
+  }
+  echo json_encode($out);
+  exit;
+}
+
+if ($action === 'rejoinGuest') {
+  $path = room_path($roomsDir, $body['code'] ?? '');
+  $key = (string)($body['guestKey'] ?? '');
+  $out = mutate_room($path, function (&$room) use ($key) {
+    if ($key === '') {
+      return ['__error' => [403, 'guestKey inválida']];
+    }
+    $max = (int)($room['maxPlayers'] ?? 2);
+    $slot = 0;
+    $ok = false;
+    if ($max <= 2) {
+      $expected = (string)($room['guestKey'] ?? '');
+      if ($expected !== '' && hash_equals($expected, $key)) {
+        $ok = true;
+        $slot = 0;
+      }
+    } else {
+      $keys = is_array($room['guestKeys'] ?? null) ? $room['guestKeys'] : [];
+      foreach ($keys as $s => $gk) {
+        if (is_string($gk) && hash_equals($gk, $key)) {
+          $ok = true;
+          $slot = (int)$s;
+          break;
+        }
+      }
+      // compat: guestKey singular
+      if (!$ok) {
+        $expected = (string)($room['guestKey'] ?? '');
+        if ($expected !== '' && hash_equals($expected, $key)) {
+          $ok = true;
+          $slot = 0;
+        }
+      }
+    }
+    if (!$ok) {
+      return ['__error' => [403, 'guestKey inválida']];
+    }
+    $room['guestJoined'] = true;
+    $room['guestCount'] = max(1, (int)($room['guestCount'] ?? 1));
+    $room['answer'] = null;
+    $room['guestIce'] = [];
+    $room['guestIceNextId'] = 1;
+    $room['hostIce'] = [];
+    $room['hostIceNextId'] = 1;
+    $room['relay'] = [];
+    $room['relayNextId'] = 1;
+    if ($max <= 2) {
+      $room['needsHostRestart'] = true;
+      $room['relayMode'] = false;
+    } else {
+      $room['relayMode'] = true;
+      $room['needsHostRestart'] = false;
+    }
+    return [
+      'ok' => true,
+      'code' => $room['code'],
+      'seed' => $room['seed'],
+      'role' => 'guest',
+      'slot' => $slot,
+      'guestKey' => $key,
+      'maxPlayers' => $max,
       'relayMode' => !empty($room['relayMode']),
     ];
   });
@@ -488,12 +571,34 @@ if ($action === 'poll') {
   if ($relayAbs > $relayLast) $relayLast = $relayAbs;
   if ($relayLast < $sinceRelay) $relayLast = $sinceRelay;
 
+  // Host heartbeat leve: só se stale (>4s) — evita lock a cada poll
+  if ($role === 'host') {
+    $last = (int)($room['hostLastSeen'] ?? 0);
+    if (time() - $last >= 4) {
+      mutate_room($path, function (&$r) {
+        $r['hostOnline'] = true;
+        $r['hostLastSeen'] = time();
+        return ['ok' => true];
+      });
+      $room['hostOnline'] = true;
+    }
+  }
+
+  $hostOnline = !empty($room['hostOnline']);
+  $lastSeen = (int)($room['hostLastSeen'] ?? 0);
+  if ($lastSeen > 0 && time() - $lastSeen > 25) {
+    $hostOnline = false;
+  }
+
   echo json_encode([
     'ok' => true,
     'code' => $room['code'],
     'seed' => $room['seed'],
     'guestJoined' => !empty($room['guestJoined']),
     'hostReady' => !empty($room['hostReady']),
+    'hostOnline' => $hostOnline,
+    'maxPlayers' => (int)($room['maxPlayers'] ?? 2),
+    'guestCount' => (int)($room['guestCount'] ?? 0),
     'relayMode' => !empty($room['relayMode']),
     'needsHostRestart' => !empty($room['needsHostRestart']),
     'offer' => $room['offer'],
@@ -511,4 +616,4 @@ if ($action === 'poll') {
 }
 
 http_response_code(400);
-echo json_encode(['error' => 'Ação inválida. Use ping|create|join|rejoinHost|publish|poll|relay']);
+echo json_encode(['error' => 'Ação inválida. Use ping|create|join|rejoinHost|rejoinGuest|publish|poll|relay']);

@@ -186,9 +186,10 @@ Zip local típico: `release/snow.zip`
 
 ---
 
-## Limites conhecidos da v1.0
+## Limites conhecidos
 
-- Co-op: **2 jogadores**; se o host cair, a sessão acaba  
+- Co-op (develop+): até **3** jogadores; 3P só via relay HTTPS  
+- Host/guest podem **reconectar no mesmo aparelho** (`hostKey` / `guestKey`) — não mid-run automático  
 - Relay HTTPS funciona atrás de firewall, com latência maior que P2P  
 - TURN público (openrelay) é best-effort; o fallback confiável é o relay HostGator  
 - Não há conta de usuário — ranking/tickets são abertos (com moderação manual de tickets)  

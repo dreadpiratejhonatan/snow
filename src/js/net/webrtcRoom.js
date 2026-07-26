@@ -1,4 +1,12 @@
-import { createRoom, joinRoom, rejoinHost, publishSignal, pollRoom, relaySend } from "./signalApi.js";
+import {
+  createRoom,
+  joinRoom,
+  rejoinHost,
+  rejoinGuest,
+  publishSignal,
+  pollRoom,
+  relaySend,
+} from "./signalApi.js";
 import { buildIceServers } from "./iceConfig.js";
 
 /** Após o guest entrar, se o DataChannel não abrir, usa relay HTTPS. */
@@ -51,6 +59,17 @@ export class WebRtcRoom {
     this.onMessage = null;
     this.onClose = null;
     this.onCode = null;
+    this._hostGoneWarned = false;
+  }
+
+  _rememberRoom() {
+    try {
+      if (this.code) sessionStorage.setItem("neveLastRoom", this.code);
+      if (this.hostKey) sessionStorage.setItem("neveHostKey:" + this.code, this.hostKey);
+      if (this.guestKey) sessionStorage.setItem("neveGuestKey:" + this.code, this.guestKey);
+    } catch {
+      /* ignore */
+    }
   }
 
   _status(msg) {
@@ -66,16 +85,12 @@ export class WebRtcRoom {
     this.maxPlayers = data.maxPlayers || 2;
     this.slot = 0;
     this.peerId = "host";
-    try {
-      if (this.hostKey) sessionStorage.setItem("neveHostKey:" + this.code, this.hostKey);
-    } catch {
-      /* ignore */
-    }
+    this._rememberRoom();
     this.onCode?.(this.code);
     this._status(
       this.maxPlayers >= 3
-        ? `Sala ${this.code} (até 3) — sync via servidor.`
-        : `Sala criada. Código ${this.code} — peça ao amigo para Entrar.`
+        ? `Sala ${this.code} (até 3) — sync via servidor. Aguardando amigos…`
+        : `Sala criada. Código ${this.code} — peça ao amigo Entrar.`
     );
     await this._setupFlow();
     this._startPoll();
@@ -93,15 +108,21 @@ export class WebRtcRoom {
     this.slot = data.slot ?? 0;
     this.peerId = `g${this.slot}`;
     this.maxPlayers = data.maxPlayers || 2;
+    this.guestKey = data.guestKey || null;
     this._guestJoined = true;
-    this._status(`Entrou na sala ${this.code}. Conectando…`);
+    this._rememberRoom();
+    this._status(
+      data.relayMode || this.maxPlayers >= 3
+        ? `Entrou na sala ${this.code}. Ligando via servidor…`
+        : `Entrou na sala ${this.code}. Conectando P2P…`
+    );
     await this._setupFlow();
     this._armFailover();
     this._startPoll();
     if (data.relayMode || this.maxPlayers >= 3) {
       this._enableHttpRelay("max3");
     }
-    return { code: this.code, seed: this.seed, slot: this.slot };
+    return { code: this.code, seed: this.seed, slot: this.slot, guestKey: this.guestKey };
   }
 
   /** Host caiu e voltou com a mesma hostKey. */
@@ -117,12 +138,37 @@ export class WebRtcRoom {
     this._closed = false;
     this._httpReady = false;
     this._openFired = false;
-    this._status(`Host reconectado na sala ${this.code}.`);
+    this._rememberRoom();
+    this._status(`Host reconectado na sala ${this.code}. Aguardando amigo…`);
     await this._setupFlow();
     this._startPoll();
     if (data.relayMode || this.maxPlayers >= 3) this._enableHttpRelay("host-rejoin");
     else this._armFailover();
     return { code: this.code, seed: this.seed };
+  }
+
+  /** Guest caiu e voltou com a mesma guestKey (mesmo aparelho). */
+  async resumeGuest(code, guestKey) {
+    const data = await rejoinGuest(code, guestKey);
+    this.role = "guest";
+    this.code = data.code;
+    this.seed = data.seed;
+    this.slot = data.slot ?? 0;
+    this.peerId = `g${this.slot}`;
+    this.maxPlayers = data.maxPlayers || 2;
+    this.guestKey = data.guestKey || guestKey;
+    this._guestJoined = true;
+    this._closed = false;
+    this._httpReady = false;
+    this._openFired = false;
+    this._hostGoneWarned = false;
+    this._rememberRoom();
+    this._status(`Convidado reconectado na sala ${this.code}. Ligando…`);
+    await this._setupFlow();
+    this._armFailover();
+    this._startPoll();
+    if (data.relayMode || this.maxPlayers >= 3) this._enableHttpRelay("guest-rejoin");
+    return { code: this.code, seed: this.seed, slot: this.slot };
   }
 
   async _setupFlow() {
@@ -190,7 +236,7 @@ export class WebRtcRoom {
       if (this._closed || this._httpReady) return;
       this.transport = "webrtc";
       this._clearFailover();
-      this._status("Co-op conectado (P2P)!");
+      this._status("Conectado! Canal direto (P2P) — latência baixa.");
       this._stopPoll();
       this._fireOpen();
     };
@@ -243,7 +289,7 @@ export class WebRtcRoom {
   _maybeFailover(reason) {
     if (this._closed || this._httpReady || this.channel?.readyState === "open") return;
     if (this.role === "host" && !this._guestJoined) return;
-    this._status(`P2P bloqueado (${reason}) — mudando para relay HTTPS…`);
+    this._status(`P2P bloqueado (${reason}) — ativando relay HTTPS…`);
     this._enableHttpRelay(reason);
   }
 
@@ -252,7 +298,7 @@ export class WebRtcRoom {
     this._httpReady = true;
     this.transport = "http";
     this._clearFailover();
-    this._status("Co-op via servidor (HTTPS) — funciona atrás de firewall.");
+    this._status("Relay ativo (via servidor) — funciona atrás de firewall. Pode ter um pouco de lag.");
     try {
       this.channel?.close();
     } catch {
@@ -312,7 +358,13 @@ export class WebRtcRoom {
         await this._pollOnce();
       } catch (e) {
         console.warn("signal poll", e);
-        this._status(`Sinalização: ${e.message || e}`);
+        const msg = e.message || String(e);
+        if (/não encontrada|expirou|404/i.test(msg)) {
+          this._status("Sala sumiu ou expirou — peça ao host criar de novo.");
+          if (this.role === "guest") this.close("room-gone");
+        } else {
+          this._status(`Sinalização: ${msg}`);
+        }
       }
       if (this._closed) {
         this._polling = false;
@@ -346,6 +398,13 @@ export class WebRtcRoom {
 
     if (!this._httpReady && data.relayMode) {
       this._enableHttpRelay("peer-relay");
+    }
+
+    if (this.role === "guest" && data.hostOnline === false && !this._hostGoneWarned) {
+      this._hostGoneWarned = true;
+      this._status("Host parece offline — ele pode usar “Reconectar como host”.");
+    } else if (this.role === "guest" && data.hostOnline === true) {
+      this._hostGoneWarned = false;
     }
 
     if (this.role === "host" && !this._httpReady && data.needsHostRestart) {
