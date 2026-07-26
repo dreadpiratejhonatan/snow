@@ -274,6 +274,17 @@ try {
   if (!mData.tames.length || mData.tames[0].type !== "mula") throw new Error("mount: serialize falhou");
   console.log("Mounts OK — mula domada, montada, armadura ativa");
 
+  // Neve: 120 frames sem groundHeight/floco não pode engolir segundos (bug gh77)
+  const snowT0 = performance.now();
+  for (let i = 0; i < 120; i++) {
+    world.updateSnowfall(0.016, i * 0.016, player.position);
+  }
+  const snowMs = performance.now() - snowT0;
+  if (snowMs > 250) {
+    throw new Error(`snowfall lento demais: ${snowMs.toFixed(0)}ms / 120 frames (freeze risk)`);
+  }
+  console.log("Snowfall OK —", snowMs.toFixed(1), "ms / 120 frames");
+
   for (let i = 0; i < 60; i++) {
     world.update(0.016, i * 0.016, 0.5, 0.1, player.position);
   }
