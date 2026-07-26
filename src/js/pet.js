@@ -1,7 +1,28 @@
 /**
  * Husky companheiro: segue o jogador e "fareja" loot próximo (marca discovered).
+ * Opcional — desligado por padrão (localStorage `neveHuskyPet`).
  */
 import * as THREE from "three";
+
+const STORAGE_KEY = "neveHuskyPet";
+
+/** Preferência do jogador. Default: off (não aparece sozinho). */
+export function isHuskyEnabled() {
+  try {
+    return localStorage.getItem(STORAGE_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+export function setHuskyEnabled(on) {
+  try {
+    localStorage.setItem(STORAGE_KEY, on ? "1" : "0");
+  } catch {
+    /* private mode */
+  }
+  return !!on;
+}
 
 export class HuskyPet {
   constructor(scene, world) {

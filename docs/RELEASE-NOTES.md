@@ -13,7 +13,7 @@ Documentação completa: [`docs/V1-OFICIAL.md`](docs/V1-OFICIAL.md) · Tag Git: 
 
 ### [gh74] — Pacote grande de features (26 jul 2026)
 - **Crafting** na fogueira (C): materiais → munição/armadilhas
-- **Husky** companheiro que fareja loot
+- **Husky** companheiro (opcional, **desligado por padrão**) — liga no pause; fareja loot
 - **Eventos**: nevasca e invasão noturna
 - **Hardcore** (morte permanente) + ranking ★
 - **Dungeon cronometrada** + cutscenes Panda/Saci/T-Rex

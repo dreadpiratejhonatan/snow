@@ -49,7 +49,7 @@ import {
 import { SecretDungeon } from "./dungeon.js";
 import { CraftBag } from "./crafting.js";
 import { WorldEvents } from "./worldEvents.js";
-import { HuskyPet } from "./pet.js";
+import { HuskyPet, isHuskyEnabled, setHuskyEnabled } from "./pet.js";
 
 // Vinheta cinematográfica suave nas bordas da tela
 const VignetteShader = {
@@ -858,7 +858,7 @@ class Game {
     });
     this.dungeon = new SecretDungeon(this.world, this.scene);
     this.player = new Player(this.camera, this.scene, this.world, this.world.getSpawn());
-    this.pet = new HuskyPet(this.scene, this.world);
+    this.syncPet();
     this.worldEvents?.reset?.();
     if (!diffOpts?.keepCraft) this.craftBag = new CraftBag();
     this._botoCutDone = false;
@@ -1047,11 +1047,48 @@ class Game {
       this.world,
       this.world.getSpawn()
     );
-    this.pet = new HuskyPet(this.scene, this.world);
+    this.syncPet();
 
     this.initSurvival();
     this.buildPostFX();
     window.addEventListener("resize", () => this.onResize());
+  }
+
+  /** Spawna/remove o husky conforme preferência (default: off). */
+  syncPet() {
+    const want = isHuskyEnabled();
+    if (want && !this.pet && this.scene && this.world) {
+      this.pet = new HuskyPet(this.scene, this.world);
+      if (this.player?.position) {
+        this.pet.pos.set(
+          this.player.position.x + 2,
+          0,
+          this.player.position.z + 2
+        );
+      }
+    } else if (!want && this.pet) {
+      this.pet.dispose?.();
+      this.pet = null;
+    }
+    this.refreshPetButton();
+  }
+
+  togglePet() {
+    const on = setHuskyEnabled(!isHuskyEnabled());
+    this.syncPet();
+    this.hud?.showMsg(
+      on ? "Husky ligado — ele fareja loot perto de você." : "Husky desligado.",
+      2400
+    );
+    return on;
+  }
+
+  refreshPetButton() {
+    const btn = document.getElementById("btn-pet-toggle");
+    if (!btn) return;
+    const on = isHuskyEnabled();
+    btn.textContent = on ? "Husky: ligado" : "Husky: desligado";
+    btn.setAttribute("aria-pressed", on ? "true" : "false");
   }
 
   initSurvival() {
@@ -1970,6 +2007,8 @@ class Game {
     document.getElementById("btn-resume").addEventListener("click", () => this.resume());
     document.getElementById("btn-restart").addEventListener("click", () => this.restart());
     document.getElementById("btn-skin")?.addEventListener("click", () => this.openSkinPickerFromPause());
+    document.getElementById("btn-pet-toggle")?.addEventListener("click", () => this.togglePet());
+    this.refreshPetButton();
     document.getElementById("btn-submit-score")?.addEventListener("click", () => this.submitWinScore());
     document.getElementById("btn-help-close")?.addEventListener("click", () => this.closeHelp());
     document.getElementById("btn-release-close")?.addEventListener("click", () => this.closeReleaseNotes());
@@ -2236,6 +2275,7 @@ class Game {
     document.getElementById("btn-resume").hidden = false;
     const btnSkin = document.getElementById("btn-skin");
     if (btnSkin) btnSkin.hidden = false;
+    this.refreshPetButton();
     this.overlay.hidden = false;
   }
 
