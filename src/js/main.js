@@ -82,6 +82,11 @@ class Game {
     this.ambience.onTrackChange = (name) => {
       if (name) this.hud?.showMsg(`♪ ${name}`, 2800);
     };
+    this.ambience.onWhisper = () => {
+      if (this.state !== "playing") return;
+      this.hud?.showMsg("…alguém fala no vento", 3000);
+    };
+    this._ammoWarnAt = 0;
     this.weapons = new WeaponInventory();
     this.traps = new TrapInventory();
     this.tutorial = null;
@@ -2098,18 +2103,23 @@ class Game {
       this.attackCd = 0.35;
       const at = CONFIG.ammoTypes[weapon.ammoType];
       const needsReload = (weapon.magSize || 0) > 0;
+      const reserve = this.weapons.ammo[weapon.ammoType] ?? 0;
       this.hud.showMsg(
         needsReload
-          ? `Carregador vazio — pressione R (reserva: ${this.weapons.ammo[weapon.ammoType] ?? 0})`
+          ? reserve > 0
+            ? `Carregador vazio — R para recarregar (${reserve} na reserva)`
+            : `Sem ${at?.name?.toLowerCase() || "munição"} — explore o mapa ou loot`
           : `Sem ${at?.name?.toLowerCase() || "munição"}!`,
-        2000
+        2400
       );
       if (this.ambience.started) this.ambience.noiseBurst(0.04, 0.05, 1800, 2);
+      this.refreshInventoryUI();
       return;
     }
 
     this.attackCd = weapon.cooldown || CONFIG.player.attackCooldown;
     this.weapons.consumeAmmo();
+    this.warnIfAmmoCritical(weapon);
     this.player.setHeldWeapon(weapon.id);
     this.player.playAttack(weapon.fire === "hitscan" || weapon.fire === "projectile" ? "ranged" : "melee");
 
@@ -2170,6 +2180,23 @@ class Game {
       }
     }
     if (weapon.ammoType) this.refreshInventoryUI();
+  }
+
+  /** Aviso curto quando a munição fica crítica (≤3 total). */
+  warnIfAmmoCritical(weapon) {
+    if (!weapon?.ammoType) return;
+    if (!this.weapons.isAmmoCritical(weapon.id, 3)) return;
+    const now = performance.now();
+    if (now - (this._ammoWarnAt || 0) < 4500) return;
+    this._ammoWarnAt = now;
+    const at = CONFIG.ammoTypes[weapon.ammoType];
+    const n = this.weapons.totalAmmoFor(weapon.id);
+    this.hud.showMsg(
+      n <= 1
+        ? `Última ${at?.name?.toLowerCase() || "munição"}!`
+        : `Poucas ${at?.name?.toLowerCase() || "balas"} (${n})`,
+      2200
+    );
   }
 
   updateSurvival(dt, night) {

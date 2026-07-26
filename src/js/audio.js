@@ -70,6 +70,7 @@ export class Ambience {
     this.musicOn = true;
     this.music = null;
     this.onTrackChange = null; // (nome) => void — preenchido pelo Game
+    this.onWhisper = null; // () => void — msg atmosférica opcional
   }
 
   /**
@@ -555,6 +556,11 @@ export class Ambience {
     setTimeout(() => {
       if (ctx) this.noiseBurst(0.7, vol * 0.35, 520 + Math.random() * 200, 1.2, "bandpass", 0.7);
     }, 400 + syllables * 200);
+    try {
+      this.onWhisper?.();
+    } catch {
+      /* HUD opcional */
+    }
   }
 
   update(dt, s) {

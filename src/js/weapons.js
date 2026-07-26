@@ -75,6 +75,26 @@ export class WeaponInventory {
     return this.ammo[w.ammoType] ?? 0;
   }
 
+  /** Mag + reserva (para aviso de munição crítica). */
+  totalAmmoFor(weaponId = this.equippedId) {
+    const w = CONFIG.weapons[weaponId];
+    if (!w?.ammoType) return Infinity;
+    const reserve = this.ammo[w.ammoType] ?? 0;
+    const size = this.magSize(weaponId);
+    if (size > 0) {
+      this.ensureMag(weaponId);
+      return (this.mag[weaponId] ?? 0) + reserve;
+    }
+    return reserve;
+  }
+
+  /** Pouca munição restante (ainda dá para atirar). */
+  isAmmoCritical(weaponId = this.equippedId, threshold = 3) {
+    const total = this.totalAmmoFor(weaponId);
+    if (!Number.isFinite(total) || total <= 0) return false;
+    return total <= threshold;
+  }
+
   /** Hitscan usa carregador; resto usa reserva. */
   canFire() {
     const w = this.current;
@@ -170,6 +190,12 @@ export class WeaponInventory {
       const key = index < 9 ? String(index + 1) : index === 9 ? "0" : "·";
       const magSize = def.magSize || 0;
       const mag = magSize > 0 ? this.mag[id] ?? 0 : null;
+      const unlocked = this.unlocked.has(id);
+      const reserve = def.ammoType ? this.ammo[def.ammoType] ?? 0 : null;
+      const total =
+        def.ammoType != null
+          ? (magSize > 0 ? (mag ?? 0) + reserve : reserve)
+          : null;
       return {
         id,
         index,
@@ -179,12 +205,13 @@ export class WeaponInventory {
         damage: def.damage,
         range: def.range,
         desc: def.desc || "",
-        unlocked: this.unlocked.has(id),
+        unlocked,
         equipped: this.equippedId === id,
         ammoType: def.ammoType || null,
-        ammo: def.ammoType ? this.ammo[def.ammoType] ?? 0 : null,
+        ammo: reserve,
         mag,
         magSize: magSize || null,
+        lowAmmo: unlocked && total != null && total > 0 && total <= 3,
       };
     });
   }

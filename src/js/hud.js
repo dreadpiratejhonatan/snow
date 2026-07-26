@@ -162,7 +162,8 @@ export class HUD {
 
     this.invSlots.innerHTML = slots
       .map((s) => {
-        const emptyMag = s.unlocked && s.magSize && s.mag === 0;
+        const emptyMag = s.unlocked && s.magSize && s.mag === 0 && (s.ammo ?? 0) === 0;
+        const emptyMagOnly = s.unlocked && s.magSize && s.mag === 0 && (s.ammo ?? 0) > 0;
         const noReserve = s.unlocked && s.ammoType && s.ammo === 0 && !s.magSize;
         const noAmmo = emptyMag || noReserve;
         const cls = [
@@ -170,6 +171,7 @@ export class HUD {
           s.unlocked ? "is-unlocked" : "is-locked",
           s.equipped ? "is-equipped" : "",
           noAmmo ? "is-empty" : "",
+          emptyMagOnly || s.lowAmmo ? "is-low" : "",
         ]
           .filter(Boolean)
           .join(" ");
