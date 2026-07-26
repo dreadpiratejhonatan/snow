@@ -83,7 +83,7 @@ Altera loot, HP/dano de inimigos, dano das armas e frio. **Médio** = balance pa
 | N | novidades |
 | Esc | pausa |
 
-Touch no celular: stick + botões.
+Touch no celular: stick + **4 ações** (correr / interagir / pular / atacar). Pause e **⋯** abrem o resto (câmera, armas, armadilhas, chat, ajuda, novidades).
 
 ### Dedicatória
 

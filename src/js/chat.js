@@ -33,12 +33,16 @@ export class GameChat {
         this.close(true);
       }
     });
-    document.getElementById("btn-chat-touch")?.addEventListener("click", (e) => {
+    const openChat = (e) => {
       e.preventDefault();
       e.stopPropagation();
       if (this.game.state !== "playing") return;
       this.begin("say");
-    });
+    };
+    const chatBtn = document.getElementById("btn-chat-touch");
+    chatBtn?.addEventListener("click", openChat);
+    // touchstart: o menu ⋯ usa toque; click às vezes atrasa no celular
+    chatBtn?.addEventListener("touchstart", openChat, { passive: false });
   }
 
   displayName() {
