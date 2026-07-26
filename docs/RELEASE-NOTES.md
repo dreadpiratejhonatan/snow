@@ -6,6 +6,11 @@ Documentação completa: [`docs/V1-OFICIAL.md`](docs/V1-OFICIAL.md) · Tag Git: 
 
 ## Atualizações recentes (pós-v1.0)
 
+### [gh75] — Modos de mapa (26 jul 2026)
+- **Classic**: o mapa fixo de sempre (base, lago e spawn nos lugares conhecidos)
+- **Random**: terreno, lago, base e spawn únicos por seed — cada partida nova é um mapa diferente
+- Escolha no boot (após a dificuldade); salva no mid-run e sincroniza no co-op; o desafio diário continua sempre Classic
+
 ### [gh74] — Pacote grande de features (26 jul 2026)
 - **Crafting** na fogueira (C): materiais → munição/armadilhas
 - **Husky** companheiro que fareja loot

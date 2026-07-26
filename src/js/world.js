@@ -27,10 +27,17 @@ export class World {
   constructor(scene, opts = {}) {
     this.scene = scene;
     this.seed = (opts.seed ?? randomSeed()) >>> 0;
+    this.mapMode = opts.mapMode === "random" ? "random" : "classic";
     this.authority = opts.authority !== false; // guest co-op: false (host simula inimigos)
     this.lowFx = !!opts.lowFx; // perfil celular: menos partículas / grama
     this._snowFrame = 0;
     this._nextNetId = 1;
+    // layout (classic defaults; random sobrescreve em _initLayout)
+    this.home = { x: 0, z: 0 };
+    this.campfireOffset = { x: 3, z: 2 };
+    this.baseOffset = { x: -4.5, z: -3 };
+    this.spawnOffset = { x: 0, z: 0 };
+    this.heightWarp = null;
     this.size = CONFIG.world.size;
     this.half = this.size / 2;
     this.bounds = this.half - 4;
@@ -97,6 +104,7 @@ export class World {
     const prevRandom = Math.random;
     Math.random = rng;
     try {
+      this._initLayout();
       this.buildTerrain();
       this.buildIce();
       this.scatterTrees();
@@ -119,19 +127,81 @@ export class World {
     }
   }
 
+  /** Define home/offsets/warp de altura (deve rodar dentro do RNG da seed). */
+  _initLayout() {
+    if (this.mapMode !== "random") {
+      this.home = { x: 0, z: 0 };
+      this.campfireOffset = { x: 3, z: 2 };
+      this.baseOffset = { x: -4.5, z: -3 };
+      this.spawnOffset = { x: 0, z: 0 };
+      this.heightWarp = null;
+      return;
+    }
+
+    this.heightWarp = {
+      ox: (Math.random() - 0.5) * 90,
+      oz: (Math.random() - 0.5) * 90,
+      freq: 0.82 + Math.random() * 0.45,
+      ridgeMul: 0.7 + Math.random() * 0.7,
+      lakeX: (Math.random() - 0.5) * this.bounds * 0.65,
+      lakeZ: (Math.random() - 0.5) * this.bounds * 0.65,
+      lakeR: 16 + Math.random() * 26,
+      lakeDepth: 1.4 + Math.random() * 2.4,
+    };
+
+    let hx = 0;
+    let hz = 0;
+    let found = false;
+    for (let tries = 0; tries < 80; tries++) {
+      const a = Math.random() * Math.PI * 2;
+      const r = 8 + Math.random() * (this.bounds * 0.45);
+      const x = Math.cos(a) * r;
+      const z = Math.sin(a) * r;
+      // usa getHeight já com warp
+      const h = this.getHeight(x, z);
+      if (h < this.waterLevel + 1.2 || h > 8.5) continue;
+      if (this.getSlope(x, z) > 0.85) continue;
+      // longe do centro do lago
+      const dl = Math.hypot(x - this.heightWarp.lakeX, z - this.heightWarp.lakeZ);
+      if (dl < this.heightWarp.lakeR + 10) continue;
+      hx = x;
+      hz = z;
+      found = true;
+      break;
+    }
+    if (!found) {
+      hx = 12;
+      hz = -10;
+    }
+    this.home = { x: hx, z: hz };
+    this.campfireOffset = { x: 2.5 + Math.random() * 1.5, z: 1.5 + Math.random() * 1.5 };
+    this.baseOffset = { x: -4.2 - Math.random() * 1.2, z: -2.5 - Math.random() * 1.5 };
+    this.spawnOffset = { x: 0.5 + Math.random(), z: 0.5 + Math.random() };
+  }
+
   // ------------------------------------------------------------------
   // TERRENO
   // ------------------------------------------------------------------
   getHeight(x, z) {
     const A = CONFIG.world.amplitude;
+    const w = this.heightWarp;
+    const px = w ? (x + w.ox) * w.freq : x;
+    const pz = w ? (z + w.oz) * w.freq : z;
     let h =
       CONFIG.world.baseHeight +
-      Math.sin(x * 0.035) * Math.cos(z * 0.032) * A * 0.45 +
-      Math.sin(x * 0.09 + z * 0.05) * A * 0.2 +
-      Math.cos(x * 0.021 - z * 0.062) * A * 0.28 +
-      Math.sin((x + z) * 0.13) * A * 0.08;
-    const ridge = Math.pow(Math.abs(Math.sin(x * 0.012) * Math.sin(z * 0.01)), 2.2);
-    h += ridge * A * 1.7;
+      Math.sin(px * 0.035) * Math.cos(pz * 0.032) * A * 0.45 +
+      Math.sin(px * 0.09 + pz * 0.05) * A * 0.2 +
+      Math.cos(px * 0.021 - pz * 0.062) * A * 0.28 +
+      Math.sin((px + pz) * 0.13) * A * 0.08;
+    const ridge = Math.pow(Math.abs(Math.sin(px * 0.012) * Math.sin(pz * 0.01)), 2.2);
+    h += ridge * A * 1.7 * (w?.ridgeMul ?? 1);
+    if (w) {
+      const dl = Math.hypot(x - w.lakeX, z - w.lakeZ);
+      if (dl < w.lakeR) {
+        const t = 1 - dl / w.lakeR;
+        h -= w.lakeDepth * t * t;
+      }
+    }
     return h;
   }
 
@@ -301,7 +371,9 @@ export class World {
    * - neve: restante
    */
   biomeAt(x, z) {
-    const dist = Math.hypot(x, z);
+    const hx = this.home?.x ?? 0;
+    const hz = this.home?.z ?? 0;
+    const dist = Math.hypot(x - hx, z - hz);
     if (dist < 14) return "clareira";
     const h = this.getHeight(x, z);
     if (h > 7.2) return "montanha";
@@ -321,7 +393,9 @@ export class World {
       const z = (Math.random() * 2 - 1) * this.bounds;
       const h = this.getHeight(x, z);
       if (h < this.waterLevel + 0.9 || h > 9.5) continue;
-      if (Math.hypot(x, z) < 9) continue; // clareira da base
+      const hx = this.home?.x ?? 0;
+      const hz = this.home?.z ?? 0;
+      if (Math.hypot(x - hx, z - hz) < 9) continue; // clareira da base
       const biome = this.biomeAt(x, z);
       // densidades relativas
       if (biome === "montanha" && Math.random() > 0.35) continue;
@@ -334,7 +408,11 @@ export class World {
           const ox = x + (Math.random() - 0.5) * 4;
           const oz = z + (Math.random() - 0.5) * 4;
           const oh = this.getHeight(ox, oz);
-          if (oh >= this.waterLevel + 0.9 && oh <= 9.5 && Math.hypot(ox, oz) > 9) {
+          if (
+            oh >= this.waterLevel + 0.9 &&
+            oh <= 9.5 &&
+            Math.hypot(ox - hx, oz - hz) > 9
+          ) {
             this.makeTree(ox, oz);
             placed++;
           }
@@ -351,7 +429,11 @@ export class World {
       const x = (Math.random() * 2 - 1) * this.bounds;
       const z = (Math.random() * 2 - 1) * this.bounds;
       const h = this.getHeight(x, z);
-      if (h < this.waterLevel + 0.3 || Math.hypot(x, z) < 9) continue;
+      if (
+        h < this.waterLevel + 0.3 ||
+        Math.hypot(x - (this.home?.x ?? 0), z - (this.home?.z ?? 0)) < 9
+      )
+        continue;
       const r = 0.5 + Math.random() * 1.7;
       const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(r, 0), this.rockMat);
       const cy = h + r * 0.25;
@@ -853,8 +935,8 @@ export class World {
   // ------------------------------------------------------------------
   buildCampfire() {
     const g = new THREE.Group();
-    const fx = 3;
-    const fz = 2;
+    const fx = (this.home?.x ?? 0) + (this.campfireOffset?.x ?? 3);
+    const fz = (this.home?.z ?? 0) + (this.campfireOffset?.z ?? 2);
     const fy = this.getHeight(fx, fz);
     g.position.set(fx, fy, fz);
     this.campfirePos = g.position.clone();
@@ -919,8 +1001,8 @@ export class World {
   }
 
   buildBase() {
-    const bx = -4.5;
-    const bz = -3;
+    const bx = (this.home?.x ?? 0) + (this.baseOffset?.x ?? -4.5);
+    const bz = (this.home?.z ?? 0) + (this.baseOffset?.z ?? -3);
     const by = this.getHeight(bx, bz);
     const g = new THREE.Group();
     g.position.set(bx, by, bz);
@@ -1421,18 +1503,20 @@ export class World {
   _spawnItemDef(def, { countsForWin = true, nearBase = false, saveId = null } = {}) {
     let x = 0;
     let z = 0;
+    const ox = this.home?.x ?? 0;
+    const oz = this.home?.z ?? 0;
     for (let tries = 0; tries < 60; tries++) {
       if (nearBase) {
         const a = Math.random() * Math.PI * 2;
         const r = 12 + Math.random() * 18;
-        x = Math.cos(a) * r;
-        z = Math.sin(a) * r;
+        x = ox + Math.cos(a) * r;
+        z = oz + Math.sin(a) * r;
       } else {
         x = (Math.random() * 2 - 1) * this.bounds * 0.92;
         z = (Math.random() * 2 - 1) * this.bounds * 0.92;
       }
       const h = this.getHeight(x, z);
-      const farFromBase = Math.hypot(x, z) > (nearBase ? 8 : 30);
+      const farFromBase = Math.hypot(x - ox, z - oz) > (nearBase ? 8 : 30);
       if (h > this.waterLevel + 0.6 && farFromBase) break;
     }
     const kind = this._lootKind({ ...def, countsForWin, saveId });
@@ -2808,7 +2892,9 @@ export class World {
   }
 
   getSpawn() {
-    return new THREE.Vector3(0, this.groundHeight(0, 0), 0);
+    const sx = (this.home?.x ?? 0) + (this.spawnOffset?.x ?? 0);
+    const sz = (this.home?.z ?? 0) + (this.spawnOffset?.z ?? 0);
+    return new THREE.Vector3(sx, this.groundHeight(sx, sz), sz);
   }
 
   clampToBounds(v) {

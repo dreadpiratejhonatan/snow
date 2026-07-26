@@ -23,6 +23,7 @@ import {
 import { runSplash, dismissSplash } from "./splash.js";
 import { runSkinPicker, applySkinToPlayer, loadSkinId } from "./skins.js";
 import { runDifficultyPicker, getDifficulty } from "./difficulty.js";
+import { runMapModePicker, getMapMode } from "./mapMode.js";
 import { WebRtcRoom } from "./net/webrtcRoom.js";
 import { CoopSession } from "./net/coopSession.js";
 import { Tutorial } from "./tutorial.js";
@@ -121,6 +122,7 @@ class Game {
     this.coopRoom = null;
     this.difficultyId = "medium";
     this.difficulty = getDifficulty("medium");
+    this.mapMode = "classic";
     this._saveAcc = 0;
     this._minimapAcc = 0;
     this.lowFx = isTouchDevice();
@@ -176,6 +178,10 @@ class Game {
     this.difficultyId = getDifficulty(diffId).id;
     this.difficulty = getDifficulty(this.difficultyId);
 
+    this.state = "mapMode";
+    const mapId = await runMapModePicker({ onGesture: unlockAudio });
+    this.mapMode = getMapMode(mapId).id;
+
     const coopChoice = await this.promptCoopMenu();
     if (coopChoice.mode === "demo") {
       await this.beginDemoRun({ fromMenu: true });
@@ -208,8 +214,10 @@ class Game {
       this.tutorial.skip();
       const seed = (resumeSave.seed >>> 0) || this.world.seed;
       applySkinToPlayer(this.player, loadSkinId() || "natan");
+      this.mapMode = resumeSave.mapMode === "random" ? "random" : "classic";
       this.recreateWorld(seed, true, {
         difficulty: resumeSave.difficulty || this.difficultyId,
+        mapMode: this.mapMode,
         thinPickups: false,
       });
       applySkinToPlayer(this.player, loadSkinId() || "natan");
@@ -219,14 +227,25 @@ class Game {
       this.tutorial.skip();
     } else if (coopChoice.daily || isDailyMode()) {
       setDailyMode(true);
+      this.mapMode = "classic"; // daily sempre classic (comparável)
       const seed = coopChoice.seed || dailySeed();
-      this.recreateWorld(seed, true);
+      this.recreateWorld(seed, true, { mapMode: "classic" });
       applySkinToPlayer(this.player, loadSkinId() || "natan");
       this.tutorial.skip();
-      this.hud.showMsg(`Desafio do dia ${dailyLabel()} — seed compartilhada.`, 4500);
+      this.hud.showMsg(`Desafio do dia ${dailyLabel()} — mapa Classic compartilhado.`, 4500);
     } else {
       setDailyMode(false);
+      // solo novo: regenera mundo com o mapa escolhido
+      const seed = (Math.random() * 0xffffffff) >>> 0;
+      this.recreateWorld(seed, true, {
+        difficulty: this.difficultyId || diffId,
+        mapMode: this.mapMode || "classic",
+      });
+      applySkinToPlayer(this.player, loadSkinId() || "natan");
       this.setDifficulty(this.difficultyId || diffId);
+      if (this.mapMode === "random") {
+        this.hud.showMsg("Mapa Random — terreno e base únicos desta seed.", 4000);
+      }
     }
     this.bindWorldCombatHooks();
     this.world.onEnemySpawned = (enemy) => {
@@ -239,13 +258,14 @@ class Game {
   async beginDemoRun() {
     // Splash vem visível no HTML — sem isso ?demo=1 fica preso no launcher
     dismissSplash();
-    for (const id of ["coop-menu", "skin-picker", "difficulty-picker"]) {
+    for (const id of ["coop-menu", "skin-picker", "difficulty-picker", "map-mode-picker"]) {
       const el = document.getElementById(id);
       if (el) {
         el.hidden = true;
         el.setAttribute("aria-hidden", "true");
       }
     }
+    this.mapMode = "classic";
 
     clearDemoFlag();
     clearMidRunSave();
@@ -471,7 +491,11 @@ class Game {
             }
           };
           const maxPlayers = Math.min(4, Math.max(2, Number(maxPlayersEl?.value) || 2));
-          const seed = isDailyMode() ? dailySeed() : this.world.seed;
+          // bit 31 da seed carrega o mapMode (random=1) — servidor não precisa mudar
+          const baseSeed = isDailyMode() ? dailySeed() : this.world.seed;
+          const seed = isDailyMode()
+            ? baseSeed
+            : ((baseSeed & 0x7fffffff) | (this.mapMode === "random" ? 0x80000000 : 0)) >>> 0;
           const { code } = await room.create(seed, { maxPlayers });
           await this.waitForRoomOpen(room);
           cleanup();
@@ -695,7 +719,10 @@ class Game {
 
   async beginCoop(choice) {
     const authority = choice.mode === "host";
-    this.recreateWorld(choice.seed, authority);
+    // decodifica mapMode do bit 31 da seed (host embutiu na criação da sala)
+    const seed = choice.seed >>> 0;
+    this.mapMode = seed & 0x80000000 ? "random" : "classic";
+    this.recreateWorld(seed, authority);
     applySkinToPlayer(this.player, loadSkinId() || "natan");
     this.coopRoom = choice.room;
     this.coop = new CoopSession(this, choice.room);
@@ -822,7 +849,13 @@ class Game {
 
     this.pet?.dispose?.();
     this.pet = null;
-    this.world = new World(this.scene, { seed, authority, lowFx: this.lowFx });
+    if (diffOpts?.mapMode) this.mapMode = diffOpts.mapMode === "random" ? "random" : "classic";
+    this.world = new World(this.scene, {
+      seed,
+      authority,
+      lowFx: this.lowFx,
+      mapMode: this.mapMode || "classic",
+    });
     this.dungeon = new SecretDungeon(this.world, this.scene);
     this.player = new Player(this.camera, this.scene, this.world, this.world.getSpawn());
     this.pet = new HuskyPet(this.scene, this.world);

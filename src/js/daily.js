@@ -12,7 +12,8 @@ export function dailySeed(date = new Date()) {
   let h = ymd ^ 0x4e455645; // "NEVE"
   h = Math.imul(h ^ (h >>> 16), 0x45d9f3b);
   h = Math.imul(h ^ (h >>> 16), 0x45d9f3b);
-  return (h ^ (h >>> 16)) >>> 0;
+  // bit 31 é reservado ao mapMode no co-op — daily fica sempre "classic"
+  return (h ^ (h >>> 16)) & 0x7fffffff;
 }
 
 export function dailyLabel(date = new Date()) {
