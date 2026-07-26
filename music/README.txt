@@ -1,16 +1,18 @@
-Pasta de músicas (estilo Minecraft)
+Pasta de músicas (ambient original)
 
-Por direitos autorais, a OST oficial (C418 / Lena Raine) NÃO vem no jogo.
+Por direitos autorais, a OST oficial de outros jogos NÃO vem no pacote.
 
-Sem arquivos aqui, o jogo toca faixas procedurais lentas e calmas
-(estilo exploração Minecraft — NÃO chiptune/Terraria).
+Há faixas ambient geradas (WAV) listadas em manifest.json.
+Sem manifesto válido, o jogo usa a trilha procedural quieta.
 
 O browser só libera áudio após um clique/toque (skin ou dificuldade).
 
-Para usar arquivos reais, coloque os .mp3 AQUI e liste em:
+Para trocar as faixas, coloque .mp3/.ogg/.wav AQUI e edite:
 
   music/manifest.json
-  ["sweden.mp3", "key.mp3", "haggstrom.mp3"]
+  ["campo-branco.wav", "bafo-de-gelo.wav", "neblina-quieta.wav"]
 
-Sem manifest.json o jogo usa só a trilha procedural (aleatória).
+Regenerar WAVs originais:
+  node scripts/gen-ambient-music.mjs
+
 A playlist é embaralhada a cada entrada no jogo.
