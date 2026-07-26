@@ -13,8 +13,8 @@ try {
 
   const camera = new THREE.PerspectiveCamera(75, 1.6, 0.1, 500);
   const player = new Player(camera, scene, world, world.getSpawn());
-  player.applySkin("arctic"); // alias → jhonatan
-  if (player.skinId !== "jhonatan") throw new Error("applySkin falhou");
+  player.applySkin("classic"); // alias antigo → natan
+  if (player.skinId !== "natan") throw new Error("applySkin falhou");
   player.applySkin("ze");
   if (player.skinId !== "ze") throw new Error("skin ZÉ falhou");
   console.log("Player OK — spawn:", player.position.toArray().map((n) => n.toFixed(2)).join(", "), "skin:", player.skinId);

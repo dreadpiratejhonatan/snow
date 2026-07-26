@@ -12,8 +12,8 @@ Edits made from the Cursor app on the phone (Cloud Agent) reach production witho
    - Squash-merges into `develop`
    - Dispatches the existing deploy workflows
 3. Production updates:
-   - **HostGator** → https://jhonatanribeiro.com/snow/  ← primary production
-   - **GitHub Pages** → https://dreadpiratejhonatan.github.io/snow/
+   - **HostGator** → https://SEU-DOMINIO.com/snow/  ← primary production
+   - **GitHub Pages** → https://SEU-USUARIO.github.io/snow/
 
 ## One-time GitHub Pages fix (phone or desktop)
 

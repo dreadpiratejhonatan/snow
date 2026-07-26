@@ -1,6 +1,6 @@
 # APIs HostGator — Neve Selvagem v1.0
 
-Base típica: `https://jhonatanribeiro.com/snow/api/`  
+Base típica: `https://SEU-DOMINIO.com/snow/api/`  
 CORS: `Access-Control-Allow-Origin: *`  
 Corpo: JSON (`Content-Type: application/json`)
 

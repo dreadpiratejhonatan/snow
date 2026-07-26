@@ -1,21 +1,10 @@
-const HOSTGATOR_API = "https://jhonatanribeiro.com/snow/api/tickets.php";
 const ADMIN_STORE = "neveTicketsAdminKey";
 const COLUMNS = ["open", "doing", "done", "wontfix"];
 
+// Mesma origem por padrão; hosts estáticos usam window.SNOW_API_BASE (injetado no build)
 function resolveApi() {
-  try {
-    const h = (location.hostname || "").toLowerCase();
-    if (h === "jhonatanribeiro.com" || h === "www.jhonatanribeiro.com") {
-      return "../api/tickets.php";
-    }
-    if (h.endsWith("github.io") || h === "localhost" || h === "127.0.0.1") {
-      return HOSTGATOR_API;
-    }
-    if (h) return HOSTGATOR_API;
-  } catch {
-    /* ignore */
-  }
-  return HOSTGATOR_API;
+  const base = String(globalThis.SNOW_API_BASE || "").replace(/\/+$/, "");
+  return base ? `${base}/tickets.php` : "../api/tickets.php";
 }
 
 const API = resolveApi();

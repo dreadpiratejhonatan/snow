@@ -45,7 +45,7 @@ secrets do CI ou variáveis de ambiente.
 
 ## 4. Deploy HostGator via FTP (CI/CD)
 
-Fluxo validado do zero: os arquivos em produção (`jhonatanribeiro.com/snow`) foram
+Fluxo validado do zero: os arquivos em produção (`SEU-DOMINIO.com/snow`) foram
 apagados manualmente e o workflow de deploy recriou tudo sozinho.
 
 **Problema encontrado:** o action de FTP mantém um arquivo de estado

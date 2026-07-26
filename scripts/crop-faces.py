@@ -1,10 +1,10 @@
 from PIL import Image
 from pathlib import Path
 
-src = Path(
-    r"C:\Users\jhona\.cursor\projects\c-dev-cursor\assets"
-    r"\c__Users_jhona_AppData_Roaming_Cursor_User_workspaceStorage_empty-window_images_image-02c9ebf8-3968-4142-a156-b9a812ea6053.png"
-)
+import sys
+
+# Uso: python scripts/crop-faces.py <caminho-da-arte-com-os-rostos.png>
+src = Path(sys.argv[1] if len(sys.argv) > 1 else "assets/faces-source.png")
 img = Image.open(src).convert("RGBA")
 W, H = img.size
 cw, ch = W // 3, H // 2
@@ -28,7 +28,7 @@ def cell(r, c):
 # Top row: head only (cut before grey label bar)
 faces = {
     "natan": cell(0, 0).crop((28, 12, cw - 28, int(ch * 0.58))),
-    "jhonatan": cell(0, 1).crop((28, 12, cw - 28, int(ch * 0.58))),
+    "arctic": cell(0, 1).crop((28, 12, cw - 28, int(ch * 0.58))),
     "jorge": cell(0, 2).crop((28, 12, cw - 28, int(ch * 0.58))),
 }
 
@@ -45,7 +45,7 @@ for name, im in faces.items():
     print(f"saved {path}")
 
 strip = Image.new("RGBA", (256 * 5, 256), (0, 0, 0, 255))
-for i, name in enumerate(["natan", "jhonatan", "jorge", "caio", "lorenzo"]):
+for i, name in enumerate(["natan", "arctic", "jorge", "caio", "lorenzo"]):
     strip.paste(Image.open(out / f"{name}.png"), (i * 256, 0))
 strip.save(out / "_preview.png")
 print("preview ok")

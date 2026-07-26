@@ -8,9 +8,9 @@ Sobrevivência 3D na neve no navegador (Three.js). Explore, colete suprimentos, 
 
 | Jogar | URL |
 | --- | --- |
-| GitHub Pages | https://dreadpiratejhonatan.github.io/snow/ |
-| HostGator | https://jhonatanribeiro.com/snow/ |
-| Sugestões | [/tickets/](https://jhonatanribeiro.com/snow/tickets/) |
+| GitHub Pages | https://SEU-USUARIO.github.io/snow/ |
+| HostGator | https://SEU-DOMINIO.com/snow/ |
+| Sugestões | [/tickets/](https://SEU-DOMINIO.com/snow/tickets/) |
 
 **Release Git:** branch `release/v1.0` · tag `v1.0.0` (25 jul 2026)
 
@@ -22,7 +22,7 @@ Sobrevivência 3D na neve no navegador (Three.js). Explore, colete suprimentos, 
 - Colete suprimentos + **Troféu do Urso Alfa** + **Troféu do Boto** e deposite no **baú**
 - Arsenal completo, armadilhas, cobertura atrás de pedras/árvores, estações do ano
 - Chefs: Panda, Saci, T-Rex gatling, Boto (lago)
-- Personagens: Natan, Jhonatan, Jorge Bolado, Caio, Lorenzo, ZÉ
+- Personagens: Natan, Ártico, Jorge Bolado, Caio, Lorenzo, ZÉ
 - Ranking online (**T**), board de sugestões, trilha procedural
 - Dedicado a **CAIO** (primeiro a testar) e **JORGE** (primeiro a zerar)
 

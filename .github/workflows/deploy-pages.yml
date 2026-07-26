@@ -34,6 +34,9 @@ jobs:
 
       - name: Build
         run: npm run build
+        env:
+          # Base absoluta da API PHP (ex.: https://SEU-DOMINIO/snow/api) — fica só no secret
+          SNOW_API_BASE: ${{ secrets.SNOW_API_BASE }}
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3

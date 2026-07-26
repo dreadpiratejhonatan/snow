@@ -145,6 +145,6 @@ Histórico completo: `git log develop`.
 
 | Ambiente | URL típica |
 |----------|------------|
-| HostGator | https://jhonatanribeiro.com/snow/ |
-| Tickets | https://jhonatanribeiro.com/snow/tickets/ |
+| HostGator | https://SEU-DOMINIO.com/snow/ |
+| Tickets | https://SEU-DOMINIO.com/snow/tickets/ |
 | GitHub Pages | build estático do `dist/` (API continua na HostGator) |
