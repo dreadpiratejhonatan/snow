@@ -904,14 +904,21 @@ export class World {
       }
     });
     this.scene.add(g);
-    // corpo da cabana (teto andável ~2.6m); cone do telhado fica acima
+    // Telhado: ConeGeometry(3.2, 1.7) em y=3.35 → base ~2.5, pico ~4.2 (local).
+    // Collider flat em 2.6 metia os pés dentro do cone (clipping). Altura andável
+    // segue a inclinação do telhado (ver colliderTopAt).
+    const roofH = 1.7;
+    const roofY = 3.35;
     this.colliders.push({
       x: bx,
       z: bz,
       y: by,
       r: 2.35,
-      top: by + 2.6,
+      top: by + roofY + roofH / 2, // pico (fallback)
       climbable: true,
+      roofTipY: roofY + roofH / 2,
+      roofBaseY: 2.6, // beirada = topo do corpo (step-up do chão ainda cabe em stepHeight)
+      roofRadius: 2.35, // mesmo raio do collider: borda ~2.6m, centro = pico
     });
     this.colliders.push({
       x: this.chestPos.x,
@@ -2556,6 +2563,19 @@ export class World {
   }
 
   /**
+   * Topo andável de um collider em (x,z). Telhados com pico usam inclinação.
+   */
+  colliderTopAt(c, x, z) {
+    if (c.roofTipY == null || !(c.roofRadius > 0)) {
+      return c.top ?? c.y + 3;
+    }
+    const d = Math.hypot(x - c.x, z - c.z);
+    const t = Math.min(1, d / c.roofRadius);
+    const base = c.roofBaseY ?? 2.6;
+    return c.y + c.roofTipY + (base - c.roofTipY) * t;
+  }
+
+  /**
    * Altura do chão sob (x,z): terreno + topo de objetos climbable.
    * feetY = altura atual dos pés (para step-up / continuar em cima).
    */
@@ -2568,7 +2588,7 @@ export class World {
       // um pouco além do raio para não cair no canto da pedra
       const reach = c.r + radius * 0.55;
       if (dx * dx + dz * dz > reach * reach) continue;
-      const top = c.top;
+      const top = this.colliderTopAt(c, x, z);
       const onTop = feetY >= top - 0.35;
       const canStep = top - feetY <= stepHeight + 0.1;
       if (onTop || canStep) y = Math.max(y, top);
@@ -2582,7 +2602,7 @@ export class World {
   collide(p, radius, stepHeight = CONFIG.player.stepHeight) {
     let stepped = false;
     for (const c of this.colliders) {
-      const top = c.top ?? c.y + 3;
+      const top = this.colliderTopAt(c, p.x, p.z);
       // já em cima: não empurra (fica andando no topo)
       if (c.climbable && p.y >= top - 0.2) continue;
       // bem acima (pulo por cima): ignora
