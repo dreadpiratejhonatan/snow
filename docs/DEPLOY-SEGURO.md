@@ -14,14 +14,14 @@ Site típico: `https://jhonatanribeiro.com/snow/`
 Workflow: [`.github/workflows/deploy-hostgator.yml`](.github/workflows/deploy-hostgator.yml)  
 Dispara em **push na `develop`** ou manualmente em Actions → **Deploy HostGator**.
 
-Secrets do repositório (`Settings → Secrets and variables → Actions`):
+Secrets do repositório (`Settings → Secrets and variables → Actions`) — **só os nomes**; valores ficam só no GitHub (nunca no código/docs):
 
-| Secret | Exemplo (conta `snowdeploy`) |
-|--------|------------------------------|
-| `HOSTGATOR_FTP_HOST` | `jhonatanribeiro.com` ou `162.241.3.41` |
-| `HOSTGATOR_FTP_USER` | `snowdeploy@jhonatanribeiro.com` |
+| Secret | Conteúdo (preencher no GitHub, não aqui) |
+|--------|------------------------------------------|
+| `HOSTGATOR_FTP_HOST` | host FTP do servidor |
+| `HOSTGATOR_FTP_USER` | usuário FTP de deploy |
 | `HOSTGATOR_FTP_PASSWORD` | senha FTP |
-| `HOSTGATOR_FTP_DIR` | `/` (raiz da conta já é a pasta do jogo) |
+| `HOSTGATOR_FTP_DIR` | pasta remota do jogo (em geral a raiz da conta FTP) |
 
 O upload **não** sobrescreve `data/leaderboard.json`, `tickets.json`, `tickets-admin.key` nem `data/rooms/`.
 
