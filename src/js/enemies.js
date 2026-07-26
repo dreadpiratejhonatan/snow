@@ -897,6 +897,20 @@ export class Enemy {
       this.updateTamed(dt);
       return;
     }
+    // Montável enfraquecido: para de atacar — pronto para domar (E)
+    const mountFrac = CONFIG.mountTame?.hpFrac ?? 0.72;
+    if (this.cfg.mount && this.hp / this.maxHp <= mountFrac) {
+      if (this.flashT > 0) {
+        this.flashT -= dt;
+        if (this.flashT <= 0) this._setFlash(false);
+      }
+      this.state = "wander";
+      this.attackCd = 1;
+      this._idleT = (this._idleT || 0) + dt;
+      const breathe = 1 + Math.sin(this._idleT * 2) * 0.02;
+      this.mesh.scale.setScalar(this._restScale * breathe);
+      return;
+    }
     const cfg = this.cfg;
     const m = this.mesh;
 

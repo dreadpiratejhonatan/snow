@@ -2601,7 +2601,9 @@ class Game {
       this.hud.setHint(`[${useKey}] Pegar ${item.name}`);
     } else if (mountNear) {
       const mLabel = mountNear.enemy.label;
-      if (mountNear.kind === "tame") this.hud.setHint(`[${useKey}] Domar ${mLabel} (enfraquecido)`);
+      if (mountNear.kind === "tame") {
+        this.hud.setHint(`[${useKey}] Domar ${mLabel} (já está calmo)`);
+      }
       else if (mountNear.kind === "armor") this.hud.setHint(`[${useKey}] Equipar armadura em ${mLabel}`);
       else this.hud.setHint(`[${useKey}] Montar ${mLabel}`);
     } else if (chestDist < 3.2 && this.carried > 0) {
