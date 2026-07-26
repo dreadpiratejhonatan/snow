@@ -3,6 +3,7 @@
 Sobrevivência 3D na neve no navegador (Three.js). Explore, colete suprimentos, enfrente criaturas e chefs, dispute o ranking e jogue co-op com um amigo.
 
 **Documentação completa da v1:** [`docs/V1-OFICIAL.md`](docs/V1-OFICIAL.md)  
+**Ciclo pós-v1 (até gh63):** [`docs/DEVELOP-ATE-GH63.md`](docs/DEVELOP-ATE-GH63.md)  
 **Changelog:** [`CHANGELOG.md`](CHANGELOG.md) · **Novidades in-game:** [`docs/RELEASE-NOTES.md`](docs/RELEASE-NOTES.md)
 
 | Jogar | URL |
@@ -70,6 +71,7 @@ npm run preview           # dist/ em :5180
 - **HostGator (seguro):** [`docs/DEPLOY-SEGURO.md`](docs/DEPLOY-SEGURO.md) — zip em `release/snow.zip`  
 - **GitHub Pages:** [`docs/GITHUB-PAGES.md`](docs/GITHUB-PAGES.md)  
 - **Co-op:** [`docs/COOP.md`](docs/COOP.md)  
+- **Pós-v1 / o que foi feito:** [`docs/DEVELOP-ATE-GH63.md`](docs/DEVELOP-ATE-GH63.md)  
 - **APIs:** [`docs/API.md`](docs/API.md)
 
 O pacote **não inclui** ranking/tickets vivos — preserve `data/` no servidor.
@@ -93,9 +95,9 @@ O pacote **não inclui** ranking/tickets vivos — preserve `data/` no servidor.
 ├── faces/              # texturas de personagem
 ├── data/               # dev + .htaccess (produção no servidor)
 ├── docs/               # guias (deploy, Pages, API, COOP, …)
-├── scripts/            # build, …
+├── scripts/            # build, gen-music, …
 ├── tests/
-├── .github/workflows/  # CI + Pages
+├── .github/workflows/  # CI + deploy FTP / Pages
 ├── dist/               # build Pages (gerado)
 └── release/            # pacote HostGator (gerado)
 ```
@@ -104,6 +106,7 @@ O pacote **não inclui** ranking/tickets vivos — preserve `data/` no servidor.
 
 | Branch | Uso |
 | --- | --- |
-| `master` | desenvolvimento / Pages |
+| `main` | linha principal / GitHub Pages |
+| `develop` | desenvolvimento contínuo (HostGator FTP) |
 | `release/v1.0` | corte da primeira versão oficial |
 | `release-notes` | espelho histórico do ciclo jul/2026 |
