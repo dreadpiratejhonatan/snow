@@ -36,7 +36,7 @@ jobs:
           username: ${{ secrets.HOSTGATOR_FTP_USER }}
           password: ${{ secrets.HOSTGATOR_FTP_PASSWORD }}
           local-dir: ./release/hostgator-snow/
-          # Conta snowdeploy: raiz FTP já é a pasta do jogo → use /
+          # Diretório remoto: valor só no secret HOSTGATOR_FTP_DIR
           server-dir: ${{ secrets.HOSTGATOR_FTP_DIR }}
           dangerous-clean-slate: false
           exclude: |
