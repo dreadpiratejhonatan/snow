@@ -466,8 +466,17 @@ export const CONFIG = {
       skin: 0xe8d4b8,
       tie: 0x0a1810,
     },
+    mega_brain: {
+      id: "mega_brain",
+      name: "MEGA BRAIN",
+      face: "faces/mega_brain.png",
+      suit: 0x0a2838,
+      shirt: 0x28a8c0,
+      skin: 0xf0e0d0,
+      tie: 0xe8c040,
+    },
   },
-  skinOrder: ["natan", "jhonatan", "jorge", "caio", "lorenzo", "ze", "herobrine"],
+  skinOrder: ["natan", "jhonatan", "jorge", "caio", "lorenzo", "ze", "herobrine", "mega_brain"],
   /** IDs antigos → personagem (localStorage / saves). */
   skinAlias: {
     classic: "natan",
