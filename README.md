@@ -3,7 +3,7 @@
 Sobrevivência 3D na neve no navegador (Three.js). Explore, colete suprimentos, enfrente criaturas e chefs, dispute o ranking e jogue co-op com um amigo.
 
 **Documentação completa da v1:** [`docs/V1-OFICIAL.md`](docs/V1-OFICIAL.md)  
-**Changelog:** [`CHANGELOG.md`](CHANGELOG.md) · **Novidades in-game:** [`RELEASE-NOTES.md`](RELEASE-NOTES.md)
+**Changelog:** [`CHANGELOG.md`](CHANGELOG.md) · **Novidades in-game:** [`docs/RELEASE-NOTES.md`](docs/RELEASE-NOTES.md)
 
 | Jogar | URL |
 | --- | --- |
@@ -67,8 +67,8 @@ npm run test:coop-relay   # HostGator signal/relay ao vivo
 npm run preview           # dist/ em :5180
 ```
 
-- **HostGator (seguro):** [`DEPLOY-SEGURO.md`](DEPLOY-SEGURO.md) — zip em `release/snow.zip`  
-- **GitHub Pages:** [`GITHUB-PAGES.md`](GITHUB-PAGES.md)  
+- **HostGator (seguro):** [`docs/DEPLOY-SEGURO.md`](docs/DEPLOY-SEGURO.md) — zip em `release/snow.zip`  
+- **GitHub Pages:** [`docs/GITHUB-PAGES.md`](docs/GITHUB-PAGES.md)  
 - **Co-op:** [`docs/COOP.md`](docs/COOP.md)  
 - **APIs:** [`docs/API.md`](docs/API.md)
 
@@ -79,18 +79,25 @@ O pacote **não inclui** ranking/tickets vivos — preserve `data/` no servidor.
 ## Estrutura
 
 ```
-web-cs/
-├── index.html          # shell + menus + splash
+/
+├── README.md           # visão geral do projeto
+├── CHANGELOG.md
+├── package.json
+├── index.html          # entry (dev) — shell + menus
+├── assets/splash/      # artes do launcher
 ├── src/js/             # game, net/, splash, …
 ├── src/styles/
 ├── api/                # leaderboard, signal, tickets (PHP)
 ├── tickets/            # board público de sugestões
+├── music/              # OST / manifest
+├── faces/              # texturas de personagem
 ├── data/               # dev + .htaccess (produção no servidor)
-├── docs/               # V1-OFICIAL, API, COOP, …
+├── docs/               # guias (deploy, Pages, API, COOP, …)
+├── scripts/            # build, …
 ├── tests/
-├── scripts/build.mjs
-├── dist/               # build Pages
-└── release/snow.zip    # pacote HostGator
+├── .github/workflows/  # CI + Pages
+├── dist/               # build Pages (gerado)
+└── release/            # pacote HostGator (gerado)
 ```
 
 ## Branches

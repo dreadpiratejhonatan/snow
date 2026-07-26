@@ -9,7 +9,8 @@ Com jogadores no ranking / tickets, **nunca apague** `data/leaderboard.json` nem
 1. Entre em `public_html/snow/`
 2. **Backup:** baixe `data/leaderboard.json` e `data/tickets.json` (se existir) para o PC
 3. **Deixe a pasta** `data/` **intacta**
-4. Apague apenas: `index.html`, `src/`, `api/`, `music/`, `faces/`, `tickets/`, `splash_screen.*`, `sc1.jpeg`…`sc4.jpeg`
+4. Apague apenas: `index.html`, `src/`, `api/`, `music/`, `faces/`, `tickets/`, `assets/`  
+   (e, se ainda existirem na raiz: `splash_screen.*`, `sc1.jpeg`…`sc4.jpeg`)
 5. Extraia o `snow.zip` novo ali
 6. Se o zip trouxe `data/` sem `leaderboard.json` / `tickets.json`, está correto — o PHP cria se faltar
 7. Se por engano sobrescreveu o JSON, restaure o backup do passo 2

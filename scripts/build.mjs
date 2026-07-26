@@ -8,7 +8,7 @@ import { execSync } from "node:child_process";
 process.chdir(path.dirname(path.dirname(fileURLToPath(import.meta.url))));
 const DIST = "dist";
 const HOST = path.join("release", "hostgator-snow");
-const CACHE = "gh41";
+const CACHE = "gh42";
 
 /** Arquivos de dados vivos no servidor — nunca clobber no pacote HostGator. */
 const PRESERVE_DATA = new Set(["leaderboard.json", "tickets.json", "tickets-rate.json", "tickets-admin.key"]);
@@ -74,15 +74,8 @@ html = html
   );
 fs.writeFileSync(path.join(DIST, "index.html"), html);
 
-for (const splash of [
-  "splash_screen.png",
-  "splash_screen.jpeg",
-  "sc1.jpeg",
-  "sc2.jpeg",
-  "sc3.jpeg",
-  "sc4.jpeg",
-]) {
-  if (fs.existsSync(splash)) fs.copyFileSync(splash, path.join(DIST, splash));
+if (fs.existsSync("assets")) {
+  fs.cpSync("assets", path.join(DIST, "assets"), { recursive: true });
 }
 if (fs.existsSync("faces")) {
   fs.cpSync("faces", path.join(DIST, "faces"), { recursive: true });
@@ -137,15 +130,8 @@ fs.mkdirSync(path.join(HOST, "src", "js"), { recursive: true });
 fs.mkdirSync(path.join(HOST, "src", "styles"), { recursive: true });
 fs.copyFileSync(path.join(DIST, "game.js"), path.join(HOST, "src", "js", "bundle.js"));
 fs.copyFileSync("src/styles/styles.css", path.join(HOST, "src", "styles", "styles.css"));
-for (const splash of [
-  "splash_screen.png",
-  "splash_screen.jpeg",
-  "sc1.jpeg",
-  "sc2.jpeg",
-  "sc3.jpeg",
-  "sc4.jpeg",
-]) {
-  if (fs.existsSync(splash)) fs.copyFileSync(splash, path.join(HOST, splash));
+if (fs.existsSync("assets")) {
+  fs.cpSync("assets", path.join(HOST, "assets"), { recursive: true });
 }
 if (fs.existsSync("faces")) {
   fs.cpSync("faces", path.join(HOST, "faces"), { recursive: true });
@@ -188,7 +174,8 @@ fs.writeFileSync(
     "",
     "1. No cPanel, abra public_html/snow",
     "2. BACKUP: baixe data/leaderboard.json (e tickets.json se existir)",
-    "3. Apague SOMENTE: index.html, src/, api/, music/, faces/, tickets/, splash_screen.*",
+    "3. Apague SOMENTE: index.html, src/, api/, music/, faces/, tickets/, assets/",
+    "   (e sc*.jpeg / splash_screen.* antigos na raiz, se ainda existirem)",
     "   (deixe data/ intacta)",
     "4. Upload deste pacote (+ pasta tickets/)",
     "   Se o zip trouxer data/, nao substitua leaderboard.json / tickets.json",
@@ -200,7 +187,7 @@ fs.writeFileSync(
     "Ranking: api/leaderboard.php -> data/leaderboard.json",
     "Co-op: api/signal.php -> data/rooms/",
     "Tickets: /tickets/ -> api/tickets.php -> data/tickets.json",
-    "Guia completo: DEPLOY-SEGURO.md no repositorio",
+    "Guia completo: docs/DEPLOY-SEGURO.md no repositorio",
     "",
   ].join("\n")
 );

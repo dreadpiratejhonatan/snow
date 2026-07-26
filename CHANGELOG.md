@@ -20,7 +20,7 @@ Primeira versão **oficial** (`release/v1.0`, tag `v1.0.0`).
 - OST procedural estilo aventura 16-bit
 - Scroll do mouse para ciclar armas
 - Deploy GitHub Pages + pacote HostGator (`release/snow.zip`)
-- Documentação: `docs/V1-OFICIAL.md`, `docs/API.md`, `docs/COOP.md`, `DEPLOY-SEGURO.md`
+- Documentação: `docs/V1-OFICIAL.md`, `docs/API.md`, `docs/COOP.md`, `docs/DEPLOY-SEGURO.md`
 
 ### Known limits
 - Co-op máximo 2 jogadores; sessão cai se o host sair
