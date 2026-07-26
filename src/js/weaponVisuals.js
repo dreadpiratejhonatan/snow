@@ -138,9 +138,11 @@ export function buildHeldWeaponMesh(weaponId) {
     g.scale.setScalar(1.2);
   } else if (weaponId === "spear") {
     const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.03, 1.4, 6), wood);
-    shaft.position.y = 0.4;
+    shaft.rotation.z = Math.PI / 2.5;
+    shaft.position.set(0.35, 0.15, 0.25);
     const tip = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.25, 6), metal);
-    tip.position.y = 1.15;
+    tip.rotation.z = Math.PI / 2.5;
+    tip.position.set(0.95, 0.38, 0.25);
     g.add(shaft, tip);
     g.scale.setScalar(1.15);
   } else if (weaponId === "relic") {
@@ -179,8 +181,14 @@ export function buildHeldWeaponMesh(weaponId) {
   }
 
   // orientação padrão: aponta para frente do personagem
-  g.rotation.set(-0.15, 0, 0.15);
-  g.position.set(0.05, 0.05, 0.1);
+  // ajustes específicos por arma
+  if (weaponId === "spear") {
+    g.rotation.set(-0.35, 0.05, 0.05);
+    g.position.set(-0.05, 0, 0.2);
+  } else {
+    g.rotation.set(-0.15, 0, 0.15);
+    g.position.set(0.05, 0.05, 0.1);
+  }
   g.traverse((m) => {
     if (m.isMesh) {
       m.castShadow = true;

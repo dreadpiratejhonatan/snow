@@ -28,8 +28,11 @@ Primeira versão **oficial** (`release/v1.0`, tag `v1.0.0`).
 
 ## [Unreleased]
 
-Trabalho na branch `develop` após `v1.0.0` (cache **`gh72`**).  
+Trabalho na branch `develop` após `v1.0.0` (cache **`gh73`**).  
 Resumo narrativo: [`docs/DEVELOP-ATE-GH63.md`](docs/DEVELOP-ATE-GH63.md).
+
+### Fixed
+- **Lança de gelo**: Posição e rotação ajustadas para não atravessar o corpo do personagem (agora segura de forma mais horizontal e natural)
 
 ### Added
 - **Dungeon secreta**: caverna escondida em posição aleatória por seed (sem marcador no mapa) — ondas de inimigos, parkour, Guardião do Abismo e a arma exclusiva **Relíquia do Abismo** + conquista "Segredo do Abismo" (solo only; morrer reseta a dungeon)
