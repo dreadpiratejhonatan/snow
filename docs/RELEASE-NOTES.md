@@ -6,6 +6,9 @@ Documentação completa: [`docs/V1-OFICIAL.md`](docs/V1-OFICIAL.md) · Tag Git: 
 
 ## Atualizações recentes (pós-v1.0)
 
+### [gh78] — Personagens (26 jul 2026)
+- Removido o personagem **Ártico** do seletor (ficam Natan, Jorge Bolado, Caio, Lorenzo e ZÉ)
+
 ### [gh77] — Montarias (26 jul 2026)
 - **Dome e monte** a mula sem cabeça e o panda: enfraqueça o animal (vida < 40%) e aperte **E**
 - Montado: WASD anda, **Shift galopa** (mula é veloz, panda é tanque), **E** desmonta
@@ -57,7 +60,7 @@ Documentação completa: [`docs/V1-OFICIAL.md`](docs/V1-OFICIAL.md) · Tag Git: 
 - Vitória exige **Troféu do Urso Alfa** + **Troféu do Boto**
 
 ## Personagens
-- **Natan**, **Ártico**, **Jorge Bolado**, **Caio**, **Lorenzo**, **ZÉ**
+- **Natan**, **Jorge Bolado**, **Caio**, **Lorenzo**, **ZÉ**
 - Preview 3D; cards em ordem aleatória; rosto só na frente da cabeça
 
 ## Mundo e áudio
