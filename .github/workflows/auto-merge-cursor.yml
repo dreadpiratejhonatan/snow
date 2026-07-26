@@ -1,0 +1,166 @@
+# Auto-merge Cursor Cloud Agent PRs into develop, then deploy production.
+# Phone / cloud-agent branches: cursor/**
+#
+# Note: merges done with GITHUB_TOKEN do not trigger other workflows, so this
+# file also runs HostGator + GitHub Pages deploy after a successful merge.
+name: Auto-merge Cursor PRs
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    branches: [develop, master, main]
+
+permissions:
+  contents: write
+  pull-requests: write
+  checks: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: auto-merge-cursor-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  merge:
+    if: startsWith(github.head_ref, 'cursor/')
+    runs-on: ubuntu-latest
+    outputs:
+      merged: ${{ steps.merge.outputs.merged }}
+    steps:
+      - name: Retarget to develop, wait for CI, squash-merge
+        id: merge
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR: ${{ github.event.pull_request.number }}
+          BASE: ${{ github.event.pull_request.base.ref }}
+        run: |
+          set -euo pipefail
+
+          if [ "$BASE" != "develop" ]; then
+            echo "Retargeting PR #$PR from $BASE → develop"
+            gh pr edit "$PR" --base develop
+          fi
+
+          if [ "${{ github.event.pull_request.draft }}" = "true" ]; then
+            echo "Marking PR #$PR ready for review"
+            gh pr ready "$PR"
+          fi
+
+          echo "Waiting for checks on PR #$PR…"
+          # Give CI a moment to register.
+          sleep 20
+          deadline=$((SECONDS + 900))
+          while [ "$SECONDS" -lt "$deadline" ]; do
+            # Capture checks; gh exits non-zero when any check fails or none exist.
+            set +e
+            out=$(gh pr checks "$PR" 2>&1)
+            code=$?
+            set -e
+            echo "$out"
+
+            if echo "$out" | grep -qiE '\b(fail|failure|cancelled)\b'; then
+              echo "A check failed — not merging"
+              exit 1
+            fi
+
+            # Pending / in-progress
+            if echo "$out" | grep -qiE '\b(pending|queued|in_progress|running)\b'; then
+              echo "Checks still running…"
+              sleep 15
+              continue
+            fi
+
+            # All reported checks look done (pass/skip) or there are no checks yet.
+            if [ "$code" -eq 0 ] || ! echo "$out" | grep -qiE '\b(pending|queued|in_progress|running|fail|failure)\b'; then
+              # If CI has not started, keep waiting a bit longer.
+              if ! echo "$out" | grep -qiE 'CI|smoke|Deploy|build'; then
+                if [ "$SECONDS" -lt 120 ]; then
+                  echo "No CI checks visible yet — waiting…"
+                  sleep 15
+                  continue
+                fi
+              fi
+              break
+            fi
+            sleep 15
+          done
+
+          echo "Squash-merging PR #$PR into develop"
+          gh pr merge "$PR" --squash --delete-branch --subject "Auto-merge cursor PR #${PR}"
+          echo "merged=true" >> "$GITHUB_OUTPUT"
+
+  deploy-hostgator:
+    needs: merge
+    if: needs.merge.outputs.merged == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout develop
+        uses: actions/checkout@v4
+        with:
+          ref: develop
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: FTP upload (preserve live data/)
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.HOSTGATOR_FTP_HOST }}
+          username: ${{ secrets.HOSTGATOR_FTP_USER }}
+          password: ${{ secrets.HOSTGATOR_FTP_PASSWORD }}
+          local-dir: ./release/hostgator-snow/
+          server-dir: ${{ secrets.HOSTGATOR_FTP_DIR }}
+          dangerous-clean-slate: false
+          exclude: |
+            **/.git*
+            **/.git*/**
+            data/leaderboard.json
+            data/tickets.json
+            data/tickets-admin.key
+            data/tickets-rate.json
+            data/rooms/**
+            data/rooms/**/*
+
+  deploy-pages:
+    needs: merge
+    if: needs.merge.outputs.merged == 'true'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout develop
+        uses: actions/checkout@v4
+        with:
+          ref: develop
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
