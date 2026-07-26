@@ -28,8 +28,12 @@ Primeira versão **oficial** (`release/v1.0`, tag `v1.0.0`).
 
 ## [Unreleased]
 
-Trabalho na branch `develop` após `v1.0.0` (cache **`gh69`**).  
+Trabalho na branch `develop` após `v1.0.0` (cache **`gh70`**).  
 Resumo narrativo: [`docs/DEVELOP-ATE-GH63.md`](docs/DEVELOP-ATE-GH63.md).
+
+### Fixed
+- Áudio no mobile: desbloqueio persistente em qualquer toque (iOS suspende o contexto); aviso "toque para som" só some com o som rodando de verdade
+- Trilha sonora: WAVs roteados pelo grafo WebAudio (volume unificado), retry no próximo gesto quando o autoplay bloqueia, e pausas entre faixas de 6–18s para 1.5–4s
 
 ### Changed
 - Organização do repositório: artes do splash em `assets/splash/`; guias `DEPLOY-SEGURO`, `GITHUB-PAGES` e `RELEASE-NOTES` em `docs/`

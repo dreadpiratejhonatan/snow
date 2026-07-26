@@ -1945,6 +1945,16 @@ class Game {
       }
     };
     this.canvas.addEventListener("click", unlock);
+    // Desbloqueio de áudio persistente: iOS/Android suspendem o AudioContext
+    // a qualquer momento (aba em 2º plano, chamada, silencioso). Cada gesto
+    // real tenta retomar — start() é barato quando já está rodando.
+    const audioUnlock = () => void this.ambience.start();
+    window.addEventListener("pointerdown", audioUnlock, { capture: true, passive: true });
+    window.addEventListener("touchend", audioUnlock, { capture: true, passive: true });
+    window.addEventListener("keydown", audioUnlock, { capture: true });
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden) void this.ambience.resumeIfSuspended();
+    });
     window.addEventListener(
       "touchstart",
       () => {
@@ -2119,7 +2129,9 @@ class Game {
       this.clickHint.hidden = this.input.locked || this.input.mobile;
       if (this.input.mobile) {
         this.clickHint.textContent = "Toque na tela para começar (áudio + trilha)";
-        this.clickHint.hidden = this.ambience.started;
+        // started pode ser true com o contexto ainda suspenso (iOS) — só
+        // esconde o aviso quando o som está saindo de verdade
+        this.clickHint.hidden = this.ambience.started && this.ambience.contextRunning;
       }
     }
 

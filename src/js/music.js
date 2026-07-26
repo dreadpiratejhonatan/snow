@@ -237,6 +237,30 @@ export class MusicPlayer {
     }
   }
 
+  /**
+   * Elemento de áudio único roteado pelo grafo WebAudio (bus → master).
+   * Um <audio> só aceita UM MediaElementSource na vida — por isso é compartilhado
+   * e as trocas de faixa mudam apenas o src.
+   */
+  ensureFileGraph() {
+    if (this.fileAudio) return;
+    const ctx = this.getCtx();
+    const master = this.getMaster();
+    this.fileAudio = new Audio();
+    this.fileAudio.preload = "auto";
+    this.fileAudio.onended = () => this.nextAfterSilence(1.5 + Math.random() * 2.5);
+    try {
+      this.fileSource = ctx.createMediaElementSource(this.fileAudio);
+      this.fileGain = ctx.createGain();
+      this.fileGain.gain.value = 0.55;
+      this.fileSource.connect(this.fileGain).connect(master);
+    } catch {
+      // fallback raro: elemento cru com volume próprio
+      this.fileGain = null;
+      this.fileAudio.volume = 0.32;
+    }
+  }
+
   trySwitchToFiles(filePl) {
     return new Promise((resolve) => {
       const entry = filePl.list[filePl.start];
@@ -244,9 +268,8 @@ export class MusicPlayer {
         resolve(false);
         return;
       }
-      const audio = new Audio(entry.url);
-      audio.volume = 0.32;
-      audio.preload = "auto";
+      this.ensureFileGraph();
+      const audio = this.fileAudio;
       let settled = false;
       const fail = () => {
         if (settled) return;
@@ -256,11 +279,15 @@ export class MusicPlayer {
         } catch {
           /* ignore */
         }
+        // Autoplay bloqueado fora do gesto (iOS/Safari): guarda para
+        // retentar no próximo clique/toque real via retryFilesOnGesture().
+        this._pendingFilePl = filePl;
         resolve(false);
       };
       const ok = () => {
         if (settled) return;
         settled = true;
+        this._pendingFilePl = null;
         this.mode = "file";
         this.playlist = filePl.list;
         this.index = filePl.start;
@@ -269,22 +296,25 @@ export class MusicPlayer {
         this.notesLeftInTrack = 0;
         this.silence = 0;
         this._pendingNext = false;
-        if (this.fileAudio) {
-          try {
-            this.fileAudio.pause();
-          } catch {
-            /* ignore */
-          }
-        }
-        this.fileAudio = audio;
         this.onTrack?.(entry.name);
-        audio.onended = () => this.nextAfterSilence(6 + Math.random() * 8);
         resolve(true);
       };
       audio.addEventListener("error", fail, { once: true });
       audio.addEventListener("playing", ok, { once: true });
       setTimeout(fail, 4000);
+      audio.src = entry.url;
       audio.play().catch(fail);
+    });
+  }
+
+  /** Chamar dentro de um gesto real: retenta a playlist de arquivos pendente. */
+  retryFilesOnGesture() {
+    if (this.mode === "file" || !this._pendingFilePl || this._retrying) return;
+    const pl = this._pendingFilePl;
+    this._pendingFilePl = null;
+    this._retrying = true;
+    void this.trySwitchToFiles(pl).finally(() => {
+      this._retrying = false;
     });
   }
 
@@ -366,19 +396,10 @@ export class MusicPlayer {
 
   playFile(entry) {
     if (!entry) return;
-    if (this.fileAudio) {
-      try {
-        this.fileAudio.pause();
-      } catch {
-        /* ignore */
-      }
-    }
-    const audio = new Audio(entry.url);
-    audio.volume = 0.3;
-    audio.preload = "auto";
-    this.fileAudio = audio;
+    this.ensureFileGraph();
+    const audio = this.fileAudio;
     this.onTrack?.(entry.name);
-    audio.onended = () => this.nextAfterSilence(8 + Math.random() * 10);
+    audio.src = entry.url;
     audio.play().catch(() => {
       this.nextAfterSilence(1);
     });
@@ -548,7 +569,10 @@ export class MusicPlayer {
       const f = 44 + this._moodBlend * 14 + Math.sin(ctx.currentTime * 0.45) * 2;
       this._combatPad.frequency.setTargetAtTime(f, ctx.currentTime, 0.4);
     }
-    if (this.fileAudio && !this.fileAudio.paused) {
+    if (this.fileGain) {
+      const fVol = (0.55 - this._moodBlend * 0.12) * dangerMul;
+      this.fileGain.gain.value += (fVol - this.fileGain.gain.value) * Math.min(1, dt * 1.6);
+    } else if (this.fileAudio && !this.fileAudio.paused) {
       this.fileAudio.volume = (0.3 - this._moodBlend * 0.06) * dangerMul;
     }
 
