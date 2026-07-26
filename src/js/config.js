@@ -117,7 +117,7 @@ export const CONFIG = {
       drops: [
         { weaponId: "axe", chance: 1, name: "Machado", color: 0xb0b8c2 },
         { weaponId: "torch", chance: 0.5, name: "Tocha", color: 0xff9a3c },
-        { ammoType: "arrow", amount: 4, chance: 0.4, name: "Flechas", color: 0x9be07a },
+        { ammoType: "arrow", amount: 2, chance: 0.22, name: "Flechas", color: 0x9be07a },
       ],
     },
     bear_elite: {
@@ -163,8 +163,8 @@ export const CONFIG = {
       faction: "wildlife",
       drops: [
         { weaponId: "spear", chance: 1, name: "Lança de gelo", color: 0xa8e8ff },
-        { weaponId: "bow", chance: 0.6, name: "Arco", color: 0x9be07a, amount: 8 },
-        { ammoType: "arrow", amount: 6, chance: 0.8, name: "Flechas", color: 0x9be07a },
+        { weaponId: "bow", chance: 0.45, name: "Arco", color: 0x9be07a, amount: 4 },
+        { ammoType: "arrow", amount: 3, chance: 0.4, name: "Flechas", color: 0x9be07a },
         { trapId: "mine", chance: 0.5, amount: 1, name: "Mina", color: 0x6a6a6a },
       ],
     },
@@ -188,7 +188,7 @@ export const CONFIG = {
       faction: "occult",
       drops: [
         { weaponId: "ak47", chance: 1, name: "AK-47", color: 0x6a5a3a },
-        { ammoType: "bullet", amount: 16, chance: 1, name: "Balas", color: 0xd8c25a },
+        { ammoType: "bullet", amount: 8, chance: 0.65, name: "Balas", color: 0xd8c25a },
       ],
     },
     mula: {
@@ -211,7 +211,7 @@ export const CONFIG = {
       faction: "occult",
       drops: [
         { weaponId: "shotgun", chance: 1, name: "Escopeta", color: 0xb87848 },
-        { ammoType: "shell", amount: 6, chance: 1, name: "Cartuchos", color: 0xe08a5a },
+        { ammoType: "shell", amount: 3, chance: 0.7, name: "Cartuchos", color: 0xe08a5a },
       ],
     },
     slender: {
@@ -233,8 +233,8 @@ export const CONFIG = {
       faction: "occult",
       drops: [
         { weaponId: "crossbow", chance: 1, name: "Besta", color: 0x8a9ab0 },
-        { weaponId: "grenade", chance: 1, name: "Granada", color: 0x5a7a4a, amount: 2 },
-        { ammoType: "grenade", amount: 2, chance: 1, name: "Granadas", color: 0x5a7a4a },
+        { weaponId: "grenade", chance: 0.7, name: "Granada", color: 0x5a7a4a, amount: 1 },
+        { ammoType: "grenade", amount: 1, chance: 0.55, name: "Granadas", color: 0x5a7a4a },
       ],
     },
     chuck: {
@@ -255,8 +255,8 @@ export const CONFIG = {
       faction: "chaos",
       drops: [
         { weaponId: "revolver", chance: 1, name: "Revólver", color: 0xd8c25a },
-        { ammoType: "bullet", amount: 12, chance: 1, name: "Balas", color: 0xd8c25a },
-        { ammoType: "arrow", amount: 6, chance: 0.7, name: "Flechas", color: 0x9be07a },
+        { ammoType: "bullet", amount: 5, chance: 0.55, name: "Balas", color: 0xd8c25a },
+        { ammoType: "arrow", amount: 3, chance: 0.35, name: "Flechas", color: 0x9be07a },
         { trapId: "bait", chance: 0.6, amount: 1, name: "Isca", color: 0xc87840 },
         { trapId: "fence", chance: 0.5, amount: 1, name: "Cerca", color: 0x8a6a40 },
       ],
@@ -284,7 +284,7 @@ export const CONFIG = {
       drops: [
         { weaponId: "claymore", chance: 1, name: "Claymore", color: 0xd0d8e8 },
         { weaponId: "shotgun", chance: 0.85, name: "Escopeta", color: 0xb87848 },
-        { ammoType: "shell", amount: 8, chance: 1, name: "Cartuchos", color: 0xe08a5a },
+        { ammoType: "shell", amount: 4, chance: 0.7, name: "Cartuchos", color: 0xe08a5a },
         { trapId: "mine", chance: 0.7, amount: 2, name: "Minas", color: 0x6a6a6a },
       ],
     },
@@ -307,8 +307,8 @@ export const CONFIG = {
       faction: "occult",
       drops: [
         { weaponId: "ak47", chance: 1, name: "AK-47", color: 0x6a5a3a },
-        { ammoType: "bullet", amount: 24, chance: 1, name: "Balas", color: 0xd8c25a },
-        { weaponId: "grenade", chance: 0.8, name: "Granada", color: 0x5a7a4a, amount: 2 },
+        { ammoType: "bullet", amount: 12, chance: 0.7, name: "Balas", color: 0xd8c25a },
+        { weaponId: "grenade", chance: 0.55, name: "Granada", color: 0x5a7a4a, amount: 1 },
         { trapId: "bait", chance: 0.7, amount: 2, name: "Iscas", color: 0xc87840 },
       ],
     },
@@ -334,7 +334,7 @@ export const CONFIG = {
       drops: [
         { weaponId: "ak47", chance: 1, name: "AK-47", color: 0x6a5a3a },
         { weaponId: "revolver", chance: 1, name: "Revólver", color: 0xd8c25a },
-        { ammoType: "bullet", amount: 40, chance: 1, name: "Balas", color: 0xd8c25a },
+        { ammoType: "bullet", amount: 18, chance: 0.75, name: "Balas", color: 0xd8c25a },
         { weaponId: "claymore", chance: 0.75, name: "Claymore", color: 0xd0d8e8 },
       ],
     },
@@ -360,7 +360,7 @@ export const CONFIG = {
       trophyColor: 0xff7ab8,
       drops: [
         { weaponId: "crossbow", chance: 1, name: "Besta", color: 0x8a9ab0 },
-        { ammoType: "arrow", amount: 12, chance: 1, name: "Flechas", color: 0x9be07a },
+        { ammoType: "arrow", amount: 6, chance: 0.7, name: "Flechas", color: 0x9be07a },
         { weaponId: "spear", chance: 0.9, name: "Lança de gelo", color: 0xa8e8ff },
       ],
     },
@@ -381,7 +381,7 @@ export const CONFIG = {
       faction: "chaos",
       flyHeight: 8,
       drops: [
-        { ammoType: "arrow", amount: 8, chance: 0.8, name: "Flechas", color: 0x9be07a },
+        { ammoType: "arrow", amount: 3, chance: 0.4, name: "Flechas", color: 0x9be07a },
         { weaponId: "spear", chance: 0.5, name: "Lança de gelo", color: 0xa8e8ff },
       ],
     },
@@ -651,28 +651,22 @@ export const CONFIG = {
     shell: { name: "Cartuchos", icon: "▮" },
     grenade: { name: "Granadas", icon: "●" },
   },
-  // pickups de arma (não contam para vitória) — vários perto da base
+  // pickups de arma (não contam para vitória) — munição inicial enxuta
   weaponPickups: [
     { name: "Lança de gelo", color: 0xa8e8ff, weaponId: "spear", nearBase: true },
     { name: "Tocha", color: 0xff9a3c, weaponId: "torch", nearBase: true },
     { name: "Claymore enferrujada", color: 0xb8c8d8, weaponId: "claymore", nearBase: true },
-    { name: "Arco de caçador", color: 0x9be07a, weaponId: "bow", ammoType: "arrow", amount: 10, nearBase: true },
-    { name: "Revólver antigo", color: 0xd8c25a, weaponId: "revolver", ammoType: "bullet", amount: 12, nearBase: true },
-    { name: "Escopeta", color: 0xb87848, weaponId: "shotgun", ammoType: "shell", amount: 6, nearBase: true },
-    { name: "AK-47", color: 0x6a5a3a, weaponId: "ak47", ammoType: "bullet", amount: 20 },
-    { name: "Besta", color: 0x8a9ab0, weaponId: "crossbow", ammoType: "arrow", amount: 8 },
+    { name: "Arco de caçador", color: 0x9be07a, weaponId: "bow", ammoType: "arrow", amount: 5, nearBase: true },
+    { name: "Revólver antigo", color: 0xd8c25a, weaponId: "revolver", ammoType: "bullet", amount: 6, nearBase: true },
+    { name: "Escopeta", color: 0xb87848, weaponId: "shotgun", ammoType: "shell", amount: 3, nearBase: true },
+    { name: "AK-47", color: 0x6a5a3a, weaponId: "ak47", ammoType: "bullet", amount: 12 },
+    { name: "Besta", color: 0x8a9ab0, weaponId: "crossbow", ammoType: "arrow", amount: 4 },
   ],
-  // caixas de munição espalhadas no mapa (não contam para vitória)
+  // caixas de munição — poucas e pequenas (sobrevivência)
   ammoPickups: [
-    // flechas também liberam o arco (ver weapons.onCollectItem)
-    { name: "Flechas (+arco)", color: 0x9be07a, ammoType: "arrow", amount: 10 },
-    { name: "Flechas (+arco)", color: 0x9be07a, ammoType: "arrow", amount: 10 },
-    { name: "Balas (+revólver)", color: 0xd8c25a, ammoType: "bullet", amount: 12 },
-    { name: "Balas (+revólver)", color: 0xd8c25a, ammoType: "bullet", amount: 12 },
-    { name: "Cartuchos (+escopeta)", color: 0xe08a5a, ammoType: "shell", amount: 4 },
-    { name: "Cartuchos (+escopeta)", color: 0xe08a5a, ammoType: "shell", amount: 4 },
-    { name: "Granada", color: 0x5a7a4a, weaponId: "grenade", ammoType: "grenade", amount: 1 },
-    { name: "Granada", color: 0x5a7a4a, weaponId: "grenade", ammoType: "grenade", amount: 1 },
+    { name: "Flechas (+arco)", color: 0x9be07a, ammoType: "arrow", amount: 5 },
+    { name: "Balas (+revólver)", color: 0xd8c25a, ammoType: "bullet", amount: 6 },
+    { name: "Cartuchos (+escopeta)", color: 0xe08a5a, ammoType: "shell", amount: 2 },
     { name: "Granada", color: 0x5a7a4a, weaponId: "grenade", ammoType: "grenade", amount: 1 },
   ],
   // itens de sobrevivência (+ troféu do urso alfa)

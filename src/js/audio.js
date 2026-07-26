@@ -65,6 +65,8 @@ export class Ambience {
     this.gust = 0;
     this.gustTarget = 0;
     this.gustTimer = 0;
+    /** Sussurros distantes — bem raros (minutos entre um e outro). */
+    this.whisperTimer = 90 + Math.random() * 120;
     this.musicOn = true;
     this.music = null;
     this.onTrackChange = null; // (nome) => void — preenchido pelo Game
@@ -529,6 +531,32 @@ export class Ambience {
     }
   }
 
+  /**
+   * Sussurro sintetizado (formantes baixos + ruído), bem quieto e com eco.
+   * Não deve competir com a trilha — só atmosfera.
+   */
+  whisper() {
+    if (!ctx) return;
+    const vol = 0.014 + Math.random() * 0.01;
+    // sopro / consoante
+    this.noiseBurst(0.55 + Math.random() * 0.45, vol * 0.7, 280 + Math.random() * 180, 0.55, "bandpass", 0.85);
+    // “vogais” mudas (2–3 formantes)
+    const base = 140 + Math.random() * 90;
+    const syllables = 2 + ((Math.random() * 2) | 0);
+    for (let i = 0; i < syllables; i++) {
+      const delay = 180 + i * (220 + Math.random() * 160);
+      setTimeout(() => {
+        if (!ctx) return;
+        this.blip(base * (1 + i * 0.12), 0.22, vol, "sine", base * 0.85, 0.9);
+        this.blip(base * 2.1, 0.18, vol * 0.45, "triangle", base * 1.7, 0.75);
+      }, delay);
+    }
+    // cauda de vento filtrado
+    setTimeout(() => {
+      if (ctx) this.noiseBurst(0.7, vol * 0.35, 520 + Math.random() * 200, 1.2, "bandpass", 0.7);
+    }, 400 + syllables * 200);
+  }
+
   update(dt, s) {
     if (!this.started || !ctx) return;
     if (ctx.state === "suspended") ctx.resume();
@@ -606,6 +634,17 @@ export class Ambience {
         this.bearRoarTimer = 2.5 + Math.random() * 3;
         this.roarSmall(1 - s.bearDist / 26);
       }
+    }
+
+    // sussurros: muito esporádicos; um pouco mais à noite / longe do combate
+    this.whisperTimer -= dt;
+    if (this.whisperTimer <= 0) {
+      // 2–5 min até a próxima tentativa
+      this.whisperTimer = 120 + Math.random() * 180;
+      const inCombat = !!(s.bearChasing && s.bearDist < 22);
+      const nightBoost = s.night > 0.45 ? 0.55 : 0.22;
+      const chance = inCombat ? 0.08 : nightBoost;
+      if (Math.random() < chance) this.whisper();
     }
 
     // coração acelerado: vida baixa ou urso na cola

@@ -28,7 +28,7 @@ Primeira versão **oficial** (`release/v1.0`, tag `v1.0.0`).
 
 ## [Unreleased]
 
-Trabalho na branch `develop` após `v1.0.0` (cache `gh51`).
+Trabalho na branch `develop` após `v1.0.0` (cache `gh54`).
 
 ### Added
 - Desafio do dia (seed UTC) + conquistas locais
@@ -46,3 +46,8 @@ Trabalho na branch `develop` após `v1.0.0` (cache `gh51`).
 ### Changed
 - Difícil mais punitivo (loot/munição/frio/spawns)
 - Cast só amigos (Rita/Bruno removidos)
+- Munição mais escassa no mapa e nos drops
+- Hitscan/projéteis alinhados à crosshair
+
+### Added
+- Sussurros sintéticos bem esporádicos na ambiência (mais à noite)
