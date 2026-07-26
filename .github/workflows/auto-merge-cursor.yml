@@ -61,15 +61,13 @@ jobs:
             # Use Checks API — avoid parsing prose from `gh pr checks`.
             json=$(gh api "repos/${REPO}/commits/${HEAD_SHA}/check-runs" --paginate)
             echo "$json" | jq -r '.check_runs[] | "\(.name)\t\(.status)\t\(.conclusion // "-")\t\(.app.name // "-")"' \
-              | grep -viE '^(merge|deploy-hostgator|deploy-pages)\t' \
-              | grep -vi 'Auto-merge Cursor PRs' \
+              | grep -viE '^(merge|deploy-hostgator|build-pages|deploy-pages)\t' \
               | tee /tmp/checks.tsv || true
 
-            # Keep only jobs from the CI workflow (name smoke) or anything not ours.
             # Fail if any non-auto-merge check concluded failure/cancelled.
             if awk -F'\t' '
               BEGIN { pending=0; failed=0; seen=0 }
-              $1 ~ /^(merge|deploy-hostgator|deploy-pages)$/ { next }
+              $1 ~ /^(merge|deploy-hostgator|build-pages|deploy-pages)$/ { next }
               {
                 seen=1
                 if ($2 != "completed") pending=1
@@ -156,13 +154,11 @@ jobs:
             data/rooms/**
             data/rooms/**/*
 
-  deploy-pages:
+  # upload-pages-artifact and deploy-pages must be separate jobs.
+  build-pages:
     needs: merge
     if: needs.merge.outputs.merged == 'true'
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Checkout develop
         uses: actions/checkout@v4
@@ -186,6 +182,14 @@ jobs:
         with:
           path: dist
 
+  deploy-pages:
+    needs: build-pages
+    if: needs.build-pages.result == 'success'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
