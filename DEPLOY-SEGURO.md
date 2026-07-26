@@ -2,14 +2,30 @@
 
 Com jogadores no ranking / tickets, **nunca apague** `data/leaderboard.json` nem `data/tickets.json` no servidor.
 
-Cache do cliente atual: **`?v=gh62`**.
+Cache do cliente atual: **`?v=gh63`**.
 
 Pacote local: `release/snow.zip` (ou pasta `release/hostgator-snow/`).  
 Preparar de novo: `npm run build` ou `powershell -File scripts/prepare-hostgator-deploy.ps1`.
 
 Site típico: `https://jhonatanribeiro.com/snow/`
 
-## Método recomendado (PRESERVA RANKING + TICKETS)
+## Deploy automático (GitHub Actions → FTP)
+
+Workflow: [`.github/workflows/deploy-hostgator.yml`](.github/workflows/deploy-hostgator.yml)  
+Dispara em **push na `develop`** ou manualmente em Actions → **Deploy HostGator**.
+
+Secrets do repositório (`Settings → Secrets and variables → Actions`):
+
+| Secret | Exemplo (conta `snowdeploy`) |
+|--------|------------------------------|
+| `HOSTGATOR_FTP_HOST` | `jhonatanribeiro.com` ou `162.241.3.41` |
+| `HOSTGATOR_FTP_USER` | `snowdeploy@jhonatanribeiro.com` |
+| `HOSTGATOR_FTP_PASSWORD` | senha FTP |
+| `HOSTGATOR_FTP_DIR` | `/` (raiz da conta já é a pasta do jogo) |
+
+O upload **não** sobrescreve `data/leaderboard.json`, `tickets.json`, `tickets-admin.key` nem `data/rooms/`.
+
+## Método manual cPanel (PRESERVA RANKING + TICKETS)
 
 ### Via cPanel File Manager
 
