@@ -28,10 +28,11 @@ Primeira versão **oficial** (`release/v1.0`, tag `v1.0.0`).
 
 ## [Unreleased]
 
-Trabalho na branch `develop` após `v1.0.0` (cache **`gh83`**).  
+Trabalho na branch `develop` após `v1.0.0` (cache **`gh84`**).  
 Resumo narrativo: [`docs/DEVELOP-ATE-GH63.md`](docs/DEVELOP-ATE-GH63.md) · [`DEVELOP-GH64-ATE-GH73.md`](docs/DEVELOP-GH64-ATE-GH73.md).
 
 ### Fixed
+- **ESC no pause (gh84)**: apertar Esc de novo (ou o botão de pause no celular) retoma o jogo — não só o botão Continuar
 - **Pointer lock (gh83)**: não tenta capturar o mouse logo após Esc (evita `SecurityError` no Chrome); promise tratada; hint “Clique para mirar”
 
 ### Added

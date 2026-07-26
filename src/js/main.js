@@ -2134,7 +2134,13 @@ class Game {
           this.tutorial.skip();
           return;
         }
-        if (this.state === "playing") this.pause();
+        if (this.state === "playing") {
+          e.preventDefault();
+          this.pause();
+        } else if (this.state === "paused") {
+          e.preventDefault();
+          this.resume();
+        }
       }
     });
 
@@ -2390,13 +2396,14 @@ class Game {
       this.refreshSoundButton();
     }
 
-    // Esc no desktop: bindUI. Tap pause no celular:
+    // Esc no desktop: bindUI. Tap pause no celular: toggle pausa/continuar
     if (this.input._tapEsc) {
       this.input._tapEsc = false;
       if (this.demoMode) {
         this.cancelDemo();
         this.pause();
       } else if (this.tutorial?.active) this.tutorial.skip();
+      else if (this.state === "paused") this.resume();
       else this.pause();
     }
 
