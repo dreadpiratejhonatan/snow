@@ -131,7 +131,8 @@ class Game {
     this.timer = new THREE.Timer();
     this.timer.connect(document);
     this.elapsed = 0;
-    this.initThree();
+    // NÃO chama initThree aqui — World+recolor trava o Android e a splash
+    // fica sem processar toques. ensureWorld() roda depois do runSplash.
     this.bindUI();
     this.chat = new GameChat(this);
     window.addEventListener("beforeunload", () => this.persistSave());
@@ -141,8 +142,15 @@ class Game {
     }
     this.loadLeaderboardChallenge();
     this._looping = false;
-    // splash → depois inicia HUD / gameplay
+    // splash ANTES do World — no celular o initThree bloqueia a main thread
+    // e a splash ficava morta (toque sem listener) por vários segundos
     this.boot();
+  }
+
+  /** Cria renderer/mundo sob demanda (depois da splash responder a toques). */
+  ensureWorld() {
+    if (this.world) return;
+    this.initThree();
   }
 
   /** Um único rAF — começa cedo para a trilha tickar nos menus. */
@@ -156,15 +164,33 @@ class Game {
     this.state = "splash";
     this.hud.hide();
     this.setTouchUiVisible(false);
+    // Loop leve (sem mundo) — trilha/menus; World só depois da splash
     this.ensureLoop();
 
     if (wantsDemoFromUrl()) {
       dismissSplash();
+      this.setBootLoading(true, "Preparando o mundo…");
+      this.ensureWorld();
+      this.setBootLoading(false);
       await this.beginDemoRun({ fromUrl: true });
       return;
     }
 
-    await runSplash({ minMs: 4200, maxMs: 10000, fadeMs: 800 });
+    // skipAfterMs baixo no touch: o aviso já diz "toque para continuar"
+    await runSplash({
+      minMs: 4200,
+      maxMs: 10000,
+      fadeMs: 500,
+      skipAfterMs: this.input.mobile || this.lowFx ? 120 : 600,
+    });
+
+    // Mundo pesado só depois do toque — splash já respondeu
+    this.setBootLoading(true, "Preparando o mundo…");
+    // Yield: deixa o fade da splash pintar antes do hitch do World
+    await new Promise((r) => setTimeout(r, 32));
+    this.ensureWorld();
+    this.setBootLoading(false);
+
     this.state = "skin";
     // Sempre exige escolher um personagem (rosto visível + preview girável)
     const unlockAudio = () => {
@@ -2437,6 +2463,7 @@ class Game {
   }
 
   onResize() {
+    if (!this.renderer || !this.camera) return;
     const w = window.innerWidth;
     const h = window.innerHeight;
     this.camera.aspect = w / h;
@@ -2444,7 +2471,28 @@ class Game {
     const maxDpr = this.lowFx ? CONFIG.mobileGfx?.maxDpr ?? 1 : 2;
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, maxDpr));
     this.renderer.setSize(w, h);
-    this.composer.setSize(w, h);
+    this.composer?.setSize(w, h);
+  }
+
+  /** Overlay simples enquanto o World carrega (pós-splash). */
+  setBootLoading(on, text = "Carregando…") {
+    let el = document.getElementById("boot-loading");
+    if (on) {
+      if (!el) {
+        el = document.createElement("div");
+        el.id = "boot-loading";
+        el.className = "boot-loading";
+        el.innerHTML = `<p class="boot-loading__text"></p>`;
+        document.getElementById("app")?.appendChild(el);
+      }
+      const p = el.querySelector(".boot-loading__text");
+      if (p) p.textContent = text;
+      el.hidden = false;
+      el.setAttribute("aria-hidden", "false");
+    } else if (el) {
+      el.hidden = true;
+      el.setAttribute("aria-hidden", "true");
+    }
   }
 
   update(dt) {
@@ -3130,7 +3178,8 @@ class Game {
     this.elapsed += dt;
     const t0 = performance.now();
     this.update(dt);
-    this.composer.render();
+    // Antes do ensureWorld() não há composer — splash/loading só precisa do rAF
+    this.composer?.render?.();
     // auto-degrade se o frame estourar (evita loop de freezes de vários segundos)
     const frameMs = performance.now() - t0;
     if (frameMs > 80) {

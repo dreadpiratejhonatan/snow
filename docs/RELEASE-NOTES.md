@@ -6,6 +6,9 @@ Documentação completa: [`docs/V1-OFICIAL.md`](docs/V1-OFICIAL.md) · Tag Git: 
 
 ## Atualizações recentes (pós-v1.0)
 
+### [gh92] — Splash responde no celular (26 jul 2026)
+- Toque na splash volta a funcionar: o mundo só carrega depois do “continuar” (sumia o travamento no Android)
+
 ### [gh91] — Hotbar mobile de volta (26 jul 2026)
 - Barra de armas volta a aparecer no celular, acima do stick/botões (sem cobrir os controles)
 

@@ -126,6 +126,7 @@ export function runSplash({
     };
 
     const detachSkip = () => {
+      el.removeEventListener("pointerdown", onSkip);
       el.removeEventListener("click", onSkip);
       el.removeEventListener("touchstart", onSkip);
       window.removeEventListener("keydown", onSkip);
@@ -144,6 +145,8 @@ export function runSplash({
       }, fadeMs);
     };
 
+    // pointerdown: Android Chrome às vezes engole click; touchstart fica de backup
+    el.addEventListener("pointerdown", onSkip, { passive: true });
     el.addEventListener("click", onSkip);
     el.addEventListener("touchstart", onSkip, { passive: true });
     window.addEventListener("keydown", onSkip);
