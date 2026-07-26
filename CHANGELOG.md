@@ -28,13 +28,14 @@ Primeira versão **oficial** (`release/v1.0`, tag `v1.0.0`).
 
 ## [Unreleased]
 
-Trabalho na branch `develop` após `v1.0.0` (cache **`gh64`**).  
+Trabalho na branch `develop` após `v1.0.0` (cache **`gh67`**).  
 Resumo narrativo: [`docs/DEVELOP-ATE-GH63.md`](docs/DEVELOP-ATE-GH63.md).
 
 ### Changed
 - Organização do repositório: artes do splash em `assets/splash/`; guias `DEPLOY-SEGURO`, `GITHUB-PAGES` e `RELEASE-NOTES` em `docs/`
 
 ### Added
+- Personagem jogável **HEROBRINE** (Jonathan Herobrine) — rosto em `faces/herobrine.png`
 - Desafio do dia (seed UTC) + conquistas locais
 - Inimigo pterodáctilo (IA flyer) + **raposa-da-neve**
 - Cutscene cinematográfica do Boto (caminho de câmera + Esc)
