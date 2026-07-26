@@ -2211,11 +2211,36 @@ class Game {
       this.input.locked = true;
       return;
     }
+    if (document.pointerLockElement === this.canvas) return;
+    // Chrome: SecurityError se pedir lock logo após Esc / exitPointerLock
+    const unlockedAt = this.input?.unlockedAt || 0;
+    if (unlockedAt && performance.now() - unlockedAt < 900) {
+      if (this.clickHint) {
+        this.clickHint.hidden = false;
+        this.clickHint.textContent = "Clique na tela para mirar de novo";
+      }
+      return;
+    }
     if (document.activeElement instanceof HTMLElement) {
       document.activeElement.blur();
     }
     this.canvas.focus({ preventScroll: true });
-    this.canvas.requestPointerLock();
+    let req;
+    try {
+      req = this.canvas.requestPointerLock?.();
+    } catch {
+      if (this.clickHint) this.clickHint.hidden = false;
+      return;
+    }
+    // API moderna devolve Promise — rejeição não tratada poluía o console
+    if (req && typeof req.then === "function") {
+      req.catch(() => {
+        if (this.clickHint) {
+          this.clickHint.hidden = false;
+          this.clickHint.textContent = "Clique na tela para mirar";
+        }
+      });
+    }
   }
 
   setCameraMode(mode) {

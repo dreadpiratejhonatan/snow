@@ -184,9 +184,10 @@ export class Tutorial {
           : "Tutorial concluído. H = ajuda a qualquer momento.",
       3600
     );
-    // Depois de pular/concluir, libera captura do mouse no próximo clique
-    if (skipped || this.game.state === "playing") {
-      queueMicrotask(() => this.game.requestPointerLock?.());
+    // Depois de pular/concluir: espera clique do usuário (relock imediato = SecurityError no Chrome)
+    if ((skipped || this.game.state === "playing") && this.game.clickHint) {
+      this.game.clickHint.hidden = false;
+      this.game.clickHint.textContent = "Clique na tela para mirar";
     }
   }
 }

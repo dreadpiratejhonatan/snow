@@ -179,6 +179,8 @@ export class Input {
     const next = document.pointerLockElement === this.lockTarget;
     // Sair do pointer lock às vezes “come” o keyup — limpa teclas pra B/Esc não travarem
     if (this.locked !== next) this.clearKeys();
+    // Chrome bloqueia relock imediato após Esc — marca o instante da saída
+    if (this.locked && !next) this.unlockedAt = performance.now();
     this.locked = next;
   }
 
