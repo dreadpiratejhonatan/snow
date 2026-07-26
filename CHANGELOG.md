@@ -28,11 +28,12 @@ Primeira versão **oficial** (`release/v1.0`, tag `v1.0.0`).
 
 ## [Unreleased]
 
-Trabalho na branch `develop` após `v1.0.0` (cache **`gh68`**).  
+Trabalho na branch `develop` após `v1.0.0` (cache **`gh69`**).  
 Resumo narrativo: [`docs/DEVELOP-ATE-GH63.md`](docs/DEVELOP-ATE-GH63.md).
 
 ### Changed
 - Organização do repositório: artes do splash em `assets/splash/`; guias `DEPLOY-SEGURO`, `GITHUB-PAGES` e `RELEASE-NOTES` em `docs/`
+- Demo automática: navegação humana (desvio/pulo/strafe), tour da base e combate com orbit
 
 ### Removed
 - Personagem de teste **HEROBRINE** (só validação do fluxo de deploy)
