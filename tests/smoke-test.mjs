@@ -274,6 +274,20 @@ try {
   if (!mData.tames.length || mData.tames[0].type !== "mula") throw new Error("mount: serialize falhou");
   console.log("Mounts OK — mula domada, montada, armadura ativa");
 
+  // Poções + novas montarias (cavalo / dromedário / pônei)
+  const potions = world.items.filter((i) => i.kind === "potion" && !i.collected);
+  if (potions.length < 2) throw new Error("heal: deveria haver poções no mapa");
+  const potMesh = world.createItemMesh(0xc42838, "potion");
+  if (!potMesh.userData.pulse?.length) throw new Error("heal: poção sem líquido pulsante");
+  for (const t of ["horse", "dromedary", "pony"]) {
+    const beast = world.spawnEnemyNow(t);
+    if (!beast?.cfg?.mount) throw new Error(`mount: ${t} deveria ser montável`);
+    beast.hp = Math.round(beast.maxHp * 0.25);
+    mounts.tame(beast);
+    if (!beast.tamed) throw new Error(`mount: falha ao domar ${t}`);
+  }
+  console.log("Potions + horse/dromedary/pony OK —", potions.length, "poções");
+
   // Neve: 120 frames sem groundHeight/floco não pode engolir segundos (bug gh77)
   const snowT0 = performance.now();
   for (let i = 0; i < 120; i++) {

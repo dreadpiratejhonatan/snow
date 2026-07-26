@@ -312,6 +312,112 @@ export function createSlenderMesh() {
   return g;
 }
 
+/** Quadrúpede montável genérico (cavalo / pônei / dromedário). */
+function createQuadrupedMountMesh(tex, opts = {}) {
+  const {
+    scale = 1,
+    color = 0x6a4a30,
+    dark = 0x2a1a10,
+    hump = false,
+    neckLen = 0.55,
+    bodyLen = 1.9,
+    legH = 1.0,
+  } = opts;
+  const hide = new THREE.MeshStandardMaterial({
+    color,
+    roughness: 1,
+    map: tex?.fur || null,
+  });
+  const mane = new THREE.MeshStandardMaterial({ color: dark, roughness: 1 });
+  const g = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.SphereGeometry(0.48, 14, 12), hide);
+  body.scale.set(0.95, 0.88, bodyLen);
+  body.position.y = 0.95 + (hump ? 0.1 : 0);
+  const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.2, neckLen, 8), hide);
+  neck.position.set(0, 1.35, 0.75);
+  neck.rotation.x = -0.55;
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.22, 10, 8), hide);
+  head.scale.set(0.85, 0.9, 1.25);
+  head.position.set(0, 1.65, 1.05);
+  const snout = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.12, 0.28, 8), hide);
+  snout.rotation.x = Math.PI / 2;
+  snout.position.set(0, 1.55, 1.28);
+  const earGeo = new THREE.ConeGeometry(0.05, 0.14, 5);
+  const earL = new THREE.Mesh(earGeo, mane);
+  earL.position.set(-0.1, 1.85, 1.0);
+  const earR = new THREE.Mesh(earGeo, mane);
+  earR.position.set(0.1, 1.85, 1.0);
+  const maneMesh = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.35, 0.45), mane);
+  maneMesh.position.set(0, 1.55, 0.7);
+  maneMesh.rotation.x = -0.4;
+  const tail = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.07, 0.55, 5), mane);
+  tail.position.set(0, 1.1, -0.95);
+  tail.rotation.x = 0.75;
+  g.add(body, neck, head, snout, earL, earR, maneMesh, tail);
+  if (hump) {
+    const h = new THREE.Mesh(new THREE.SphereGeometry(0.35, 10, 8), hide);
+    h.scale.set(0.9, 1.15, 0.85);
+    h.position.set(0, 1.45, 0.05);
+    g.add(h);
+  }
+  const legs = [];
+  const legGeo = new THREE.CylinderGeometry(0.08, 0.1, legH, 6);
+  for (const [dx, dz] of [
+    [-0.28, 0.6],
+    [0.28, 0.6],
+    [-0.28, -0.6],
+    [0.28, -0.6],
+  ]) {
+    const leg = new THREE.Mesh(legGeo, hide);
+    leg.position.set(dx, legH * 0.5, dz);
+    legs.push(leg);
+    g.add(leg);
+  }
+  g.userData.legs = legs;
+  g.scale.setScalar(scale);
+  g.traverse((m) => {
+    if (m.isMesh) {
+      m.castShadow = true;
+      m.receiveShadow = true;
+    }
+  });
+  return g;
+}
+
+export function createHorseMesh(tex) {
+  return createQuadrupedMountMesh(tex, {
+    scale: 1.05,
+    color: 0x6a4a28,
+    dark: 0x1e1208,
+    bodyLen: 2.05,
+    neckLen: 0.6,
+    legH: 1.05,
+  });
+}
+
+export function createDromedaryMesh(tex) {
+  return createQuadrupedMountMesh(tex, {
+    scale: 1.2,
+    color: 0xc4a06a,
+    dark: 0x6a4828,
+    hump: true,
+    bodyLen: 2.1,
+    neckLen: 0.7,
+    legH: 1.15,
+  });
+}
+
+export function createPonyMesh(tex) {
+  return createQuadrupedMountMesh(tex, {
+    scale: 0.78,
+    color: 0x8a6038,
+    dark: 0x3a2818,
+    bodyLen: 1.7,
+    neckLen: 0.45,
+    legH: 0.75,
+  });
+}
+
 /** Panda violento: urso preto/branco tank. */
 export function createPandaMesh(tex, { scale = 1.4 } = {}) {
   const white = new THREE.MeshStandardMaterial({

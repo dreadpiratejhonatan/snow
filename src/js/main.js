@@ -2598,6 +2598,16 @@ class Game {
         if (mat) {
           this.hud.showMsg(`Material: ${mat} · ${this.craftBag.statusLine()}`, 2200);
         }
+        const healAmt =
+          item.healthHeal ||
+          (item.kind === "potion" || item.kind === "medkit" ? 35 : 0);
+        let healed = 0;
+        if (healAmt > 0) {
+          const before = this.health;
+          this.health = Math.min(CONFIG.survival.maxHealth, this.health + healAmt);
+          healed = this.health - before;
+          this.hud.setHealth(this.health, CONFIG.survival.maxHealth);
+        }
         if (item.countsForWin !== false) this.carried++;
         this.ambience.pickupKind(kind === "weapon" || item.weaponId ? "weapon" : kind);
         this.hud.flashLoot();
@@ -2606,7 +2616,9 @@ class Game {
         this.refreshInventoryUI();
         this.refreshTrapUI();
         this.tutorial?.notify("pickup");
-        if (loot.unlocked) {
+        if (healed > 0) {
+          this.hud.showMsg(`Poção: +${Math.round(healed)} vida (${Math.round(this.health)})`, 2800);
+        } else if (loot.unlocked) {
           this.hud.toggleInventoryExpanded(true);
           if (this.cameraMode === "first") {
             this.setCameraMode("third");
