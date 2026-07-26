@@ -146,7 +146,7 @@ Pasta `data/` no servidor: **não apagar** em deploys. Ver [`DEPLOY-SEGURO.md`](
 
 | Branch / tag | Papel |
 | --- | --- |
-| `master` | linha principal / Pages |
+| `main` | linha principal / Pages |
 | `release-notes` | espelho usado no desenvolvimento recente (manter alinhada) |
 | `release/v1.0` | **corte oficial da v1.0** |
 | `v1.0.0` | tag anotada da release |
@@ -164,7 +164,7 @@ npm run test:smoke
 node tests/coop-relay-smoke.mjs
 ```
 
-- **Pages:** push em `master` → GitHub Actions publica `dist/`  
+- **Pages:** push em `main` → GitHub Actions publica `dist/`  
 - **HostGator:** subir `release/snow.zip` **sem** sobrescrever `data/leaderboard.json` / `data/tickets.json`  
 
 Zip local típico: `release/snow.zip`
