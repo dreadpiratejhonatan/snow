@@ -1,4 +1,22 @@
 export const CONFIG = {
+  /**
+   * Qualidade gráfica no celular — Android Chrome engasga com bloom +
+   * sombras 2048 + DPR 2. Valores aplicados quando `isTouchDevice()`.
+   */
+  mobileGfx: {
+    maxDpr: 1,
+    antialias: false,
+    shadows: false,
+    shadowMapSize: 512,
+    bloom: false,
+    snowCount: 320,
+    grassCount: 900,
+    fireflyCount: 28,
+    minimapHz: 8,
+    /** Neve: atualiza a cada N frames (1 = todo frame). */
+    snowFrameSkip: 2,
+  },
+
   // Mundo de inverno: terreno contínuo coberto de neve, lago congelado.
   world: {
     size: 240,
