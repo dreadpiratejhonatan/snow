@@ -68,7 +68,8 @@ export class World {
       bumpMap: T.barkBump || null,
       bumpScale: 0.5,
     });
-    this.leafMats = [0x3d6a4c, 0x477455, 0x365e45].map(
+    this._leafBase = [0x3d6a4c, 0x477455, 0x365e45];
+    this.leafMats = this._leafBase.map(
       (hex) =>
         new THREE.MeshStandardMaterial({ color: hex, roughness: 1, map: T.foliage || null })
     );
@@ -243,6 +244,7 @@ export class World {
       mid: new THREE.Color(CONFIG.colors.snowMid),
       high: new THREE.Color(CONFIG.colors.snowHigh),
       rock: new THREE.Color(CONFIG.colors.rock),
+      tint: new THREE.Color(),
     });
     const w = this.waterLevel;
     const t1 = THREE.MathUtils.smoothstep(h, w + 0.2, w + 1.4);
@@ -256,6 +258,14 @@ export class World {
     // encostas íngremes mostram rocha exposta
     const steep = THREE.MathUtils.smoothstep(this.getSlope(x, z), 0.8, 1.4);
     out.lerp(c.rock, steep * 0.8);
+
+    // tinta de estação: primavera/verão/outono trocam o "skin" do chão.
+    // picos altos ficam nevados o ano todo → reduz a tinta com a altitude.
+    const tintMul = this.season?.groundTintMul ?? 0;
+    if (tintMul > 0 && this.season?.groundTint != null) {
+      c.tint.setHex(this.season.groundTint);
+      out.lerp(c.tint, tintMul * (1 - t3 * 0.85));
+    }
     return out;
   }
 
@@ -638,6 +648,7 @@ export class World {
   /** Aplica visual da estação (neve, gelo, copas). */
   applySeason(season) {
     if (!season) return;
+    const prevId = this.season?.id;
     this.season = season;
     const snowMul = season.snowMul ?? 1;
     if (this.ice?.material) {
@@ -662,6 +673,55 @@ export class World {
     for (const cap of this.snowCaps || []) {
       if (cap) cap.visible = showCaps;
     }
+
+    // "skin" do mundo por estação: solo, folhas e grama
+    this.recolorVegetation(season);
+    if (prevId !== season.id) this.recolorTerrain();
+  }
+
+  /** Tinge folhas dos pinheiros e a grama conforme a estação. */
+  recolorVegetation(season) {
+    const tmp = this._seasonTmpColor || (this._seasonTmpColor = new THREE.Color());
+    const leafMul = season.leafTintMul ?? 0;
+    if (this.leafMats && this._leafBase) {
+      for (let i = 0; i < this.leafMats.length; i++) {
+        const mat = this.leafMats[i];
+        mat.color.setHex(this._leafBase[i]);
+        if (leafMul > 0 && season.leafTint != null) {
+          mat.color.lerp(tmp.setHex(season.leafTint), leafMul);
+        }
+        mat.needsUpdate = true;
+      }
+    }
+    if (this.grassMat) {
+      const grassMul = season.grassTintMul ?? 0;
+      this.grassMat.color.setHex(0xffffff);
+      if (grassMul > 0 && season.grassTint != null) {
+        this.grassMat.color.lerp(tmp.setHex(season.grassTint), grassMul);
+      }
+      this.grassMat.needsUpdate = true;
+    }
+  }
+
+  /** Recalcula as vertex-colors do terreno (chão muda de cor por estação). */
+  recolorTerrain() {
+    if (!this.terrain?.geometry) return;
+    const geo = this.terrain.geometry;
+    const pos = geo.attributes.position;
+    const colAttr = geo.attributes.color;
+    if (!pos || !colAttr) return;
+    const col = this._seasonTmpColor2 || (this._seasonTmpColor2 = new THREE.Color());
+    for (let i = 0; i < pos.count; i++) {
+      const x = pos.getX(i);
+      const z = pos.getZ(i);
+      const h = pos.getY(i);
+      this.colorAt(x, z, h, col);
+      const v = 0.98 + Math.sin(x * 1.7 + z * 2.3) * 0.02;
+      colAttr.setXYZ(i, col.r * v, col.g * v, col.b * v);
+    }
+    colAttr.needsUpdate = true;
+    // minimapa usa a mesma paleta → regenera com a nova estação
+    this.buildMinimap();
   }
 
   updateSnowfall(dt, elapsed, playerPos) {
