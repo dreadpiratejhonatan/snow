@@ -20,7 +20,7 @@ import {
   getTopEntry,
   exportLeaderboardJson,
 } from "./leaderboard.js";
-import { runSplash } from "./splash.js";
+import { runSplash, dismissSplash } from "./splash.js";
 import { runSkinPicker, applySkinToPlayer, loadSkinId } from "./skins.js";
 import { runDifficultyPicker, getDifficulty } from "./difficulty.js";
 import { WebRtcRoom } from "./net/webrtcRoom.js";
@@ -145,6 +145,7 @@ class Game {
     this.ensureLoop();
 
     if (wantsDemoFromUrl()) {
+      dismissSplash();
       await this.beginDemoRun({ fromUrl: true });
       return;
     }
@@ -227,13 +228,27 @@ class Game {
 
   /** Partida solo automática (espectável). */
   async beginDemoRun() {
+    // Splash vem visível no HTML — sem isso ?demo=1 fica preso no launcher
+    dismissSplash();
+    for (const id of ["coop-menu", "skin-picker", "difficulty-picker"]) {
+      const el = document.getElementById(id);
+      if (el) {
+        el.hidden = true;
+        el.setAttribute("aria-hidden", "true");
+      }
+    }
+
     clearDemoFlag();
     clearMidRunSave();
     setDailyMode(false);
     this.demoMode = true;
     this.coop = null;
     this.coopRoom = null;
-    void this.ambience.start();
+    try {
+      void this.ambience.start();
+    } catch {
+      /* gesture pode falhar; demo segue sem áudio */
+    }
     this.setDifficulty("easy");
     applySkinToPlayer(this.player, "natan");
     const seed = (Math.random() * 0xffffffff) >>> 0;

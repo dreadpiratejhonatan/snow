@@ -164,6 +164,10 @@ body.is-touch .hud:has(.inv-bar.is-open) .hud__traps {
 
 /* ---------- Splash / launcher ---------- */
 
+html.demo-boot #splash {
+  display: none !important;
+}
+
 .splash {
   position: absolute;
   inset: 0;
