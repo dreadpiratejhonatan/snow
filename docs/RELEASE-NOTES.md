@@ -21,7 +21,7 @@ Documentação completa: [`docs/V1-OFICIAL.md`](docs/V1-OFICIAL.md) · Tag Git: 
 - Vitória exige **Troféu do Urso Alfa** + **Troféu do Boto**
 
 ## Personagens
-- **Natan**, **Jhonatan**, **Jorge Bolado**, **Caio**, **Lorenzo**, **ZÉ**
+- **Natan**, **Jhonatan**, **Jorge Bolado**, **Caio**, **Lorenzo**, **ZÉ**, **HEROBRINE**
 - Preview 3D; cards em ordem aleatória; rosto só na frente da cabeça
 
 ## Mundo e áudio
