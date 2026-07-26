@@ -1116,6 +1116,33 @@ kbd {
   opacity: 1;
 }
 
+/* Carga arco/besta — sob a mira */
+.hud__charge {
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 14px);
+  transform: translateX(-50%);
+  width: 56px;
+  height: 5px;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.hud__charge-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #c8e070, #f0c040 55%, #ff8a40);
+  box-shadow: 0 0 6px rgba(255, 200, 80, 0.45);
+}
+
+.hud__charge.is-full .hud__charge-fill {
+  background: linear-gradient(90deg, #ffe08a, #fff6c8);
+  box-shadow: 0 0 8px rgba(255, 240, 160, 0.7);
+}
+
 .cutscene-letterbox {
   position: absolute;
   inset: 0;

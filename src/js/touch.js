@@ -192,10 +192,31 @@ export class TouchControls {
       // remove no próximo frame via flag
       this.input._tapE = true;
     });
-    tap("btn-attack", () => {
-      this.input.leftClicked = true;
-      this.input.mouseDown = true;
-    });
+    // Ataque: segurar = carga (arco/besta) / automático; soltar = dispara carga
+    {
+      const el = document.getElementById("btn-attack");
+      if (el) {
+        el.addEventListener(
+          "touchstart",
+          (e) => {
+            e.preventDefault();
+            this.input.leftClicked = true;
+            this.input.leftHeld = true;
+            this.input.mouseDown = true;
+            el.classList.add("is-down");
+          },
+          { passive: false }
+        );
+        const up = (e) => {
+          e.preventDefault();
+          this.input.leftHeld = false;
+          this.input.mouseDown = false;
+          el.classList.remove("is-down");
+        };
+        el.addEventListener("touchend", up, { passive: false });
+        el.addEventListener("touchcancel", up, { passive: false });
+      }
+    }
     // 👁: toque curto = 1ª/3ª; segurar + arrastar look = orbitar (ver o rosto)
     {
       const el = document.getElementById("btn-camera");

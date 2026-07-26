@@ -87,6 +87,26 @@ export class HUD {
     this.warmthFill.style.width = `${p * 100}%`;
   }
 
+  /**
+   * Barra de carga do arco/besta (0–1). `null` / ≤0 esconde.
+   * @param {number|null} t01
+   */
+  setCharge(t01) {
+    if (!this.chargeBar) this.chargeBar = document.getElementById("charge-bar");
+    if (!this.chargeFill) this.chargeFill = document.getElementById("charge-fill");
+    if (!this.chargeBar || !this.chargeFill) return;
+    if (t01 == null || t01 <= 0) {
+      this.chargeBar.hidden = true;
+      this.chargeFill.style.width = "0%";
+      this.chargeBar.classList.remove("is-full");
+      return;
+    }
+    const p = Math.max(0, Math.min(1, t01));
+    this.chargeBar.hidden = false;
+    this.chargeFill.style.width = `${p * 100}%`;
+    this.chargeBar.classList.toggle("is-full", p >= 0.98);
+  }
+
   setItems(carried, deposited, total) {
     if (!this.itemsEl) return;
     this.itemsEl.textContent = `🎒 ${carried} · 📦 ${deposited}/${total}`;

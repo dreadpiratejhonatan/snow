@@ -1875,7 +1875,17 @@ export class World {
   /**
    * Projétil físico: flecha (mata no impacto) ou granada (explode no fuse).
    */
-  spawnProjectile({ pos, dir, speed, damage, kind = "arrow", fuse = 0, explodeRadius = 0, slowElite = 0 }) {
+  spawnProjectile({
+    pos,
+    dir,
+    speed,
+    damage,
+    kind = "arrow",
+    fuse = 0,
+    explodeRadius = 0,
+    slowElite = 0,
+    ttl = 6,
+  }) {
     let mesh;
     if (kind === "grenade") {
       mesh = new THREE.Mesh(
@@ -1900,7 +1910,7 @@ export class World {
       fuse,
       explodeRadius,
       slowElite,
-      ttl: 6,
+      ttl: Math.max(1.5, ttl),
       resting: false,
     });
   }

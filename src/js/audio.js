@@ -327,26 +327,75 @@ export class Ambience {
     this.noiseBurst(0.06, 0.12, 500, 0.7, "lowpass");
   }
 
-  bowShot() {
+  bowShot(power = 1) {
     if (!this.started || !ctx) return;
-    // corda + assobio da flecha
-    this.blip(280, 0.08, 0.1, "triangle", 120);
-    this.blip(480, 0.05, 0.06, "sine", 200);
-    this.noiseBurst(0.22, 0.08, 2200, 1.2, "bandpass", 0.25);
+    const p = Math.max(0.35, Math.min(1.4, power));
+    // corda + assobio da flecha (mais forte = mais whoosh)
+    this.blip(280, 0.08, 0.1 * p, "triangle", 120);
+    this.blip(480 + p * 40, 0.05, 0.06 * p, "sine", 200);
+    this.noiseBurst(0.22 * p, 0.08 * p, 2200, 1.2, "bandpass", 0.25);
   }
 
   /** Besta: trava mecânica + click + whoosh seco. */
-  crossbowShot() {
+  crossbowShot(power = 1) {
     if (!this.started || !ctx) return;
-    // click da trava
-    this.blip(900, 0.035, 0.11, "square", 400);
-    this.noiseBurst(0.04, 0.12, 1600, 2.5, "bandpass");
-    // liberação + haste
+    const p = Math.max(0.35, Math.min(1.4, power));
+    this.blip(900, 0.035, 0.11 * p, "square", 400);
+    this.noiseBurst(0.04, 0.12 * p, 1600, 2.5, "bandpass");
     setTimeout(() => {
       if (!ctx) return;
-      this.blip(180, 0.06, 0.08, "triangle", 90);
-      this.noiseBurst(0.14, 0.1, 2800, 1.5, "bandpass", 0.2);
+      this.blip(180, 0.06, 0.08 * p, "triangle", 90);
+      this.noiseBurst(0.14 * p, 0.1 * p, 2800, 1.5, "bandpass", 0.2);
     }, 40);
+  }
+
+  /** Começa a puxar a corda (arco/besta). */
+  bowDrawStart(weapon) {
+    if (!this.started || !ctx) return;
+    if (weapon?.id === "crossbow") {
+      this.blip(600, 0.08, 0.07, "square", 280);
+      this.noiseBurst(0.1, 0.06, 900, 1.2, "bandpass");
+    } else {
+      this.blip(220, 0.12, 0.07, "triangle", 140);
+      this.noiseBurst(0.14, 0.05, 1400, 1.4, "bandpass", 0.15);
+    }
+  }
+
+  /** Tensão enquanto carrega (ticks suaves). */
+  bowDrawTick(t01) {
+    if (!this.started || !ctx) return;
+    const f = 180 + t01 * 220;
+    this.blip(f, 0.04, 0.035 + t01 * 0.03, "sine", f * 0.7);
+  }
+
+  /** Clique seco — sem munição / carregador vazio. */
+  dryFire(weapon) {
+    if (!this.started || !ctx) return;
+    if (weapon?.fire === "projectile") {
+      this.blip(140, 0.05, 0.05, "triangle", 80);
+      this.noiseBurst(0.04, 0.04, 1200, 2, "bandpass");
+      return;
+    }
+    this.blip(1100, 0.04, 0.09, "square", 500);
+    this.noiseBurst(0.05, 0.07, 2400, 2.2, "bandpass");
+  }
+
+  /** Recarga de carregador (revólver / escopeta / AK). */
+  reload(weapon) {
+    if (!this.started || !ctx) return;
+    this.blip(380, 0.05, 0.07, "square", 200);
+    this.noiseBurst(0.06, 0.08, 700, 1.1, "bandpass");
+    setTimeout(() => {
+      if (!ctx) return;
+      this.blip(520, 0.04, 0.06, "triangle", 280);
+      this.noiseBurst(0.05, 0.05, 1600, 1.5, "highpass");
+    }, 90);
+    if (weapon?.id === "shotgun") {
+      setTimeout(() => {
+        if (!ctx) return;
+        this.blip(240, 0.06, 0.07, "square", 120);
+      }, 160);
+    }
   }
 
   /** Granada: pino + arremesso. */
@@ -367,8 +416,8 @@ export class Ambience {
     this.blip(140, 0.08, 0.05, "triangle", 60);
   }
 
-  /** Escolhe SFX pelo tipo de arma. */
-  weaponFire(weapon) {
+  /** Escolhe SFX pelo tipo de arma. `power` 0–1+ para arco/besta. */
+  weaponFire(weapon, power = 1) {
     if (!this.started || !ctx || !weapon) return;
     switch (weapon.id) {
       case "revolver":
@@ -381,17 +430,30 @@ export class Ambience {
         this.akShot();
         break;
       case "bow":
-        this.bowShot();
+        this.bowShot(power);
         break;
       case "crossbow":
-        this.crossbowShot();
+        this.crossbowShot(power);
         break;
       case "grenade":
         this.grenadeThrow();
         break;
+      case "axe":
+      case "spear":
+      case "torch":
+      case "claymore":
+      case "fists":
+        this.meleeSwing();
+        // impacto metálico/madeira leve por arma
+        if (weapon.id === "axe" || weapon.id === "claymore") {
+          this.blip(160, 0.06, 0.07, "sawtooth", 70);
+        } else if (weapon.id === "torch") {
+          this.noiseBurst(0.08, 0.06, 600, 0.8, "bandpass");
+        }
+        break;
       default:
         if (weapon.fire === "hitscan") this.gunshot(1);
-        else if (weapon.fire === "projectile") this.bowShot();
+        else if (weapon.fire === "projectile") this.bowShot(power);
         else if (weapon.fire === "thrown") this.grenadeThrow();
         else this.meleeSwing();
     }

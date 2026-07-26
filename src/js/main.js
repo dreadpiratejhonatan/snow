@@ -1033,6 +1033,7 @@ class Game {
       this.hud.showMsg("Arma ainda não encontrada no mapa.", 2000);
       return false;
     }
+    this.cancelWeaponCharge();
     const w = this.weapons.current;
     this.player.setHeldWeapon(w.id);
     this.refreshInventoryUI();
@@ -1040,8 +1041,16 @@ class Game {
     return true;
   }
 
+  cancelWeaponCharge() {
+    this._weaponCharge = 0;
+    this._charging = false;
+    this._chargeTickAcc = 0;
+    this.hud.setCharge(null);
+  }
+
   /** Próxima/anterior arma desbloqueada (touch, scroll). */
   cycleWeapon(dir = 1) {
+    this.cancelWeaponCharge();
     this.weapons.cycle(dir);
     this.player.setHeldWeapon(this.weapons.current.id);
     this.refreshInventoryUI();
@@ -1918,11 +1927,13 @@ class Game {
   pause() {
     if (this.state !== "playing") return;
     this.chat?.close(false);
+    this.cancelWeaponCharge();
     this.state = "paused";
     this.speedrun.pause();
     this.persistSave();
     if (!this.input.mobile) document.exitPointerLock();
     this.input.clearKeys();
+    this._wasLeftHeld = false;
     if (this.clickHint) this.clickHint.hidden = true;
     const winPanel = document.getElementById("win-panel");
     if (winPanel) winPanel.hidden = true;
@@ -2017,8 +2028,10 @@ class Game {
     }
 
     if (this.input.wasPressed("KeyR")) {
+      this.cancelWeaponCharge();
       const r = this.weapons.reload();
       if (r.msg) this.hud.showMsg(r.msg, 2200);
+      if (r.ok) this.ambience.reload?.(this.weapons.current);
       this.refreshInventoryUI();
     }
     if (this.input.wasPressed("KeyC")) {
@@ -2234,14 +2247,65 @@ class Game {
     // ataque com arma equipada (melee, hitscan, projétil ou granada)
     const weapon = this.weapons.current;
     this.attackCd -= dt;
-    const wantFire = weapon.auto ? clicks.left || this.input.leftHeld : clicks.left;
-    if (wantFire && (this.input.locked || this.input.mobile) && this.attackCd <= 0) {
-      this.fireWeapon(weapon, p);
-      this.tutorial?.notify("attack");
+    const canAim = this.input.locked || this.input.mobile;
+    const leftHeld = !!this.input.leftHeld;
+    const leftReleased = this._wasLeftHeld && !leftHeld;
+    this._wasLeftHeld = leftHeld;
+
+    if (weapon.chargeable) {
+      this.updateChargeWeapon(dt, weapon, p, canAim, leftHeld, leftReleased, clicks.left);
+    } else {
+      if (this._charging) this.cancelWeaponCharge();
+      const wantFire = weapon.auto ? clicks.left || leftHeld : clicks.left;
+      if (wantFire && canAim && this.attackCd <= 0) {
+        this.fireWeapon(weapon, p);
+        this.tutorial?.notify("attack");
+      }
     }
   }
 
-  fireWeapon(weapon, p) {
+  /** Arco / besta: segurar carrega, soltar dispara. */
+  updateChargeWeapon(dt, weapon, p, canAim, leftHeld, leftReleased, leftClicked) {
+    const maxT = weapon.chargeMax || 0.9;
+    const minT = weapon.chargeMin || 0.12;
+
+    if (!canAim || this.attackCd > 0) {
+      if (this._charging) this.cancelWeaponCharge();
+      return;
+    }
+
+    if (leftHeld && this.weapons.canFire()) {
+      if (!this._charging) {
+        this._charging = true;
+        this._weaponCharge = 0;
+        this._chargeTickAcc = 0;
+        this.ambience.bowDrawStart?.(weapon);
+      }
+      this._weaponCharge = Math.min(maxT, (this._weaponCharge || 0) + dt);
+      const t01 = this._weaponCharge / maxT;
+      this.hud.setCharge(t01);
+      this._chargeTickAcc = (this._chargeTickAcc || 0) + dt;
+      if (this._chargeTickAcc >= 0.16) {
+        this._chargeTickAcc = 0;
+        this.ambience.bowDrawTick?.(t01);
+      }
+    } else if (this._charging && (leftReleased || (!leftHeld && leftClicked))) {
+      // soltou: dispara se tiver carga mínima; clique muito curto ainda dispara fraco se passou min
+      const charge = this._weaponCharge || 0;
+      this.cancelWeaponCharge();
+      if (charge >= minT * 0.35) {
+        this.fireWeapon(weapon, p, { charge: Math.max(charge, minT * 0.5) });
+        this.tutorial?.notify("attack");
+      }
+    } else if (!leftHeld && this._charging) {
+      this.cancelWeaponCharge();
+    } else if (leftClicked && !this.weapons.canFire()) {
+      // clique seco sem munição
+      this.fireWeapon(weapon, p);
+    }
+  }
+
+  fireWeapon(weapon, p, opts = {}) {
     // sem munição: clique seco
     if (weapon.ammoType && !this.weapons.canFire()) {
       this.attackCd = 0.35;
@@ -2256,7 +2320,7 @@ class Game {
           : `Sem ${at?.name?.toLowerCase() || "munição"}!`,
         2400
       );
-      if (this.ambience.started) this.ambience.noiseBurst(0.04, 0.05, 1800, 2);
+      this.ambience.dryFire?.(weapon);
       this.refreshInventoryUI();
       return;
     }
@@ -2267,12 +2331,30 @@ class Game {
     this.player.setHeldWeapon(weapon.id);
     this.player.playAttack(weapon.fire === "hitscan" || weapon.fire === "projectile" ? "ranged" : "melee");
 
-    const aim = this.player.getAimFire(this.world, weapon.range || 80);
+    const chargeT = opts.charge;
+    const maxT = weapon.chargeMax || 1;
+    const t01 =
+      weapon.chargeable && chargeT != null
+        ? Math.max(0, Math.min(1, chargeT / maxT))
+        : 1;
+    const lerp = (a, b) => a + (b - a) * t01;
+    const dmgMul = weapon.chargeable
+      ? lerp(weapon.chargeDmgMin ?? 0.45, weapon.chargeDmgMax ?? 1.25)
+      : 1;
+    const speedMul = weapon.chargeable
+      ? lerp(weapon.chargeSpeedMin ?? 0.55, weapon.chargeSpeedMax ?? 1.2)
+      : 1;
+    const rangeMul = weapon.chargeable
+      ? lerp(weapon.chargeRangeMin ?? 0.55, weapon.chargeRangeMax ?? 1.15)
+      : 1;
+
+    const aimRange = (weapon.range || 80) * rangeMul;
+    const aim = this.player.getAimFire(this.world, aimRange);
     const origin = aim.origin;
     const dir = aim.dir;
 
     const dmgScale = this.difficulty?.weapon ?? 1;
-    const dmg = Math.max(1, Math.round(weapon.damage * dmgScale));
+    const dmg = Math.max(1, Math.round(weapon.damage * dmgScale * dmgMul));
 
     if (weapon.fire === "hitscan") {
       const pellets = weapon.pellets || 1;
@@ -2291,14 +2373,16 @@ class Game {
       this.ambience.weaponFire(weapon);
       if (hitAny) this.ambience.bearHit();
     } else if (weapon.fire === "projectile") {
+      const speed = (weapon.projSpeed || 34) * speedMul;
       this.world.spawnProjectile({
         pos: origin.clone().addScaledVector(dir, 0.6),
         dir,
-        speed: weapon.projSpeed || 34,
+        speed,
         damage: dmg,
         kind: "arrow",
+        ttl: 4 + t01 * 3,
       });
-      this.ambience.weaponFire(weapon);
+      this.ambience.weaponFire(weapon, 0.55 + t01 * 0.7);
     } else if (weapon.fire === "thrown") {
       const lob = dir.clone();
       lob.y += 0.35;

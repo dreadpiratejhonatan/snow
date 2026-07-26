@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="src/styles/styles.css?v=gh62" />
+  <link rel="stylesheet" href="src/styles/styles.css?v=gh63" />
   <script type="importmap">
   {
     "imports": {
@@ -100,6 +100,9 @@
       <div class="hud__crosshair" aria-hidden="true">
         <span></span><span></span><span></span><span></span>
         <i class="hud__crosshair-dot"></i>
+        <div id="charge-bar" class="hud__charge" hidden>
+          <div id="charge-fill" class="hud__charge-fill"></div>
+        </div>
       </div>
 
       <div class="hud__status">
@@ -424,7 +427,7 @@
           <li><kbd>E</kbd> pegar item / depositar no baú</li>
           <li><kbd>IJKL</kbd> olhar (sem mouse) · <kbd>B</kbd> mostrar/esconder armas · <kbd>1–9</kbd>/<kbd>0</kbd> ou <strong>scroll</strong> equipar</li>
           <li><kbd>G</kbd> tipo de armadilha · <kbd>F</kbd> colocar (perto da fogueira)</li>
-          <li><kbd>V</kbd> / <kbd>Tab</kbd> 1ª / 3ª pessoa · clique esquerdo atacar · <strong>segurar botão direito</strong> mirar (zoom)</li>
+          <li><kbd>V</kbd> / <kbd>Tab</kbd> 1ª / 3ª pessoa · clique esquerdo atacar · <strong>arco/besta: segurar</strong> carrega (barra na mira) e soltar atira · <strong>segurar botão direito</strong> mirar (zoom)</li>
           <li><kbd>Alt</kbd> + setas (3ª pessoa) orbitar câmera 360° e ver o rosto · <kbd>Alt</kbd>+<kbd>V</kbd> volta atrás</li>
           <li><kbd>Y</kbd> ou <kbd>Enter</kbd> chat (estilo CS) · <kbd>Esc</kbd> cancela o chat</li>
           <li>Tutorial: botão <strong>Pular</strong>, <kbd>Esc</kbd> ou <kbd>P</kbd> — depois o mouse captura no clique</li>
@@ -470,6 +473,6 @@
     </div>
   </div>
 
-  <script type="module" src="src/js/main.js?v=gh62"></script>
+  <script type="module" src="src/js/main.js?v=gh63"></script>
 </body>
 </html>
