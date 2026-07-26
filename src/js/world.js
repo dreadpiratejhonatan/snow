@@ -668,27 +668,26 @@ export class World {
     const p = playerPos || { x: 0, y: 4, z: 0 };
     const snowMul = this.season?.snowMul ?? 1;
     if (snowMul < 0.04 || !this.snow) return;
-    // Celular: pula frames — groundHeight×1400/frame engasga o main thread
-    if (this.lowFx) {
-      const skip = CONFIG.mobileGfx?.snowFrameSkip ?? 2;
-      this._snowFrame = (this._snowFrame + 1) % skip;
-      if (this._snowFrame !== 0) return;
-      dt *= skip;
-    }
+    // Nunca chamar groundHeight por floco — 1400×/frame travava o desktop (~segundos)
+    const skip = this.lowFx
+      ? CONFIG.mobileGfx?.snowFrameSkip ?? 2
+      : CONFIG.world.snowFrameSkip ?? 2;
+    this._snowFrame = ((this._snowFrame || 0) + 1) % skip;
+    if (this._snowFrame !== 0) return;
+    dt *= skip;
     const sp = this.snow.geometry.attributes.position;
     const blizzard = this.season?.blizzardMul ?? 1;
     const speedMul = (0.35 + snowMul * 0.9) * blizzard;
     const floorY = (p.y || 4) - 1.5;
-    for (let i = 0; i < this.snowData.length; i++) {
+    const n = Math.min(this.snowData.length, this._snowPerfCap || this.snowData.length);
+    for (let i = 0; i < n; i++) {
       const d = this.snowData[i];
       let x = sp.getX(i) + Math.sin(elapsed * 1.1 + d.phase) * dt * 0.8 * snowMul;
       let y = sp.getY(i) - d.speed * dt * speedMul;
       let z = sp.getZ(i) + Math.cos(elapsed * 0.9 + d.phase) * dt * 0.5 * snowMul;
       const dx = x - p.x;
       const dz = z - p.z;
-      // lowFx: sem groundHeight (barato); desktop mantém colisão com o terreno
-      const hitGround = this.lowFx ? y < floorY : y < this.groundHeight(x, z);
-      if (hitGround || dx * dx + dz * dz > 45 * 45) {
+      if (y < floorY || dx * dx + dz * dz > 45 * 45) {
         x = p.x + (Math.random() * 2 - 1) * 40;
         z = p.z + (Math.random() * 2 - 1) * 40;
         y = p.y + 10 + Math.random() * 14;
@@ -1476,9 +1475,10 @@ export class World {
 
     this._addLootGlow(g, color, kind === "trophy" ? 0.55 : 0.42);
     this._addRarityRing(g, this.lootRarity(kind));
+    // loot sem castShadow — dezenas de casters matam o shadow map
     g.traverse((m) => {
       if (m.isMesh && !m.userData.isGlow) {
-        m.castShadow = true;
+        m.castShadow = false;
         m.receiveShadow = true;
       }
     });
@@ -1701,8 +1701,8 @@ export class World {
       if (it.mesh.userData.rarityRing) {
         it.mesh.userData.rarityRing.rotation.z = elapsed * 1.1 + it.phase;
       }
-      // animar partículas (movimento circular suave)
-      if (it.mesh.userData.particles) {
+      // partículas só perto do jogador (atualizar BufferAttribute em todo loot = hitch)
+      if (it.mesh.userData.particles && near > 0.05) {
         const p = it.mesh.userData.particles;
         const pos = p.points.geometry.attributes.position;
         for (let i = 0; i < p.data.length; i++) {
@@ -2551,7 +2551,7 @@ export class World {
     this._addRarityRing(g, this.lootRarity("weapon", weaponId));
     g.traverse((m) => {
       if (m.isMesh && !m.userData.isGlow) {
-        m.castShadow = true;
+        m.castShadow = false;
         m.receiveShadow = true;
       }
     });
