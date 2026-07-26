@@ -4,6 +4,23 @@ Primeira versão oficial do **Neve Selvagem**. No jogo: botão **N** (ao lado do
 
 Documentação completa: [`docs/V1-OFICIAL.md`](docs/V1-OFICIAL.md) · Tag Git: `v1.0.0` · Branch: `release/v1.0`
 
+## Atualizações recentes (pós-v1.0)
+
+### [gh73] — Correções de armas (26 jul 2026)
+- **Lança de gelo**: Posição e rotação corrigidas — agora é segurada horizontalmente e não atravessa mais o corpo do personagem
+
+### [gh72] — Melhorias visuais e balanceamento (26 jul 2026)
+- **Itens mais atraentes**: Geometria detalhada (dobradiças, fechos, antenas), luzes emissivas (PointLights) em munição, armadilhas, troféus, lanternas e armas
+- **Partículas flutuantes**: Sistema sutil de partículas ao redor de armas e troféus para maior destaque visual
+- **Economia de munição**: Redução de ~40-50% na quantidade e chance de munição dropada por inimigos eliminados (balanceamento para aumentar tensão)
+- **Drops variáveis**: Suporte a ranges [min, max] para quantidades de drops (ex: 2-3 balas ao invés de quantidade fixa)
+
+### [gh71] — Dungeon secreta e áudio mobile (25 jul 2026)
+- **Dungeon secreta**: Caverna escondida (posição aleatória por seed, sem marcador) com ondas de inimigos, parkour, Guardião do Abismo e arma exclusiva **Relíquia do Abismo** + conquista "Segredo do Abismo" (solo only)
+- **Áudio mobile corrigido**: Desbloqueio síncrono no Android Chrome, trilha procedural dedicada para mobile, botão "Ativar som" quando AudioContext suspenso
+
+---
+
 ## Pickups e combate
 - Itens no chão com silhuetas próprias + partículas/flash ao pegar
 - NPCs: flash vermelho, knockback, startle no aggro; SFX de hurt/teleporte/gatling
