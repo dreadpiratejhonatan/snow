@@ -239,7 +239,8 @@ feita no telefone chega em produção sozinha.
 1. No app do Cursor no celular, você abre o repositório e pede a mudança em
    linguagem natural (ex.: "diminua o dano do lobo").
 2. O Cloud Agent trabalha numa VM própria, numa branch `cursor/*`, e abre um
-   **Pull Request** no GitHub.
+   **Pull Request** no GitHub (muitas vezes contra `main`). O auto-merge
+   retargeteia para `develop` — por isso o workflow precisa existir também na `main`.
 3. Um workflow dedicado (`.github/workflows/auto-merge-cursor.yml`,
    "Auto-merge Cursor PRs") assume a partir daí:
    - Só age em branches que começam com `cursor/` (PRs humanos não são tocados)
