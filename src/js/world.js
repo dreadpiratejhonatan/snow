@@ -849,21 +849,18 @@ export class World {
     g.position.set(bx, by, bz);
     this.basePos = g.position.clone();
 
-    // cabana simples de madeira com telhado nevado
+    // cabana: telhado só madeira (sem cone de neve — a base do cone virava
+    // uma placa branca flutuante na altura do teto andável)
     const body = new THREE.Mesh(new THREE.BoxGeometry(4, 2.6, 3.2), this.woodMat);
     body.position.y = 1.3;
     g.add(body);
-    // neve filha do telhado (mesmo eixo) — evita “tampa” branca flutuando
-    const roof = new THREE.Group();
+    const roofMat = this.woodDarkMat.clone();
+    roofMat.color = new THREE.Color(0xb8c4ce); // madeira com pó de neve
+    roofMat.roughness = 1;
+    const roof = new THREE.Mesh(new THREE.ConeGeometry(3.2, 1.7, 4), roofMat);
     roof.position.y = 3.35;
     roof.rotation.y = Math.PI / 4;
-    const roofWood = new THREE.Mesh(new THREE.ConeGeometry(3.2, 1.7, 4), this.woodDarkMat);
-    roof.add(roofWood);
-    const roofSnow = new THREE.Mesh(new THREE.ConeGeometry(2.95, 1.52, 4), this.snowCapMat);
-    roofSnow.position.y = 0.14; // tip quase alinhado ao da madeira
-    roof.add(roofSnow);
     g.add(roof);
-    this.snowCaps.push(roofSnow);
     const door = new THREE.Mesh(new THREE.BoxGeometry(0.9, 1.7, 0.08), this.woodDarkMat);
     door.position.set(0.8, 0.85, 1.62);
     g.add(door);
