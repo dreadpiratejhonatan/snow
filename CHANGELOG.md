@@ -42,12 +42,10 @@ Trabalho na branch `develop` após `v1.0.0` (cache `gh54`).
 - Chat in-game estilo CS (`Y` / `Enter`) no co-op
 - TURN próprio via `window.NEVE_TURN` / `NEVE_ICE_SERVERS`
 - CI GitHub Actions (build + smokes)
+- Sussurros sintéticos bem esporádicos na ambiência (mais à noite)
 
 ### Changed
 - Difícil mais punitivo (loot/munição/frio/spawns)
 - Cast só amigos (Rita/Bruno removidos)
 - Munição mais escassa no mapa e nos drops
 - Hitscan/projéteis alinhados à crosshair
-
-### Added
-- Sussurros sintéticos bem esporádicos na ambiência (mais à noite)
