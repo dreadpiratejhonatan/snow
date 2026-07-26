@@ -6,6 +6,14 @@ Documentação completa: [`docs/V1-OFICIAL.md`](docs/V1-OFICIAL.md) · Tag Git: 
 
 ## Atualizações recentes (pós-v1.0)
 
+### [gh74] — Pacote grande de features (26 jul 2026)
+- **Crafting** na fogueira (C): materiais → munição/armadilhas
+- **Husky** companheiro que fareja loot
+- **Eventos**: nevasca e invasão noturna
+- **Hardcore** (morte permanente) + ranking ★
+- **Dungeon cronometrada** + cutscenes Panda/Saci/T-Rex
+- **Biomas** locais + raridade de loot + poses de armas melee
+
 ### [gh73] — Correções de armas (26 jul 2026)
 - **Lança de gelo**: Posição e rotação corrigidas — agora é segurada horizontalmente e não atravessa mais o corpo do personagem
 

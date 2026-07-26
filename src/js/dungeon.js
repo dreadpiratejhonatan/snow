@@ -31,6 +31,15 @@ export class SecretDungeon {
     this.runePos = null; // topo do parkour (gatilho do boss)
     this.portal = null;
     this.boss = null;
+    this.runStartedAt = 0; // performance.now() ao entrar
+    this.lastClearMs = null;
+    this.bestClearMs = null;
+    try {
+      const best = Number(localStorage.getItem("neveDungeonBestMs"));
+      if (Number.isFinite(best) && best > 0) this.bestClearMs = best;
+    } catch {
+      /* ignore */
+    }
 
     // chão/gelo do bolso: World consulta esta zona em groundHeight/isOnIce
     this.world.dungeonZone = { x: POCKET_X, z: POCKET_Z, r: ZONE_R, floorY: FLOOR_Y };
@@ -234,6 +243,7 @@ export class SecretDungeon {
     this.world.dungeonActive = true;
     this.phase = "waves1";
     this._waveSpawned = false;
+    this.runStartedAt = performance.now();
     this.returnPos = game.player.position.clone();
     this._snowWasVisible = this.world.snow ? this.world.snow.visible : null;
     if (this.world.snow) this.world.snow.visible = false;
@@ -245,8 +255,19 @@ export class SecretDungeon {
     p.syncMesh();
     p.syncCamera();
     game.ambience.teleportWhoosh?.();
-    game.hud.showMsg("Você desce ao Abismo... derrote todos para avançar!", 5200);
+    const best =
+      this.bestClearMs != null
+        ? ` · recorde ${this._fmt(this.bestClearMs)}`
+        : "";
+    game.hud.showMsg(`Você desce ao Abismo... derrote todos!${best}`, 5200);
     return true;
+  }
+
+  _fmt(ms) {
+    const s = Math.max(0, Math.floor(ms / 1000));
+    const m = Math.floor(s / 60);
+    const r = s % 60;
+    return `${m}:${String(r).padStart(2, "0")}`;
   }
 
   /** Sai da arena (portal, morte). `died` mantém a dungeon resetada p/ nova tentativa. */
@@ -286,6 +307,12 @@ export class SecretDungeon {
   markCleared() {
     this.cleared = true;
     if (this.phase === "idle") this.phase = "done";
+    try {
+      const best = Number(localStorage.getItem("neveDungeonBestMs"));
+      if (Number.isFinite(best) && best > 0) this.bestClearMs = best;
+    } catch {
+      /* ignore */
+    }
   }
 
   // ------------------------------------------------------------------
@@ -380,9 +407,28 @@ export class SecretDungeon {
       if (p.distanceTo(this.portal.position) < 1.8) {
         this.cleared = true;
         this.phase = "done";
+        const clearMs = this.runStartedAt ? performance.now() - this.runStartedAt : null;
+        if (clearMs != null) {
+          this.lastClearMs = clearMs;
+          if (this.bestClearMs == null || clearMs < this.bestClearMs) {
+            this.bestClearMs = clearMs;
+          }
+          try {
+            localStorage.setItem("neveDungeonBestMs", String(this.bestClearMs));
+          } catch {
+            /* ignore */
+          }
+        }
         this.leave(game);
         game.toastAchievement?.(unlockAchievement("dungeon_clear"));
-        game.hud.showMsg("Você venceu o Abismo! A Relíquia é sua.", 6000);
+        if (clearMs != null && clearMs < 240000) {
+          game.toastAchievement?.(unlockAchievement("dungeon_speed"));
+        }
+        const timeMsg =
+          clearMs != null
+            ? ` Tempo: ${this._fmt(clearMs)} (melhor ${this._fmt(this.bestClearMs)}).`
+            : "";
+        game.hud.showMsg(`Você venceu o Abismo! A Relíquia é sua.${timeMsg}`, 6500);
         game.persistSave?.();
       }
     }

@@ -28,11 +28,21 @@ Primeira versão **oficial** (`release/v1.0`, tag `v1.0.0`).
 
 ## [Unreleased]
 
-Trabalho na branch `develop` após `v1.0.0` (cache **`gh73`**).  
-Resumo narrativo: [`docs/DEVELOP-ATE-GH63.md`](docs/DEVELOP-ATE-GH63.md).
+Trabalho na branch `develop` após `v1.0.0` (cache **`gh74`**).  
+Resumo narrativo: [`docs/DEVELOP-ATE-GH63.md`](docs/DEVELOP-ATE-GH63.md) · [`DEVELOP-GH64-ATE-GH73.md`](docs/DEVELOP-GH64-ATE-GH73.md).
+
+### Added
+- **Raridade de loot**: anéis rare/epic nos pickups + partículas (armas/troféus)
+- **Crafting na fogueira (C)**: materiais (corda, latas, isqueiro, mapa, bússola, rádio) → munição/armadilhas; cerca clássica como fallback
+- **Husky companheiro**: segue o jogador e fareja loot próximo
+- **Eventos de mundo**: nevasca (visão/frio) e invasão noturna na base
+- **Hardcore**: dificuldade com morte permanente, sem mid-run save; ranking marcado com ★
+- **Dungeon cronometrada**: tempo de clear + melhor tempo local + conquista sob 4 min
+- **Cutscenes de chefs**: Panda, Saci e T-Rex (mesmo runner do Boto)
+- **Biomas locais**: floresta densa, montanha e clareira na densidade de árvores
 
 ### Fixed
-- **Lança de gelo**: Posição e rotação ajustadas para não atravessar o corpo do personagem (agora segura de forma mais horizontal e natural)
+- **Armas melee**: poses da claymore/relíquia/machado/tocha; lança com estocada (não atravessa o corpo)
 
 ### Added
 - **Dungeon secreta**: caverna escondida em posição aleatória por seed (sem marcador no mapa) — ondas de inimigos, parkour, Guardião do Abismo e a arma exclusiva **Relíquia do Abismo** + conquista "Segredo do Abismo" (solo only; morrer reseta a dungeon)

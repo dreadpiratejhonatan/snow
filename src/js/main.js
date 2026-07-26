@@ -37,7 +37,7 @@ import {
 } from "./save.js";
 import { dailySeed, dailyLabel, isDailyMode, setDailyMode } from "./daily.js";
 import { unlockAchievement, listAchievements } from "./achievements.js";
-import { playBotoCutscene, updateCinematic, isCinematicActive } from "./cutscene.js";
+import { playChefCutscene, updateCinematic, isCinematicActive } from "./cutscene.js";
 import { GameChat } from "./chat.js";
 import {
   DemoBot,
@@ -46,6 +46,9 @@ import {
   armDemoFromMenu,
 } from "./demoBot.js";
 import { SecretDungeon } from "./dungeon.js";
+import { CraftBag } from "./crafting.js";
+import { WorldEvents } from "./worldEvents.js";
+import { HuskyPet } from "./pet.js";
 
 // Vinheta cinematográfica suave nas bordas da tela
 const VignetteShader = {
@@ -96,6 +99,9 @@ class Game {
     this._ammoWarnAt = 0;
     this.weapons = new WeaponInventory();
     this.traps = new TrapInventory();
+    this.craftBag = new CraftBag();
+    this.worldEvents = new WorldEvents();
+    this.pet = null;
     this.tutorial = null;
     this.demoBot = null;
     this.demoMode = false;
@@ -224,7 +230,7 @@ class Game {
     }
     this.bindWorldCombatHooks();
     this.world.onEnemySpawned = (enemy) => {
-      if (enemy?.type === "boto") playBotoCutscene(this);
+      playChefCutscene(this, enemy);
     };
     this.start();
   }
@@ -266,7 +272,7 @@ class Game {
     this.refreshTrapUI();
     this.bindWorldCombatHooks();
     this.world.onEnemySpawned = (enemy) => {
-      if (enemy?.type === "boto") playBotoCutscene(this);
+      playChefCutscene(this, enemy);
     };
     this.demoBot = new DemoBot(this);
     this.start();
@@ -814,9 +820,18 @@ class Game {
     // limpa viewmodel órfão na câmera
     for (const c of [...this.camera.children]) this.camera.remove(c);
 
+    this.pet?.dispose?.();
+    this.pet = null;
     this.world = new World(this.scene, { seed, authority, lowFx: this.lowFx });
     this.dungeon = new SecretDungeon(this.world, this.scene);
     this.player = new Player(this.camera, this.scene, this.world, this.world.getSpawn());
+    this.pet = new HuskyPet(this.scene, this.world);
+    this.worldEvents?.reset?.();
+    if (!diffOpts?.keepCraft) this.craftBag = new CraftBag();
+    this._botoCutDone = false;
+    this._pandaCutDone = false;
+    this._saciCutDone = false;
+    this._trexCutDone = false;
     this.setCameraMode(this.cameraMode);
     this.initSurvival();
     if (diffOpts) {
@@ -862,6 +877,7 @@ class Game {
 
   persistSave() {
     if (this.coop) return; // co-op não usa save mid-run local
+    if (this.difficulty?.hardcore) return; // hardcore: sem mid-run
     // playing / paused / dead (pós-queda com loot no chão)
     if (this.state !== "playing" && this.state !== "paused" && this.state !== "dead") return;
     writeMidRunSave(captureGameState(this));
@@ -1018,7 +1034,7 @@ class Game {
 
     this.world.onEnemyAttack = (dmg, dir, enemy) => this.onEnemyAttack(dmg, dir, enemy);
     this.world.onEnemySpawned = (enemy) => {
-      if (enemy?.type === "boto") playBotoCutscene(this);
+      playChefCutscene(this, enemy);
       if (this.state !== "playing") return;
       this.hud.showMsg(`${enemy.label} surgiu na neve…`, 2800);
     };
@@ -1094,7 +1110,7 @@ class Game {
     this.hud.showMsg(`Armadilha: ${this.traps.current.name}`, 1400);
   }
 
-  /** Perto da fogueira: gasta 1 suprimento da mochila → 1 cerca. */
+  /** Perto da fogueira: receita de materiais → ammo/trap; senão cerca clássica. */
   tryCraftFence() {
     const fire = this.world.campfirePos;
     if (!fire) return;
@@ -1103,8 +1119,30 @@ class Game {
       this.hud.showMsg("Craft só perto da fogueira da base.", 2200);
       return;
     }
+
+    const recipe = this.craftBag?.firstAvailable?.();
+    if (recipe) {
+      const result = this.craftBag.craft(recipe);
+      if (result) {
+        if (result.ammoType) this.weapons.addAmmo(result.ammoType, result.amount || 1);
+        if (result.trapId) {
+          this.traps.add(result.trapId, result.amount || 1);
+          this.traps.selected = result.trapId;
+        }
+        this.refreshInventoryUI();
+        this.refreshTrapUI();
+        this.persistSave();
+        this.hud.showMsg(`Craft: ${result.name} · ${this.craftBag.statusLine()}`, 3600);
+        this.toastAchievement(unlockAchievement("craft_ammo"));
+        return;
+      }
+    }
+
     if (this.carried < 1) {
-      this.hud.showMsg("Precisa de 1 suprimento na mochila (não depositado) para craftar cerca.", 3200);
+      this.hud.showMsg(
+        `Sem receita pronta (${this.craftBag?.statusLine?.() || "sem materiais"}). Ou 1 suprimento da mochila → cerca.`,
+        3800
+      );
       return;
     }
     this.carried--;
@@ -1306,13 +1344,28 @@ class Game {
     // morreu na dungeon: volta para a entrada (loot cai lá fora, dungeon reseta)
     if (this.dungeon?.active) this.dungeon.leave(this, { died: true });
     this.dropCarriedOnDeath();
-    this.persistSave();
+    const hardcore = !!this.difficulty?.hardcore;
+    if (hardcore) {
+      clearMidRunSave();
+    } else {
+      this.persistSave();
+    }
     document.exitPointerLock();
     this.input.clearKeys();
     if (this.clickHint) this.clickHint.hidden = true;
-    this.overlayTitle.textContent = "Você morreu";
-    this.overlayMsg.textContent = `${reason} O que você carregava caiu no chão. Itens no baú estão seguros. Renasça na base.`;
-    document.getElementById("btn-resume").textContent = "Renascer na base";
+    this.overlayTitle.textContent = hardcore ? "Hardcore — fim da linha" : "Você morreu";
+    this.overlayMsg.textContent = hardcore
+      ? `${reason} Sem segunda chance. Sua expedição acabou.`
+      : `${reason} O que você carregava caiu no chão. Itens no baú estão seguros. Renasça na base.`;
+    const btnResume = document.getElementById("btn-resume");
+    if (btnResume) {
+      if (hardcore) {
+        btnResume.textContent = "Nova partida";
+        btnResume.onclick = () => this.restart();
+      } else {
+        btnResume.textContent = "Renascer na base";
+      }
+    }
     const btnSkin = document.getElementById("btn-skin");
     if (btnSkin) btnSkin.hidden = true;
     this.overlay.hidden = false;
@@ -1333,6 +1386,9 @@ class Game {
     this.ambience.victory();
     this.toastAchievement(unlockAchievement("first_win"));
     if (this.difficultyId === "hard") this.toastAchievement(unlockAchievement("hard_win"));
+    if (this.difficultyId === "hardcore" || this.difficulty?.hardcore) {
+      this.toastAchievement(unlockAchievement("hardcore_win"));
+    }
     if (isDailyMode()) this.toastAchievement(unlockAchievement("daily_win"));
     if (this.coop) this.toastAchievement(unlockAchievement("coop_win"));
     this.toastAchievement(unlockAchievement("full_deposit"));
@@ -1409,7 +1465,10 @@ class Game {
       status.classList.remove("win-panel__status--ok", "win-panel__status--warn", "win-panel__status--err");
     }
     try {
-      const data = await submitScore(name, ms, { daily: isDailyMode() });
+      const data = await submitScore(name, ms, {
+        daily: isDailyMode(),
+        hardcore: !!this.difficulty?.hardcore,
+      });
       this.leaderboard = data.entries || [];
       this.fillLeaderboardList(document.getElementById("leaderboard-list"), this.leaderboard);
       this.fillLeaderboardList(document.getElementById("rank-overlay-list"), this.leaderboard);
@@ -2341,6 +2400,11 @@ class Game {
     const night = this.updateDayNight(dt);
     this.world.update(dt, this.clock.elapsedTime, night, this.duskF, this.player.position);
     this.dungeon?.update(dt, this);
+    this.worldEvents?.update(dt, this, night);
+    this.pet?.update(dt, this.player.position);
+    if (this.pet?.justSniffed) {
+      this.hud.showMsg("O husky farejou algo próximo…", 2200);
+    }
 
     this.updateInteractions(dt);
     this.updateSurvival(dt, night);
@@ -2422,6 +2486,10 @@ class Game {
         this.coop?.broadcastEvent("pickup", { saveId: item.saveId });
         const loot = this.weapons.onCollectItem(item);
         const gotTrap = this.traps.onCollectItem(item);
+        const mat = this.craftBag?.onCollectItem?.(item);
+        if (mat) {
+          this.hud.showMsg(`Material: ${mat} · ${this.craftBag.statusLine()}`, 2200);
+        }
         if (item.countsForWin !== false) this.carried++;
         this.ambience.pickupKind(kind === "weapon" || item.weaponId ? "weapon" : kind);
         this.hud.flashLoot();
@@ -2681,7 +2749,7 @@ class Game {
       this._coldWarned = false;
       this._freezingWarned = false;
     } else {
-      const coldMul = this.difficulty?.cold ?? 1;
+      const coldMul = (this.difficulty?.cold ?? 1) * (this.worldEvents?.coldMul?.() ?? 1);
       const seasonMul = this.getSeason()?.warmthMul ?? 1;
       const drain =
         (night > 0.5 ? s.warmthDrainNight : s.warmthDrainDay) * coldMul * seasonMul;

@@ -1,7 +1,7 @@
 # Pós–v1.0 — backlog
 
-Status na branch `develop` (**gh63**).  
-Documento completo do ciclo: [`DEVELOP-ATE-GH63.md`](DEVELOP-ATE-GH63.md).
+Status na branch `develop` (**gh74**).  
+Documentos: [`DEVELOP-ATE-GH63.md`](DEVELOP-ATE-GH63.md) · [`DEVELOP-GH64-ATE-GH73.md`](DEVELOP-GH64-ATE-GH73.md) · [`GUIA-DO-ZERO-AO-DEPLOY.md`](GUIA-DO-ZERO-AO-DEPLOY.md).
 
 ## Entregue
 - [x] Difícil mais punitivo (loot/munição/frio)
@@ -11,6 +11,7 @@ Documento completo do ciclo: [`DEVELOP-ATE-GH63.md`](DEVELOP-ATE-GH63.md).
 - [x] Raposa-da-neve + winter whiteout
 - [x] Cast só amigos (Rita/Bruno removidos)
 - [x] Cutscene cinematográfica do Boto (câmera + Esc)
+- [x] Cutscenes Panda / Saci / T-Rex
 - [x] Temporada mensal no ranking + export JSON
 - [x] Tickets admin com bulk status
 - [x] Host reconnect (`hostKey` + rejoinHost)
@@ -26,10 +27,16 @@ Documento completo do ciclo: [`DEVELOP-ATE-GH63.md`](DEVELOP-ATE-GH63.md).
 - [x] OST ambient por arquivo (`music/manifest.json` + WAVs)
 - [x] Sons de armas + carga arco/besta com barra
 - [x] Aim/crosshair + munição crítica + fix telhado cabana
-- [x] Docs ciclo develop (`DEVELOP-ATE-GH63.md`) + deploy gh63
+- [x] Dungeon secreta + Relíquia do Abismo
+- [x] Pickups visuais + balance de munição (gh72)
+- [x] Raridade de loot + crafting de materiais (gh74)
+- [x] Husky companion + eventos (nevasca / invasão)
+- [x] Hardcore + dungeon cronometrada
+- [x] Biomas locais (floresta / montanha / clareira)
+- [x] Docs ciclo develop + guia do zero ao deploy
 
 ## Ainda aberto / futuro
 - Mesh P2P completo entre 4 peers (hoje 3–4 via servidor estrela)
 - Credenciais TURN em produção (coturn na VPS — guia pronto)
-- Mais biomas além do ciclo de estações
-- Cutscenes para outros chefs (mesmo runner `playCinematic`)
+- Segunda dungeon / variações de layout por seed
+- Pet com combate / habilidades (hoje só fareja)

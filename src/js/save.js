@@ -112,6 +112,7 @@ export function captureGameState(game) {
     difficulty: game.difficultyId || "medium",
     // dungeon secreta: só a flag persiste (morrer/sair no meio reseta a run)
     dungeonCleared: !!game.dungeon?.cleared,
+    craftMats: game.craftBag?.serialize?.() || null,
   };
 }
 
@@ -200,6 +201,7 @@ export function applyGameState(game, data) {
   }
 
   if (data.dungeonCleared) game.dungeon?.markCleared();
+  if (data.craftMats) game.craftBag?.load?.(data.craftMats);
 
   game.hud.setHealth(game.health, s.maxHealth);
   game.hud.setWarmth(game.warmth, s.maxWarmth);

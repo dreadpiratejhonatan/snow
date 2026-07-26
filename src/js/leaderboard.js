@@ -143,11 +143,13 @@ export async function fetchLeaderboard(limit = 10, opts = {}) {
 }
 
 export async function submitScore(name, timeMs, opts = {}) {
+  const hardcore = !!opts.hardcore;
   const entry = {
-    name: String(name || "").trim().slice(0, 16),
+    name: String(name || "").trim().slice(0, 16) + (hardcore ? " ★" : ""),
     timeMs: Math.round(Number(timeMs)),
     at: new Date().toISOString(),
     daily: !!opts.daily,
+    hardcore,
   };
 
   if (!isValidLeaderboardName(entry.name)) {
