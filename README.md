@@ -106,6 +106,6 @@ O pacote **não inclui** ranking/tickets vivos — preserve `data/` no servidor.
 
 | Branch | Uso |
 | --- | --- |
-| `master` | desenvolvimento / Pages |
+| `main` | linha principal / GitHub Pages |
 | `release/v1.0` | corte da primeira versão oficial |
 | `release-notes` | espelho histórico do ciclo jul/2026 |
