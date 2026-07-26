@@ -32,6 +32,7 @@ Trabalho na branch `develop` após `v1.0.0` (cache **`gh75`**).
 Resumo narrativo: [`docs/DEVELOP-ATE-GH63.md`](docs/DEVELOP-ATE-GH63.md) · [`DEVELOP-GH64-ATE-GH73.md`](docs/DEVELOP-GH64-ATE-GH73.md).
 
 ### Added
+- **Estações mudam o visual do mundo**: o chão troca de "skin" por estação (primavera verde, verão viçoso, outono dourado, inverno nevado) e a vegetação acompanha — folhas dos pinheiros e grama tingidas; minimapa recolorido junto
 - **Modos de mapa (gh75)**: seletor no boot após a dificuldade — **Classic** (layout fixo atual) e **Random** (terreno, lago, base e spawn derivados da seed). Persistido no mid-run save; no co-op o modo viaja no bit 31 da seed da sala (daily continua sempre Classic)
 - **Raridade de loot**: anéis rare/epic nos pickups + partículas (armas/troféus)
 - **Crafting na fogueira (C)**: materiais (corda, latas, isqueiro, mapa, bússola, rádio) → munição/armadilhas; cerca clássica como fallback
