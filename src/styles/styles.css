@@ -1643,6 +1643,34 @@ body.is-touch .inv-slot__icon {
   display: none;
 }
 
+.hud__sound-btn {
+  position: absolute;
+  top: 58%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 40;
+  padding: 0.7rem 1.25rem;
+  border: 1px solid rgba(200, 230, 255, 0.45);
+  border-radius: 10px;
+  background: rgba(12, 28, 48, 0.88);
+  color: #e8f4ff;
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  pointer-events: auto;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.hud__sound-btn:active {
+  transform: translateX(-50%) scale(0.98);
+}
+
+.hud__sound-btn[hidden] {
+  display: none;
+}
+
 /* ---------- HUD de sobrevivência ---------- */
 
 .hud__status {
