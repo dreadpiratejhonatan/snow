@@ -28,4 +28,7 @@ Primeira versão **oficial** (`release/v1.0`, tag `v1.0.0`).
 
 ## [Unreleased]
 
+### Added
+- Personagem jogável **HEROBRINE** (Jonathan Herobrine) — rosto em `faces/herobrine.png`
+
 Trabalho após o corte `v1.0.0` entra aqui / em branches de feature.

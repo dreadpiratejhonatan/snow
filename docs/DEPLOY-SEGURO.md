@@ -16,7 +16,7 @@ Com jogadores no ranking / tickets, **nunca apague** `data/leaderboard.json` nem
 7. Se por engano sobrescreveu o JSON, restaure o backup do passo 2
 8. Permissões da pasta `data/`: **755** ou **775**
 9. **Tickets admin:** crie `data/tickets-admin.key` com **uma linha** = senha secreta (não versionar). Sem isso, mudar status falha de propósito.
-10. Abra o site e force **Ctrl+F5** (cache `?v=gh46` ou superior na v1.0)
+10. Abra o site e force **Ctrl+F5** (cache `?v=gh47` ou superior na v1.0)
 11. Teste ranking: zerar → digitar nome → Enviar → tecla **T**
 12. Co-op: `api/signal.php` + `data/rooms/`. Guia: `docs/COOP.md`
 13. Tickets: abra `/snow/tickets/` → envie um bug de teste → na seção Moderar, use a senha do `.key`
