@@ -73,6 +73,21 @@ export class Ambience {
     this.onWhisper = null; // () => void — msg atmosférica opcional
   }
 
+  /** AudioContext existe e está tocando de verdade. */
+  get contextRunning() {
+    return !!ctx && ctx.state === "running";
+  }
+
+  /** Retomada leve (ex.: voltar para a aba) — não cria nada novo. */
+  async resumeIfSuspended() {
+    if (!ctx || ctx.state !== "suspended") return;
+    try {
+      await ctx.resume();
+    } catch {
+      /* precisa de gesto real */
+    }
+  }
+
   /**
    * Precisa ser chamado a partir de um gesto real (click/touch).
    * Eventos sintéticos (CustomEvent) NÃO desbloqueiam o AudioContext.
@@ -97,6 +112,8 @@ export class Ambience {
     if (ctx.state === "suspended") return false;
     if (this.started) {
       if (this.musicOn && !this.music) this.startMusic();
+      // Gesto real: retenta a trilha em arquivos se o autoplay tinha bloqueado
+      this.music?.retryFilesOnGesture?.();
       return true;
     }
     this.started = true;
