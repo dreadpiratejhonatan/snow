@@ -38,6 +38,7 @@ Resumo narrativo: [`docs/DEVELOP-ATE-GH63.md`](docs/DEVELOP-ATE-GH63.md).
 - Personagem de teste **HEROBRINE** (só validação do fluxo de deploy)
 
 ### Added
+- Playbook genérico de lições: [`docs/PLAYBOOK-JOGO-WEB.md`](docs/PLAYBOOK-JOGO-WEB.md) (reutilizável em projetos parecidos)
 - Desafio do dia (seed UTC) + conquistas locais
 - Inimigo pterodáctilo (IA flyer) + **raposa-da-neve**
 - Cutscene cinematográfica do Boto (caminho de câmera + Esc)
