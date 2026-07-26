@@ -2018,7 +2018,7 @@ export class World {
     let best = null;
     let bestD = range;
     for (const e of this.enemies) {
-      if (!e.alive) continue;
+      if (!e.alive || e.tamed) continue;
       const d = e.mesh.position.distanceTo(pos);
       if (d < bestD) {
         bestD = d;
@@ -2164,7 +2164,7 @@ export class World {
     let bestT = maxDist;
     const v = new THREE.Vector3();
     for (const e of this.enemies) {
-      if (!e.alive) continue;
+      if (!e.alive || e.tamed) continue;
       const center = e.mesh.position.clone();
       center.y += 0.9 * (e.cfg.scale || 1);
       v.subVectors(center, origin);
@@ -2312,7 +2312,7 @@ export class World {
       // impacto em inimigo (só flechas — granada explode pelo fuse)
       if (p.kind !== "grenade") {
         for (const e of this.enemies) {
-          if (!e.alive) continue;
+          if (!e.alive || e.tamed) continue;
           const center = e.mesh.position.clone();
           center.y += 0.9 * (e.cfg.scale || 1);
           const hitR = 0.9 * (e.cfg.scale || 1) + 0.35;
@@ -2588,7 +2588,7 @@ export class World {
     let best = null;
     let bestD = maxDist;
     for (const e of this.enemies) {
-      if (!e.alive) continue;
+      if (!e.alive || e.tamed) continue;
       const d = e.mesh.position.distanceTo(playerPos);
       if (d < bestD) {
         bestD = d;
@@ -2816,7 +2816,7 @@ export class World {
       let best = null;
       let bestD = cfg.lureRadius || 28;
       for (const e of this.enemies) {
-        if (!e.alive) continue;
+        if (!e.alive || e.tamed) continue;
         const d = e.mesh.position.distanceTo(trap.pos);
         if (d < bestD) {
           bestD = d;
@@ -2857,7 +2857,7 @@ export class World {
         const led = t.mesh.userData.led;
         if (led) led.material.opacity = 0.5 + Math.sin(performance.now() * 0.01) * 0.5;
         for (const e of this.enemies) {
-          if (!e.alive) continue;
+          if (!e.alive || e.tamed) continue;
           if (e.mesh.position.distanceTo(t.pos) < (t.cfg.triggerRadius || 2.8)) {
             this.explodeAt(t.pos.clone().setY(t.pos.y + 0.5), t.cfg.damage || 70, t.cfg.explodeRadius || 5);
             this.removeTrap(t);
@@ -2875,7 +2875,7 @@ export class World {
         // re-atrai inimigos próximos ocasionalmente
         if (Math.random() < dt * 0.4) {
           for (const e of this.enemies) {
-            if (!e.alive) continue;
+            if (!e.alive || e.tamed) continue;
             if (e.mesh.position.distanceTo(t.pos) < (t.cfg.lureRadius || 28)) {
               e.lurePos = t.pos.clone();
               e.lureTimer = Math.max(e.lureTimer || 0, 4);

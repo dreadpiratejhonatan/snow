@@ -242,6 +242,7 @@ export function playTrexCutscene(game, enemy) {
 /** Dispara cutscene do chef correspondente (uma vez por run). */
 export function playChefCutscene(game, enemy) {
   if (!enemy?.type) return;
+  if (enemy.tamed) return; // montaria restaurada do save não é ameaça
   if (enemy.type === "boto") playBotoCutscene(game);
   else if (enemy.type === "panda") playPandaCutscene(game, enemy);
   else if (enemy.type === "saci") playSaciCutscene(game, enemy);

@@ -17,6 +17,7 @@ const DEFS = [
   { id: "craft_fence", title: "Engenheiro da base", desc: "Craftar uma cerca" },
   { id: "full_deposit", title: "Baú lotado", desc: "Depositar todos os suprimentos" },
   { id: "dungeon_clear", title: "Segredo do Abismo", desc: "Vencer a dungeon secreta" },
+  { id: "tame_mount", title: "Domador da neve", desc: "Domar uma montaria (mula ou panda)" },
 ];
 
 function read() {

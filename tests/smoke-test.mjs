@@ -5,6 +5,7 @@ import { World } from "../src/js/world.js";
 import { Player } from "../src/js/player.js";
 import { CONFIG } from "../src/js/config.js";
 import { SecretDungeon } from "../src/js/dungeon.js";
+import { MountManager } from "../src/js/mounts.js";
 
 try {
   const scene = new THREE.Scene();
@@ -220,6 +221,58 @@ try {
     rs.x.toFixed(1),
     rs.z.toFixed(1)
   );
+
+  // Montarias ARK: domar mula fraca, montar/andar, armadura reduz dano, sem fogo amigo
+  const mounts = new MountManager(world, scene);
+  const mule = world.spawnEnemyNow("mula");
+  if (!mule.cfg.mount) throw new Error("mount: mula deveria ser montável");
+  mule.mesh.position.set(10, world.groundHeight(10, 10), 10);
+  mule.hp = Math.round(mule.maxHp * 0.3);
+  const nearPos = new THREE.Vector3(10, mule.mesh.position.y, 11);
+  const offer = mounts.nearest(nearPos);
+  if (!offer || offer.kind !== "tame") throw new Error("mount: deveria oferecer domar");
+  mounts.tame(mule);
+  if (!mule.tamed || mule.state !== "tamed") throw new Error("mount: tame falhou");
+  if (mounts.nearest(nearPos)?.kind !== "ride") throw new Error("mount: deveria oferecer montar");
+  mounts.mount(mule, player);
+  if (!mounts.riding || !mule.ridden) throw new Error("mount: montar falhou");
+  player.yaw = 0;
+  const rideInput = {
+    analog: null,
+    sprint: true,
+    moveForward: true,
+    moveBack: false,
+    moveLeft: false,
+    moveRight: false,
+    jump: false,
+  };
+  const startX = mule.mesh.position.x;
+  const startZ = mule.mesh.position.z;
+  for (let i = 0; i < 60; i++) mounts.updateRiding(0.016, rideInput, player);
+  if (Math.hypot(mule.mesh.position.x - startX, mule.mesh.position.z - startZ) < 3) {
+    throw new Error("mount: montaria não andou");
+  }
+  if (Math.abs(player.position.x - mule.mesh.position.x) > 0.01) {
+    throw new Error("mount: player não segue a sela");
+  }
+  mounts.armorStock = 1;
+  mounts.equipArmor(mule);
+  if (!mule.mountArmor || mounts.armorStock !== 0) throw new Error("mount: armadura não equipou");
+  const hpArmored = mule.hp;
+  mule.takeDamage(20);
+  if (hpArmored - mule.hp !== 10) throw new Error("mount: armadura deveria cortar dano à metade");
+  mounts.dismount(player);
+  if (mounts.riding || mule.ridden) throw new Error("mount: desmontar falhou");
+  const fShot = world.hitscan(
+    new THREE.Vector3(mule.mesh.position.x, mule.mesh.position.y + 0.9, mule.mesh.position.z - 6),
+    new THREE.Vector3(0, 0, 1),
+    999,
+    20
+  );
+  if (fShot && fShot.enemy === mule) throw new Error("mount: hitscan não deveria acertar domada");
+  const mData = mounts.serialize();
+  if (!mData.tames.length || mData.tames[0].type !== "mula") throw new Error("mount: serialize falhou");
+  console.log("Mounts OK — mula domada, montada, armadura ativa");
 
   for (let i = 0; i < 60; i++) {
     world.update(0.016, i * 0.016, 0.5, 0.1, player.position);

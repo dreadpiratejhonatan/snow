@@ -45,6 +45,13 @@ export const RECIPES = [
     needs: { map: 1, compass: 1 },
     gives: { trapId: "bait", amount: 1 },
   },
+  // Só é craftada quando o Game pede explicitamente (montaria domada sem armadura)
+  {
+    id: "mount_armor",
+    name: "Armadura de montaria",
+    needs: { cans: 2, rope: 2 },
+    gives: { mountArmor: 1 },
+  },
 ];
 
 export class CraftBag {
@@ -82,7 +89,13 @@ export class CraftBag {
   }
 
   firstAvailable() {
-    return RECIPES.find((r) => this.canCraft(r)) || null;
+    return RECIPES.find((r) => r.id !== "mount_armor" && this.canCraft(r)) || null;
+  }
+
+  /** Receita da armadura de montaria (o Game decide quando priorizá-la). */
+  armorRecipe() {
+    const r = RECIPES.find((x) => x.id === "mount_armor");
+    return r && this.canCraft(r) ? r : null;
   }
 
   /** Consome materiais e retorna o `gives` da receita. */
