@@ -50,6 +50,7 @@ import { SecretDungeon } from "./dungeon.js";
 import { CraftBag } from "./crafting.js";
 import { WorldEvents } from "./worldEvents.js";
 import { HuskyPet, isHuskyEnabled, setHuskyEnabled } from "./pet.js";
+import { MountManager } from "./mounts.js";
 
 // Vinheta cinematográfica suave nas bordas da tela
 const VignetteShader = {
@@ -858,6 +859,7 @@ class Game {
     });
     this.dungeon = new SecretDungeon(this.world, this.scene);
     this.player = new Player(this.camera, this.scene, this.world, this.world.getSpawn());
+    this.mounts = new MountManager(this.world, this.scene);
     this.syncPet();
     this.worldEvents?.reset?.();
     if (!diffOpts?.keepCraft) this.craftBag = new CraftBag();
@@ -1047,6 +1049,7 @@ class Game {
       this.world,
       this.world.getSpawn()
     );
+    this.mounts = new MountManager(this.world, this.scene);
     this.syncPet();
 
     this.initSurvival();
@@ -1191,11 +1194,20 @@ class Game {
       return;
     }
 
-    const recipe = this.craftBag?.firstAvailable?.();
+    // prioriza armadura se há montaria domada sem proteção e nenhuma em estoque
+    const wantArmor =
+      (this.mounts?.tames || []).some((e) => !e.mountArmor) &&
+      (this.mounts?.armorStock || 0) === 0;
+    const recipe =
+      (wantArmor && this.craftBag?.armorRecipe?.()) || this.craftBag?.firstAvailable?.();
     if (recipe) {
       const result = this.craftBag.craft(recipe);
       if (result) {
         if (result.ammoType) this.weapons.addAmmo(result.ammoType, result.amount || 1);
+        if (result.mountArmor) {
+          this.mounts.armorStock += result.mountArmor;
+          this.hud.showMsg(`Armadura pronta — aperte E na montaria domada para equipar.`, 3600);
+        }
         if (result.trapId) {
           this.traps.add(result.trapId, result.amount || 1);
           this.traps.selected = result.trapId;
@@ -1409,6 +1421,7 @@ class Game {
     if (this.ended) return;
     this.ended = true;
     this.state = "dead";
+    this.mounts?.dismount(this.player, { keepPos: true });
     this.closeHelp(true);
     this.closeReleaseNotes(true);
     this.closeRank(true);
@@ -2467,7 +2480,13 @@ class Game {
     }
 
     this.input.blockAim = !!this.chat?.open;
-    this.player.update(dt, this.input);
+    if (this.mounts?.riding) {
+      // montado: a montaria anda com WASD; o player vira passageiro (câmera livre)
+      this.mounts.updateRiding(dt, this.input, this.player);
+      this.player.update(dt, this.mounts.stubInput(this.input));
+    } else {
+      this.player.update(dt, this.input);
+    }
     this.hud.el?.classList.toggle("is-aiming", !!this.player.aiming);
     this.coop?.tick(dt);
 
@@ -2537,10 +2556,19 @@ class Game {
       gift?.visible && gift.userData.landed && p.distanceTo(gift.position) < 6;
     const useKey = this.input.mobile ? "◉" : "E";
     const caveNear = this.dungeon?.nearEntrance(p);
-    if (caveNear) {
+    // demo bot pulsa E para loot — não deixa ele domar/montar sem querer
+    const mountNear = this.mounts?.riding || this.demoMode ? null : this.mounts?.nearest(p);
+    if (this.mounts?.riding) {
+      this.hud.setHint(`[${useKey}] Desmontar ${this.mounts.riding.label}`);
+    } else if (caveNear) {
       this.hud.setHint(`[${useKey}] Entrar na caverna escura...`);
     } else if (item) {
       this.hud.setHint(`[${useKey}] Pegar ${item.name}`);
+    } else if (mountNear) {
+      const mLabel = mountNear.enemy.label;
+      if (mountNear.kind === "tame") this.hud.setHint(`[${useKey}] Domar ${mLabel} (enfraquecido)`);
+      else if (mountNear.kind === "armor") this.hud.setHint(`[${useKey}] Equipar armadura em ${mLabel}`);
+      else this.hud.setHint(`[${useKey}] Montar ${mLabel}`);
     } else if (chestDist < 3.2 && this.carried > 0) {
       this.hud.setHint(`[${useKey}] Depositar ${this.carried} ${this.carried === 1 ? "item" : "itens"} no baú`);
     } else if (giftNear) {
@@ -2550,7 +2578,10 @@ class Game {
     }
 
     if (this.input.interact) {
-      if (caveNear) {
+      if (this.mounts?.riding) {
+        this.mounts.dismount(this.player);
+        this.hud.showMsg("Você desmontou.", 1800);
+      } else if (caveNear) {
         this.dungeon.tryEnter(this);
       } else if (item) {
         const kind =
@@ -2610,6 +2641,23 @@ class Game {
           );
         } else {
           this.hud.showMsg(`Você pegou: ${item.name}`);
+        }
+      } else if (mountNear) {
+        const beast = mountNear.enemy;
+        if (mountNear.kind === "tame") {
+          this.mounts.tame(beast);
+          this.hud.showMsg(`${beast.label} domado! Aperte ${useKey} de novo para montar.`, 4200);
+          this.toastAchievement(unlockAchievement("tame_mount"));
+        } else if (mountNear.kind === "armor") {
+          this.mounts.equipArmor(beast);
+          this.hud.showMsg(`Armadura equipada em ${beast.label} — dano recebido cai pela metade.`, 3800);
+        } else if (this.mounts.mount(beast, this.player)) {
+          this.hud.showMsg(
+            this.input.mobile
+              ? `Montado em ${beast.label} — joystick anda, ◉ desmonta.`
+              : `Montado em ${beast.label} — WASD anda, Shift galopa, ${useKey} desmonta.`,
+            4200
+          );
         }
       } else if (chestDist < 3.2 && this.carried > 0) {
         this.deposited += this.carried;

@@ -28,8 +28,11 @@ Primeira versão **oficial** (`release/v1.0`, tag `v1.0.0`).
 
 ## [Unreleased]
 
-Trabalho na branch `develop` após `v1.0.0` (cache **`gh76`**).  
+Trabalho na branch `develop` após `v1.0.0` (cache **`gh77`**).  
 Resumo narrativo: [`docs/DEVELOP-ATE-GH63.md`](docs/DEVELOP-ATE-GH63.md) · [`DEVELOP-GH64-ATE-GH73.md`](docs/DEVELOP-GH64-ATE-GH73.md).
+
+### Added
+- **Montarias estilo ARK (gh77)**: mula sem cabeça e panda podem ser **domados** (E com o animal abaixo de 40% de vida), **montados** (E de novo; WASD anda, Shift galopa, E desmonta) e **equipados com armadura** de placas (receita na fogueira: 2 latas + 2 cordas → corta o dano recebido pela metade). Montarias persistem no mid-run save; conquista "Domador da neve"
 
 ### Changed
 - **Privacidade (gh76)**: nenhum domínio/host fica no repositório — APIs same-origin por padrão, hosts estáticos usam `SNOW_API_BASE` (secret injetado no build); docs com placeholders; skin renomeada para **Ártico** (`faces/arctic.png`); smoke do relay só roda com `SIGNAL_URL` definido

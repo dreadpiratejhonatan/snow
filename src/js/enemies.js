@@ -616,6 +616,9 @@ export class Enemy {
     this.rivalTarget = null;
     this.flashT = 0;
     this.startleT = 0;
+    this.tamed = false;
+    this.ridden = false;
+    this.mountArmor = false;
     this.knockVel = new THREE.Vector3();
     this._baseEmissive = [];
     this._cacheEmissive();
@@ -635,7 +638,7 @@ export class Enemy {
     let best = null;
     let bestD = maxDist;
     for (const e of this.world.enemies) {
-      if (e === this || !e.alive) continue;
+      if (e === this || !e.alive || e.tamed) continue;
       // mesma facção ainda briga se estiver muito perto (caos)
       const same = e.faction === this.faction;
       const d = this.mesh.position.distanceTo(e.mesh.position);
@@ -721,6 +724,8 @@ export class Enemy {
 
   takeDamage(dmg, opts = {}) {
     if (!this.alive) return false;
+    // armadura de montaria: metade do dano
+    if (this.tamed && this.mountArmor) dmg = Math.max(1, Math.round(dmg * 0.5));
     this.hp -= dmg;
     this.hurtTimer = 0.28;
     this.flashT = 0.18;
@@ -733,7 +738,7 @@ export class Enemy {
       away.normalize();
       this.knockVel.copy(away).multiplyScalar(4.2);
     }
-    if (this.state !== "chase" && this.state !== "flee") this.state = "chase";
+    if (!this.tamed && this.state !== "chase" && this.state !== "flee") this.state = "chase";
     if (this.hp <= 0) {
       this.hp = 0;
       this.state = "dead";
@@ -755,8 +760,37 @@ export class Enemy {
     this.startleT = 0.28;
   }
 
+  /** Doma o animal: vira montaria dócil e recupera parte da vida. */
+  tame() {
+    this.tamed = true;
+    this.state = "tamed";
+    this.hp = Math.max(this.hp, Math.round(this.maxHp * 0.6));
+    this.knockVel.set(0, 0, 0);
+    this._setFlash(false);
+  }
+
+  /** Montaria domada: fica onde foi deixada (respiração suave), sem IA hostil. */
+  updateTamed(dt) {
+    if (this.flashT > 0) {
+      this.flashT -= dt;
+      if (this.flashT <= 0) this._setFlash(false);
+    }
+    if (this.ridden) return; // MountManager controla posição/animação
+    this._idleT = (this._idleT || 0) + dt;
+    const breathe = 1 + Math.sin(this._idleT * 1.6) * 0.015;
+    this.mesh.scale.setScalar(this._restScale * breathe);
+    // regenera devagar até a metade da vida
+    if (this.hp < this.maxHp * 0.5) {
+      this.hp = Math.min(this.maxHp * 0.5, this.hp + dt * 1.2);
+    }
+  }
+
   update(dt, elapsed, playerPos, hooks) {
     if (!this.alive) return;
+    if (this.tamed) {
+      this.updateTamed(dt);
+      return;
+    }
     const cfg = this.cfg;
     const m = this.mesh;
 

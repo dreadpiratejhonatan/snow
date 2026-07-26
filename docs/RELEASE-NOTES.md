@@ -6,6 +6,12 @@ Documentação completa: [`docs/V1-OFICIAL.md`](docs/V1-OFICIAL.md) · Tag Git: 
 
 ## Atualizações recentes (pós-v1.0)
 
+### [gh77] — Montarias (26 jul 2026)
+- **Dome e monte** a mula sem cabeça e o panda: enfraqueça o animal (vida < 40%) e aperte **E**
+- Montado: WASD anda, **Shift galopa** (mula é veloz, panda é tanque), **E** desmonta
+- **Armadura de montaria** (estilo ARK): craft na fogueira (2 latas + 2 cordas) e equipe com **E** — dano recebido cai pela metade
+- Montarias ficam onde você as deixa, regeneram devagar e são salvas na expedição
+
 ### [gh75] — Modos de mapa (26 jul 2026)
 - **Classic**: o mapa fixo de sempre (base, lago e spawn nos lugares conhecidos)
 - **Random**: terreno, lago, base e spawn únicos por seed — cada partida nova é um mapa diferente

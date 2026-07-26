@@ -266,6 +266,8 @@ export const CONFIG = {
       spawnMin: 62,
       spawnDelay: 110,
       faction: "occult",
+      // montável estilo ARK (domar com HP <= 40% + E)
+      mount: { seatHeight: 1.55, speed: 7.6, sprint: 10.5, radius: 0.85 },
       drops: [
         { weaponId: "shotgun", chance: 1, name: "Escopeta", color: 0xb87848 },
         { ammoType: "shell", amount: 2, chance: 0.45, name: "Cartuchos", color: 0xe08a5a },
@@ -338,6 +340,8 @@ export const CONFIG = {
       spawnMin: 55,
       spawnDelay: 180,
       faction: "wildlife",
+      // montável estilo ARK: mais lento que a mula, porém tanque
+      mount: { seatHeight: 1.95, speed: 6.2, sprint: 8.6, radius: 1.05 },
       drops: [
         { weaponId: "claymore", chance: 1, name: "Claymore", color: 0xd0d8e8 },
         { weaponId: "shotgun", chance: 0.85, name: "Escopeta", color: 0xb87848 },
