@@ -1774,6 +1774,54 @@ export class World {
   }
 
   /**
+   * Ponto sob a mira: inimigo, cobertura ou chão ao longo do raio da câmera.
+   * Usado para alinhar tiro do olho com a crosshair (3ª pessoa / órbita).
+   */
+  rayAimPoint(origin, dir, maxDist = 80) {
+    if (!origin || !dir || !(maxDist > 0)) {
+      return origin.clone().addScaledVector(dir || new THREE.Vector3(0, 0, -1), 40);
+    }
+    const d = dir.clone().normalize();
+    let bestT = maxDist;
+
+    // Inimigos
+    const v = new THREE.Vector3();
+    for (const e of this.enemies) {
+      if (!e.alive) continue;
+      const center = e.mesh.position.clone();
+      center.y += 0.9 * (e.cfg.scale || 1);
+      v.subVectors(center, origin);
+      const t = v.dot(d);
+      if (t < 0.4 || t > bestT) continue;
+      const perp = v.clone().addScaledVector(d, -t).length();
+      const hitR = 0.9 * (e.cfg.scale || 1) + 0.5;
+      if (perp < hitR) bestT = t;
+    }
+
+    // Cobertura
+    const cover = this.rayHitsCover(origin, d, bestT);
+    if (cover && cover.dist < bestT) bestT = cover.dist;
+
+    // Chão: amostra ao longo do raio
+    const steps = 24;
+    for (let i = 1; i <= steps; i++) {
+      const t = (maxDist * i) / steps;
+      if (t >= bestT) break;
+      const x = origin.x + d.x * t;
+      const y = origin.y + d.y * t;
+      const z = origin.z + d.z * t;
+      const gy = this.groundHeight(x, z);
+      if (y <= gy + 0.05) {
+        bestT = t;
+        break;
+      }
+    }
+
+    if (!(bestT > 0.5)) bestT = Math.min(maxDist, 40);
+    return origin.clone().addScaledVector(d, bestT);
+  }
+
+  /**
    * Tiro instantâneo (raycast simplificado): inimigo mais próximo ao longo do raio.
    * Obstáculos (árvore/pedra/etc.) bloqueiam antes do alvo.
    * @returns {{ enemy, dist } | null}

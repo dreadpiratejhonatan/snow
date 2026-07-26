@@ -540,4 +540,38 @@ export class Player {
       -Math.cos(this.yaw) * cosP
     ).normalize();
   }
+
+  /** Direção da câmera (crosshair) — inclui órbita 3ª pessoa. */
+  get cameraLookDirection() {
+    const yaw = this.cameraYaw;
+    const pitch = this.cameraPitch;
+    const cosP = Math.cos(pitch);
+    return new THREE.Vector3(
+      -Math.sin(yaw) * cosP,
+      Math.sin(pitch),
+      -Math.cos(yaw) * cosP
+    ).normalize();
+  }
+
+  /**
+   * Origem no olho + direção para o ponto sob a crosshair.
+   * Corrige parallax 3P e Alt-órbita.
+   */
+  getAimFire(world, range = 80) {
+    const eye = this.eyePosition;
+    const camDir = this.cameraLookDirection;
+    const camPos = this.camera?.position
+      ? this.camera.position.clone()
+      : eye.clone();
+    const maxDist = Math.max(8, Number(range) || 80);
+    const aimPoint = world?.rayAimPoint
+      ? world.rayAimPoint(camPos, camDir, maxDist)
+      : camPos.clone().addScaledVector(camDir, Math.min(maxDist, 40));
+    const dir = aimPoint.clone().sub(eye);
+    if (dir.lengthSq() < 1e-6) {
+      return { origin: eye, dir: camDir.clone() };
+    }
+    dir.normalize();
+    return { origin: eye, dir };
+  }
 }

@@ -2113,8 +2113,9 @@ class Game {
     this.player.setHeldWeapon(weapon.id);
     this.player.playAttack(weapon.fire === "hitscan" || weapon.fire === "projectile" ? "ranged" : "melee");
 
-    const origin = this.player.eyePosition;
-    const dir = this.player.lookDirection.clone().normalize();
+    const aim = this.player.getAimFire(this.world, weapon.range || 80);
+    const origin = aim.origin;
+    const dir = aim.dir;
 
     const dmgScale = this.difficulty?.weapon ?? 1;
     const dmg = Math.max(1, Math.round(weapon.damage * dmgScale));

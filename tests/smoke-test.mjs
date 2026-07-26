@@ -153,6 +153,17 @@ try {
   if (!(mxRight > 90)) throw new Error("minimapa: direita do player deveria ficar à direita");
   console.log("Minimap orientation OK");
 
+  // Mira: com órbita, tiro deve seguir a câmera (não só o corpo)
+  player.orbitYaw = Math.PI / 2;
+  player.orbitPitch = 0;
+  const aim = player.getAimFire(world, 50);
+  const camDir = player.cameraLookDirection;
+  if (aim.dir.dot(camDir) < 0.85) {
+    throw new Error("getAimFire deveria alinhar com a direção da câmera/crosshair");
+  }
+  player.orbitYaw = 0;
+  console.log("Aim/crosshair OK");
+
   for (let i = 0; i < 60; i++) {
     world.update(0.016, i * 0.016, 0.5, 0.1, player.position);
   }
