@@ -28,6 +28,8 @@ export class World {
     this.scene = scene;
     this.seed = (opts.seed ?? randomSeed()) >>> 0;
     this.authority = opts.authority !== false; // guest co-op: false (host simula inimigos)
+    this.lowFx = !!opts.lowFx; // perfil celular: menos partículas / grama
+    this._snowFrame = 0;
     this._nextNetId = 1;
     this.size = CONFIG.world.size;
     this.half = this.size / 2;
@@ -337,7 +339,9 @@ export class World {
   }
 
   buildGrass() {
-    const count = CONFIG.world.grassCount;
+    const count = this.lowFx
+      ? CONFIG.mobileGfx?.grassCount ?? Math.min(900, CONFIG.world.grassCount)
+      : CONFIG.world.grassCount;
     const tuft = new THREE.BufferGeometry();
     const w = 0.26;
     const h = 0.5;
@@ -430,7 +434,9 @@ export class World {
   }
 
   buildFireflies() {
-    const count = CONFIG.world.fireflyCount;
+    const count = this.lowFx
+      ? CONFIG.mobileGfx?.fireflyCount ?? Math.min(28, CONFIG.world.fireflyCount)
+      : CONFIG.world.fireflyCount;
     const positions = new Float32Array(count * 3);
     this.fireflyBase = [];
     for (let i = 0; i < count; i++) {
@@ -482,7 +488,9 @@ export class World {
 
   // nevasca: flocos reciclados ao redor do jogador
   buildSnowfall() {
-    const count = CONFIG.world.snowCount;
+    const count = this.lowFx
+      ? CONFIG.mobileGfx?.snowCount ?? Math.min(320, CONFIG.world.snowCount)
+      : CONFIG.world.snowCount;
     const positions = new Float32Array(count * 3);
     this.snowData = [];
     for (let i = 0; i < count; i++) {
@@ -496,7 +504,13 @@ export class World {
     geo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
     this.snow = new THREE.Points(
       geo,
-      new THREE.PointsMaterial({ color: 0xffffff, size: 0.14, transparent: true, opacity: 0.9, depthWrite: false })
+      new THREE.PointsMaterial({
+        color: 0xffffff,
+        size: this.lowFx ? 0.18 : 0.14,
+        transparent: true,
+        opacity: 0.9,
+        depthWrite: false,
+      })
     );
     this.scene.add(this.snow);
   }
@@ -534,9 +548,17 @@ export class World {
     const p = playerPos || { x: 0, y: 4, z: 0 };
     const snowMul = this.season?.snowMul ?? 1;
     if (snowMul < 0.04 || !this.snow) return;
+    // Celular: pula frames — groundHeight×1400/frame engasga o main thread
+    if (this.lowFx) {
+      const skip = CONFIG.mobileGfx?.snowFrameSkip ?? 2;
+      this._snowFrame = (this._snowFrame + 1) % skip;
+      if (this._snowFrame !== 0) return;
+      dt *= skip;
+    }
     const sp = this.snow.geometry.attributes.position;
     const blizzard = this.season?.blizzardMul ?? 1;
     const speedMul = (0.35 + snowMul * 0.9) * blizzard;
+    const floorY = (p.y || 4) - 1.5;
     for (let i = 0; i < this.snowData.length; i++) {
       const d = this.snowData[i];
       let x = sp.getX(i) + Math.sin(elapsed * 1.1 + d.phase) * dt * 0.8 * snowMul;
@@ -544,7 +566,9 @@ export class World {
       let z = sp.getZ(i) + Math.cos(elapsed * 0.9 + d.phase) * dt * 0.5 * snowMul;
       const dx = x - p.x;
       const dz = z - p.z;
-      if (y < this.groundHeight(x, z) || dx * dx + dz * dz > 45 * 45) {
+      // lowFx: sem groundHeight (barato); desktop mantém colisão com o terreno
+      const hitGround = this.lowFx ? y < floorY : y < this.groundHeight(x, z);
+      if (hitGround || dx * dx + dz * dz > 45 * 45) {
         x = p.x + (Math.random() * 2 - 1) * 40;
         z = p.z + (Math.random() * 2 - 1) * 40;
         y = p.y + 10 + Math.random() * 14;
