@@ -155,7 +155,7 @@ class Game {
     this.state = "skin";
     // Sempre exige escolher um personagem (rosto visível + preview girável)
     const unlockAudio = () => {
-      void this.ambience.start();
+      this.ambience.unlockFromGesture();
     };
     const skinId = await runSkinPicker({ force: true, onGesture: unlockAudio });
     applySkinToPlayer(this.player, skinId);
@@ -246,7 +246,7 @@ class Game {
     this.coop = null;
     this.coopRoom = null;
     try {
-      void this.ambience.start();
+      this.ambience.unlockFromGesture();
     } catch {
       /* gesture pode falhar; demo segue sem áudio */
     }
@@ -879,7 +879,7 @@ class Game {
     this.overlay.hidden = true;
     const skinId = await runSkinPicker({
       force: true,
-      onGesture: () => void this.ambience.start(),
+      onGesture: () => this.ambience.unlockFromGesture(),
     });
     applySkinToPlayer(this.player, skinId);
     this.hud.showMsg(`Skin: ${CONFIG.skins[skinId]?.name || skinId}`, 2200);
@@ -1884,10 +1884,12 @@ class Game {
       },
       { passive: false }
     );
-    window.addEventListener("neve-user-gesture", () => void this.ambience.start(), { once: true });
+    window.addEventListener("neve-user-gesture", () => this.ambience.unlockFromGesture(), {
+      once: true,
+    });
     document.getElementById("skin-confirm")?.addEventListener(
       "pointerdown",
-      () => void this.ambience.start(),
+      () => this.ambience.unlockFromGesture(),
       { once: true }
     );
 
@@ -1972,11 +1974,10 @@ class Game {
       }
     };
     this.canvas.addEventListener("click", unlock);
-    // Desbloqueio de áudio persistente: iOS/Android suspendem o AudioContext
-    // a qualquer momento (aba em 2º plano, chamada, silencioso). Cada gesto
-    // real tenta retomar — start() é barato quando já está rodando.
-    const audioUnlock = () => void this.ambience.start();
+    // Android Chrome: resume() TEM que rodar na stack do gesto (sem await).
+    const audioUnlock = () => this.ambience.unlockFromGesture();
     window.addEventListener("pointerdown", audioUnlock, { capture: true, passive: true });
+    window.addEventListener("touchstart", audioUnlock, { capture: true, passive: true });
     window.addEventListener("touchend", audioUnlock, { capture: true, passive: true });
     window.addEventListener("keydown", audioUnlock, { capture: true });
     document.addEventListener("visibilitychange", () => {
@@ -1985,16 +1986,36 @@ class Game {
     window.addEventListener(
       "touchstart",
       () => {
-        void this.ambience.start();
+        this.ambience.unlockFromGesture();
         if (this.input.mobile) this.input.locked = true;
         this.speedrun.start();
       },
       { once: true, passive: true }
     );
+
+    // Botão explícito no mobile — volume de mídia às vezes está baixo / contexto suspenso
+    const soundBtn = document.getElementById("btn-enable-sound");
+    if (soundBtn) {
+      const arm = () => {
+        this.ambience.unlockFromGesture();
+        this.refreshSoundButton();
+      };
+      soundBtn.addEventListener("pointerdown", arm);
+      soundBtn.addEventListener("click", arm);
+    }
+  }
+
+  refreshSoundButton() {
+    const soundBtn = document.getElementById("btn-enable-sound");
+    if (!soundBtn) return;
+    const need =
+      !!this.input?.mobile && !(this.ambience?.started && this.ambience?.contextRunning);
+    soundBtn.hidden = !need;
+    soundBtn.setAttribute("aria-hidden", need ? "false" : "true");
   }
 
   requestPointerLock() {
-    void this.ambience.start(); // gesto do usuário: pode iniciar o áudio + trilha
+    this.ambience.unlockFromGesture(); // gesto do usuário: áudio + trilha
     // Durante o tutorial o mouse fica livre para clicar em “Pular”
     if (this.tutorial?.active) {
       try {
@@ -2156,10 +2177,11 @@ class Game {
       this.clickHint.hidden = this.input.locked || this.input.mobile;
       if (this.input.mobile) {
         this.clickHint.textContent = "Toque na tela para começar (áudio + trilha)";
-        // started pode ser true com o contexto ainda suspenso (iOS) — só
+        // started pode ser true com o contexto ainda suspenso — só
         // esconde o aviso quando o som está saindo de verdade
         this.clickHint.hidden = this.ambience.started && this.ambience.contextRunning;
       }
+      this.refreshSoundButton();
     }
 
     // Esc no desktop: bindUI. Tap pause no celular:
