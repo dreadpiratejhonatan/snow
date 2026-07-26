@@ -6,6 +6,10 @@ Documentação completa: [`docs/V1-OFICIAL.md`](docs/V1-OFICIAL.md) · Tag Git: 
 
 ## Atualizações recentes (pós-v1.0)
 
+### [gh89] — Roster e solo sazonal (26 jul 2026)
+- Removidos **Neymar** e **MEGA BRAIN** do seletor (ficam Natan, Jorge Bolado, Caio, Lorenzo e ZÉ)
+- **Solo e vegetação** mudam de cor com as estações (primavera/verão/outono/inverno), também no desktop
+
 ### [gh82] — Poções e montarias (26 jul 2026)
 - **Poções de vida**: jarros com líquido vermelho espalhados pelo mapa — pegue para curar
 - **Novas montarias**: cavalo (galope rápido), dromedário (resistente) e pônei — enfraqueça e aperte **E** para domar/montar

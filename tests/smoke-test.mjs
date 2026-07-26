@@ -302,6 +302,44 @@ try {
   }
   console.log("Snowfall OK —", snowMs.toFixed(1), "ms / 120 frames");
 
+  // Roster: Neymar / MEGA BRAIN fora; aliases caem em natan
+  if (CONFIG.skins.neymar || CONFIG.skins.mega_brain) {
+    throw new Error("roster: neymar/mega_brain ainda em CONFIG.skins");
+  }
+  if (CONFIG.skinOrder.includes("neymar") || CONFIG.skinOrder.includes("mega_brain")) {
+    throw new Error("roster: neymar/mega_brain ainda em skinOrder");
+  }
+  player.applySkin("neymar");
+  if (player.skinId !== "natan") throw new Error("alias neymar deveria virar natan");
+  player.applySkin("mega_brain");
+  if (player.skinId !== "natan") throw new Error("alias mega_brain deveria virar natan");
+
+  // Solo sazonal: verão tinges o chão de verde; inverno volta branco
+  const summer = CONFIG.world.seasons.find((s) => s.id === "summer");
+  const winter = CONFIG.world.seasons.find((s) => s.id === "winter");
+  if (!summer?.groundTintMul || summer.groundTintMul < 0.5) {
+    throw new Error("season: summer.groundTintMul ausente");
+  }
+  world.applySeason(summer, { recolorTerrain: true });
+  const sample = new THREE.Color();
+  world.colorAt(0, 0, world.getHeight(0, 0), sample);
+  if (sample.g <= sample.r || sample.g < 0.25) {
+    throw new Error(`season: solo de verão deveria ser esverdeado (rgb=${sample.r.toFixed(2)},${sample.g.toFixed(2)},${sample.b.toFixed(2)})`);
+  }
+  if (world.terrain.material.color.g <= world.terrain.material.color.r) {
+    throw new Error("season: material do terreno no verão deveria tingir de verde (desktop)");
+  }
+  if (!world.grassMat?.color || world.grassMat.color.g <= world.grassMat.color.r) {
+    throw new Error("season: grama no verão deveria tingir de verde");
+  }
+  world.applySeason(winter, { recolorTerrain: true });
+  world.colorAt(0, 0, world.getHeight(0, 0), sample);
+  const winterBright = (sample.r + sample.g + sample.b) / 3;
+  if (winterBright < 0.7) {
+    throw new Error(`season: solo de inverno deveria ser claro (avg=${winterBright.toFixed(2)})`);
+  }
+  console.log("Season ground OK — summer green / winter snow");
+
   for (let i = 0; i < 60; i++) {
     world.update(0.016, i * 0.016, 0.5, 0.1, player.position);
   }

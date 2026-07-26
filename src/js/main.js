@@ -1043,7 +1043,7 @@ class Game {
     this._prevDayTime = this.dayTime;
 
     this.world = new World(this.scene, { lowFx: this.lowFx });
-    this.world.applySeason?.(this.getSeason());
+    this.applySeasonVisual(this.computeSeasonVisual());
     this.dungeon = new SecretDungeon(this.world, this.scene);
     this.player = new Player(
       this.camera,
@@ -1723,7 +1723,11 @@ class Game {
     return list[i];
   }
 
-  /** Avança estação a cada `seasonDays` midnights. */
+  /**
+   * Avança o índice de estação a cada `seasonDays` midnights.
+   * NÃO troca o visual de uma vez — a mudança de "skin" do mundo é gradual
+   * (ver updateSeasonVisual), então aqui só mexemos no contador + aviso.
+   */
   tickSeasonOnDayWrap() {
     if (this.dayTime >= this._prevDayTime) {
       this._prevDayTime = this.dayTime;
@@ -1738,8 +1742,88 @@ class Game {
     const n = CONFIG.world.seasons?.length || 4;
     this.seasonIndex = ((this.seasonIndex || 0) + 1) % n;
     const s = this.getSeason();
-    this.world.applySeason?.(s);
     this.hud.showMsg(`${s.icon} Chegou ${s.label}`, 3800);
+  }
+
+  /**
+   * Estado visual da estação *interpolado*. As estações mantêm seu visual
+   * na maior parte do tempo e derretem para a próxima na reta final — assim
+   * o chão e a vegetação mudam junto com o ambiente, sem trocar de uma hora
+   * para outra. Vale para qualquer mapa (Classic ou Random), pois o World
+   * usa a mesma paleta.
+   */
+  computeSeasonVisual() {
+    const list = CONFIG.world.seasons || [];
+    if (!list.length) return this.getSeason();
+    const n = list.length;
+    const need = CONFIG.world.seasonDays || 2;
+    const i = ((this.seasonIndex % n) + n) % n;
+    const cur = list[i];
+    const nxt = list[(i + 1) % n];
+
+    // progresso contínuo dentro da estação (0..1), incluindo a hora do dia
+    const p = Math.min(1, ((this.seasonDayAcc || 0) + this.dayTime) / need);
+    const TF = CONFIG.world.seasonTransition ?? 0.45; // fração final que transiciona
+    const raw = p <= 1 - TF ? 0 : (p - (1 - TF)) / TF;
+    const blend = raw * raw * (3 - 2 * raw); // smoothstep
+
+    const v =
+      this._seasonVisual ||
+      (this._seasonVisual = {
+        iceColor: new THREE.Color(),
+        fogTint: new THREE.Color(),
+        groundTint: new THREE.Color(),
+        leafTint: new THREE.Color(),
+        grassTint: new THREE.Color(),
+        _sa: new THREE.Color(),
+        _sb: new THREE.Color(),
+      });
+
+    const lerp = (a, b) => a + (b - a) * blend;
+    const lerpHex = (target, hexA, hexB) =>
+      target.setHex(hexA ?? 0xffffff).lerp(v._sb.setHex(hexB ?? 0xffffff), blend);
+
+    v.warmthMul = lerp(cur.warmthMul ?? 1, nxt.warmthMul ?? 1);
+    v.snowMul = lerp(cur.snowMul ?? 0, nxt.snowMul ?? 0);
+    v.iceOpacity = lerp(cur.iceOpacity ?? 0.9, nxt.iceOpacity ?? 0.9);
+    v.fogDensityMul = lerp(cur.fogDensityMul ?? 1, nxt.fogDensityMul ?? 1);
+    v.blizzardMul = lerp(cur.blizzardMul ?? 1, nxt.blizzardMul ?? 1);
+    v.groundTintMul = lerp(cur.groundTintMul ?? 0, nxt.groundTintMul ?? 0);
+    v.leafTintMul = lerp(cur.leafTintMul ?? 0, nxt.leafTintMul ?? 0);
+    v.grassTintMul = lerp(cur.grassTintMul ?? 0, nxt.grassTintMul ?? 0);
+    lerpHex(v.iceColor, cur.iceColor, nxt.iceColor);
+    lerpHex(v.fogTint, cur.fogTint, nxt.fogTint);
+    lerpHex(v.groundTint, cur.groundTint, nxt.groundTint);
+    lerpHex(v.leafTint, cur.leafTint, nxt.leafTint);
+    lerpHex(v.grassTint, cur.grassTint, nxt.grassTint);
+
+    const dom = blend < 0.5 ? cur : nxt;
+    v.id = dom.id;
+    v.label = dom.label;
+    v.icon = dom.icon;
+    v._blend = blend;
+    v._phaseIndex = i;
+    return v;
+  }
+
+  /** Aplica o visual sazonal ao mundo (terreno recolorido só quando muda). */
+  applySeasonVisual(v) {
+    if (!this.world?.applySeason) return;
+    // terreno + minimapa são caros → só recalcula quando o blend muda de fato
+    let recolor = false;
+    if (this._lastSeasonPhase !== v._phaseIndex) {
+      recolor = true;
+    } else if (
+      this._lastSeasonBlend == null ||
+      Math.abs(v._blend - this._lastSeasonBlend) > 0.04
+    ) {
+      recolor = true;
+    }
+    if (recolor) {
+      this._lastSeasonBlend = v._blend;
+      this._lastSeasonPhase = v._phaseIndex;
+    }
+    this.world.applySeason(v, { recolorTerrain: recolor });
   }
 
   // Ciclo de dia e noite: move sol/lua, mistura cores do céu e da névoa,
@@ -1747,7 +1831,8 @@ class Game {
   updateDayNight(dt) {
     this.dayTime = (this.dayTime + dt / CONFIG.world.dayLength) % 1;
     this.tickSeasonOnDayWrap();
-    const season = this.getSeason();
+    const season = this.computeSeasonVisual();
+    if (!this.dungeon?.active) this.applySeasonVisual(season);
 
     // Dungeon secreta: ambiente fixo escuro (fog curto esconde o mundo lá fora).
     // O caminho normal recalcula tudo por frame, então ao sair restaura sozinho.
@@ -1843,10 +1928,13 @@ class Game {
       this.hemi.color.lerp(this._tmpColorB.setHex(0x88ffcc), aurora * 0.4);
       this.hemi.intensity = Math.max(this.hemi.intensity, 0.22 + aurora * 0.35);
     }
-    // tinta leve da estação na névoa / hemi
+    // tinta leve da estação na névoa / hemi (fogTint pode ser hex ou Color interpolado)
     if (season?.fogTint != null) {
-      this.scene.fog.color.lerp(this._tmpColorA.setHex(season.fogTint), 0.18);
-      this.hemi.color.lerp(this._tmpColorB.setHex(season.fogTint), 0.12);
+      const ft = season.fogTint;
+      if (typeof ft === "number") this._tmpColorA.setHex(ft);
+      else this._tmpColorA.copy(ft);
+      this.scene.fog.color.lerp(this._tmpColorA, 0.18);
+      this.hemi.color.lerp(this._tmpColorB.copy(this._tmpColorA), 0.12);
     }
 
     this.hud.updateTime(this.dayTime, night, season);
@@ -2923,7 +3011,7 @@ class Game {
       this._freezingWarned = false;
     } else {
       const coldMul = (this.difficulty?.cold ?? 1) * (this.worldEvents?.coldMul?.() ?? 1);
-      const seasonMul = this.getSeason()?.warmthMul ?? 1;
+      const seasonMul = this._seasonVisual?.warmthMul ?? this.getSeason()?.warmthMul ?? 1;
       const drain =
         (night > 0.5 ? s.warmthDrainNight : s.warmthDrainDay) * coldMul * seasonMul;
       this.warmth = Math.max(0, this.warmth - drain * dt);
