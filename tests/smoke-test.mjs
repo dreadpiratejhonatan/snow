@@ -188,6 +188,39 @@ try {
   }
   console.log("Dungeon OK — entrada:", ep.x.toFixed(1), ep.z.toFixed(1));
 
+  // Map modes: classic mantém layout fixo; random é determinístico pela seed e diferente do classic
+  if (world.mapMode !== "classic") throw new Error("mapMode default deveria ser classic");
+  if (world.basePos.x !== -4.5 || world.basePos.z !== -3) {
+    throw new Error("classic: base deveria ficar em (-4.5, -3)");
+  }
+  const sceneR1 = new THREE.Scene();
+  const randA = new World(sceneR1, { seed: 12345, mapMode: "random" });
+  const sceneR2 = new THREE.Scene();
+  const randB = new World(sceneR2, { seed: 12345, mapMode: "random" });
+  if (randA.basePos.x !== randB.basePos.x || randA.basePos.z !== randB.basePos.z) {
+    throw new Error("random: mesma seed deveria dar a mesma base");
+  }
+  if (randA.basePos.x === world.basePos.x && randA.basePos.z === world.basePos.z) {
+    throw new Error("random: base não deveria coincidir com o classic");
+  }
+  const rs = randA.getSpawn();
+  if (!Number.isFinite(rs.x) || !Number.isFinite(rs.y) || !Number.isFinite(rs.z)) {
+    throw new Error("random: spawn inválido");
+  }
+  if (randA.getHeight(randA.basePos.x, randA.basePos.z) < randA.waterLevel) {
+    throw new Error("random: base caiu dentro do lago");
+  }
+  const randDungeon = new SecretDungeon(randA, sceneR1);
+  if (!randDungeon.entrancePos) throw new Error("random: dungeon sem entrada");
+  console.log(
+    "Map modes OK — random base:",
+    randA.basePos.x.toFixed(1),
+    randA.basePos.z.toFixed(1),
+    "spawn:",
+    rs.x.toFixed(1),
+    rs.z.toFixed(1)
+  );
+
   for (let i = 0; i < 60; i++) {
     world.update(0.016, i * 0.016, 0.5, 0.1, player.position);
   }

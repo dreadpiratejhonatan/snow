@@ -110,6 +110,7 @@ export function captureGameState(game) {
     speedrunMs: game.speedrun?.ms ?? 0,
     speedrunStarted: !!game.speedrun?.started,
     difficulty: game.difficultyId || "medium",
+    mapMode: game.mapMode === "random" ? "random" : "classic",
     // dungeon secreta: só a flag persiste (morrer/sair no meio reseta a run)
     dungeonCleared: !!game.dungeon?.cleared,
     craftMats: game.craftBag?.serialize?.() || null,
