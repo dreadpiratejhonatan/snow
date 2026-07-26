@@ -1012,7 +1012,8 @@ class Game {
     this.sunLight = new THREE.DirectionalLight(0xfff2d6, 0.8);
     this.sunLight.castShadow = shadowsOn;
     if (shadowsOn) {
-      const mapSize = gfx?.shadowMapSize || 2048;
+      // 2048 + bloom + neve engasgava o Chrome; 1024 basta na neve
+      const mapSize = gfx?.shadowMapSize || 1024;
       this.sunLight.shadow.mapSize.set(mapSize, mapSize);
       this.sunLight.shadow.camera.left = -60;
       this.sunLight.shadow.camera.right = 60;
@@ -1611,10 +1612,10 @@ class Game {
     this.composer = new EffectComposer(this.renderer);
     this.composer.addPass(new RenderPass(this.scene, this.camera));
 
-    // Bloom é o vilão no celular (multipass full-screen) — só no desktop
+    // Bloom full-screen é caro; desktop usa versão leve (threshold alto)
     const wantBloom = this.lowFx ? CONFIG.mobileGfx?.bloom === true : true;
     if (wantBloom) {
-      this.bloomPass = new UnrealBloomPass(size, 0.35, 0.4, 0.85);
+      this.bloomPass = new UnrealBloomPass(size, 0.22, 0.35, 0.92);
       this.composer.addPass(this.bloomPass);
     } else {
       this.bloomPass = null;
@@ -2990,8 +2991,27 @@ class Game {
     this.timer.update(timestamp);
     const dt = Math.min(this.timer.getDelta(), 0.05);
     this.elapsed += dt;
+    const t0 = performance.now();
     this.update(dt);
     this.composer.render();
+    // auto-degrade se o frame estourar (evita loop de freezes de vários segundos)
+    const frameMs = performance.now() - t0;
+    if (frameMs > 80) {
+      this._slowFrames = (this._slowFrames || 0) + 1;
+      if (this._slowFrames >= 3 && !this._perfDegraded) {
+        this._perfDegraded = true;
+        if (this.bloomPass) {
+          this.bloomPass.enabled = false;
+        }
+        if (this.world?.snowData?.length > 280) {
+          // esconde metade dos flocos (Buffer fica, mas update corta)
+          this.world._snowPerfCap = 280;
+        }
+        this.hud?.showMsg?.("Modo leve ativado (PC lento detectado).", 3500);
+      }
+    } else {
+      this._slowFrames = 0;
+    }
   }
 }
 

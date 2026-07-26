@@ -30,7 +30,9 @@ export const CONFIG = {
     cloudCount: 10,
     fireflyCount: 90,
     birdCount: 4,
-    snowCount: 1400,
+    snowCount: 700,
+    /** Neve desktop: atualiza a cada N frames (groundHeight/floco foi removido). */
+    snowFrameSkip: 2,
     dayLength: 140,
     /** Dias de jogo (ciclos dia/noite) por estação. */
     seasonDays: 2,
