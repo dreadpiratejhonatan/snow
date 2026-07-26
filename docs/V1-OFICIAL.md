@@ -13,9 +13,9 @@ Este documento é o mapa da **primeira versão oficial**: o que o jogo faz, onde
 
 | Ambiente | URL |
 | --- | --- |
-| GitHub Pages (front) | https://dreadpiratejhonatan.github.io/snow/ |
-| HostGator (front + PHP) | https://jhonatanribeiro.com/snow/ |
-| Board de sugestões | https://jhonatanribeiro.com/snow/tickets/ (Pages também em `/tickets/`) |
+| GitHub Pages (front) | https://SEU-USUARIO.github.io/snow/ |
+| HostGator (front + PHP) | https://SEU-DOMINIO.com/snow/ |
+| Board de sugestões | https://SEU-DOMINIO.com/snow/tickets/ (Pages também em `/tickets/`) |
 | Ranking API | `…/api/leaderboard.php` |
 | Co-op API | `…/api/signal.php` |
 | Tickets API | `…/api/tickets.php` |
@@ -45,7 +45,7 @@ Sobrevivência 3D na neve (Three.js no navegador). Explore, colete suprimentos, 
 
 ### Personagens
 
-Natan, Jhonatan, Jorge Bolado, Caio, Lorenzo, **ZÉ** — rostos em `faces/`, cards embaralhados no picker.
+Natan, Ártico, Jorge Bolado, Caio, Lorenzo, **ZÉ** — rostos em `faces/`, cards embaralhados no picker.
 
 ### Dificuldade
 
@@ -151,7 +151,7 @@ Pasta `data/` no servidor: **não apagar** em deploys. Ver [`DEPLOY-SEGURO.md`](
 | `release/v1.0` | **corte oficial da v1.0** |
 | `v1.0.0` | tag anotada da release |
 
-Repo: https://github.com/dreadpiratejhonatan/snow
+Repo: https://github.com/SEU-USUARIO/snow
 
 ---
 

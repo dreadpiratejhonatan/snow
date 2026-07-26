@@ -7,7 +7,7 @@ Cache do cliente atual: **`?v=gh64`**.
 Pacote local: `release/snow.zip` (ou pasta `release/hostgator-snow/`).  
 Preparar de novo: `npm run build` ou `powershell -File scripts/prepare-hostgator-deploy.ps1`.
 
-Site típico: `https://jhonatanribeiro.com/snow/`
+Site típico: `https://SEU-DOMINIO.com/snow/`
 
 ## Deploy automático (GitHub Actions → FTP)
 

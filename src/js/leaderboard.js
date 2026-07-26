@@ -1,4 +1,3 @@
-const HOSTGATOR_API = "https://jhonatanribeiro.com/snow/api/leaderboard.php";
 const LOCAL_KEY = "neveLeaderboardCache";
 const FETCH_RETRIES = 3;
 const RETRY_MS = 450;
@@ -7,23 +6,13 @@ export const MIN_TIME_MS = 120000;
 export const MAX_TIME_MS = 86400000;
 
 /**
- * HostGator: API relativa.
- * GitHub Pages / preview / outros hosts estáticos: API absoluta (CORS).
+ * API do ranking: mesma origem por padrão (host com PHP).
+ * Hosts estáticos (GitHub Pages, preview) usam window.SNOW_API_BASE,
+ * injetado no build via env SNOW_API_BASE — o domínio não fica no repo.
  */
 function resolveApi() {
-  try {
-    const h = (location.hostname || "").toLowerCase();
-    if (h === "jhonatanribeiro.com" || h === "www.jhonatanribeiro.com") {
-      return "api/leaderboard.php";
-    }
-    if (h.endsWith("github.io") || h === "localhost" || h === "127.0.0.1") {
-      return HOSTGATOR_API;
-    }
-    if (h) return HOSTGATOR_API;
-  } catch {
-    /* SSR / testes */
-  }
-  return HOSTGATOR_API;
+  const base = String(globalThis.SNOW_API_BASE || "").replace(/\/+$/, "");
+  return base ? `${base}/leaderboard.php` : "api/leaderboard.php";
 }
 
 const API = resolveApi();

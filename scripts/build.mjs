@@ -8,7 +8,7 @@ import { execSync } from "node:child_process";
 process.chdir(path.dirname(path.dirname(fileURLToPath(import.meta.url))));
 const DIST = "dist";
 const HOST = path.join("release", "hostgator-snow");
-const CACHE = "gh75";
+const CACHE = "gh76";
 
 /** Arquivos de dados vivos no servidor — nunca clobber no pacote HostGator. */
 const PRESERVE_DATA = new Set(["leaderboard.json", "tickets.json", "tickets-rate.json", "tickets-admin.key"]);
@@ -54,6 +54,18 @@ function copyDataDir(destRoot, { omitLiveData = false } = {}) {
   }
 }
 
+// Hosts estáticos (Pages/preview): base absoluta da API vem do env/secret
+// SNOW_API_BASE — o domínio nunca fica commitado no repositório.
+const API_BASE = (process.env.SNOW_API_BASE || "").trim().replace(/\/+$/, "");
+function injectApiBase(htmlFile) {
+  if (!API_BASE || !fs.existsSync(htmlFile)) return;
+  const src = fs.readFileSync(htmlFile, "utf8");
+  fs.writeFileSync(
+    htmlFile,
+    src.replace("<head>", `<head>\n  <script>window.SNOW_API_BASE=${JSON.stringify(API_BASE)};</script>`)
+  );
+}
+
 fs.rmSync(DIST, { recursive: true, force: true });
 fs.mkdirSync(path.join(DIST, "styles"), { recursive: true });
 
@@ -76,6 +88,7 @@ html = html
     `<script type="module" src="game.js?v=${CACHE}"></script>`
   );
 fs.writeFileSync(path.join(DIST, "index.html"), html);
+injectApiBase(path.join(DIST, "index.html"));
 
 if (fs.existsSync("assets")) {
   fs.cpSync("assets", path.join(DIST, "assets"), { recursive: true });
@@ -92,6 +105,7 @@ if (fs.existsSync("music")) {
 }
 if (fs.existsSync("tickets")) {
   fs.cpSync("tickets", path.join(DIST, "tickets"), { recursive: true });
+  injectApiBase(path.join(DIST, "tickets", "index.html"));
 }
 if (fs.existsSync("api")) {
   fs.cpSync("api", path.join(DIST, "api"), { recursive: true });

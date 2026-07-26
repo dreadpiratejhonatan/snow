@@ -1,18 +1,14 @@
 /**
- * Cliente HTTP para api/signal.php (HostGator).
- * Em localhost / GitHub Pages usa a URL absoluta do domínio com PHP.
+ * Cliente HTTP para api/signal.php.
+ * Mesma origem por padrão; hosts estáticos (Pages/localhost) usam
+ * window.SNOW_API_BASE injetado no build (env SNOW_API_BASE).
  */
 
 const RELATIVE = "api/signal.php";
-const HOSTGATOR_SIGNAL = "https://jhonatanribeiro.com/snow/api/signal.php";
 
 export function signalEndpoint() {
-  if (typeof location === "undefined") return RELATIVE;
-  const h = location.hostname;
-  if (h === "localhost" || h === "127.0.0.1" || h.endsWith("github.io")) {
-    return HOSTGATOR_SIGNAL;
-  }
-  return RELATIVE;
+  const base = String(globalThis.SNOW_API_BASE || "").replace(/\/+$/, "");
+  return base ? `${base}/signal.php` : RELATIVE;
 }
 
 function mapSignalError(status, errMsg) {

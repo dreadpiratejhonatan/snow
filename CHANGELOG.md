@@ -9,7 +9,7 @@ Primeira versão **oficial** (`release/v1.0`, tag `v1.0.0`).
 
 ### Added
 - Jogo completo de sobrevivência 3D (Three.js): exploração, loot, combate, frio, dia/noite, estações
-- Personagens: Natan, Jhonatan, Jorge Bolado, Caio, Lorenzo, ZÉ
+- Personagens: Natan, Ártico, Jorge Bolado, Caio, Lorenzo, ZÉ
 - Dificuldade Fácil / Médio / Difícil
 - Chefs: Panda, Saci, T-Rex gatling, Boto-cor-de-rosa (+ troféu do boto na vitória)
 - Ranking online HostGator (`api/leaderboard.php`)
@@ -28,8 +28,11 @@ Primeira versão **oficial** (`release/v1.0`, tag `v1.0.0`).
 
 ## [Unreleased]
 
-Trabalho na branch `develop` após `v1.0.0` (cache **`gh75`**).  
+Trabalho na branch `develop` após `v1.0.0` (cache **`gh76`**).  
 Resumo narrativo: [`docs/DEVELOP-ATE-GH63.md`](docs/DEVELOP-ATE-GH63.md) · [`DEVELOP-GH64-ATE-GH73.md`](docs/DEVELOP-GH64-ATE-GH73.md).
+
+### Changed
+- **Privacidade (gh76)**: nenhum domínio/host fica no repositório — APIs same-origin por padrão, hosts estáticos usam `SNOW_API_BASE` (secret injetado no build); docs com placeholders; skin renomeada para **Ártico** (`faces/arctic.png`); smoke do relay só roda com `SIGNAL_URL` definido
 
 ### Added
 - **Modos de mapa (gh75)**: seletor no boot após a dificuldade — **Classic** (layout fixo atual) e **Random** (terreno, lago, base e spawn derivados da seed). Persistido no mid-run save; no co-op o modo viaja no bit 31 da seed da sala (daily continua sempre Classic)

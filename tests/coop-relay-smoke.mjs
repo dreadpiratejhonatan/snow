@@ -1,8 +1,12 @@
 /**
- * Smoke: HostGator signal.php relay (fallback firewall).
- * Uso: node tests/coop-relay-smoke.mjs
+ * Smoke: signal.php relay (fallback firewall).
+ * Uso: SIGNAL_URL=https://SEU-DOMINIO/snow/api/signal.php node tests/coop-relay-smoke.mjs
  */
-const API = process.env.SIGNAL_URL || "https://jhonatanribeiro.com/snow/api/signal.php";
+const API = process.env.SIGNAL_URL;
+if (!API) {
+  console.log("SIGNAL_URL não definido — smoke do relay pulado (defina o secret/env para rodar).");
+  process.exit(0);
+}
 
 async function post(body) {
   const res = await fetch(API, {

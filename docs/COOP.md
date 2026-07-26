@@ -6,7 +6,7 @@
 - Preferência: sincronizar **peer-to-peer** (WebRTC DataChannel + TURN/TURNS).
 - Se NAT/firewall bloquear P2P (~8s sem DataChannel), os peers caem no **relay via HTTPS** (mesma API).
 - O **host** é autoritativo (inimigos, snapshots). Guests espelham.
-- GitHub Pages / localhost chamam `https://jhonatanribeiro.com/snow/api/signal.php`.
+- GitHub Pages / localhost chamam `https://SEU-DOMINIO.com/snow/api/signal.php`.
 
 ## Jogadores
 

@@ -17,8 +17,10 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
-      - name: Coop relay smoke (HostGator)
+      - name: Coop relay smoke (pulado se SIGNAL_URL não for secret)
         run: npm run test:coop-relay
+        env:
+          SIGNAL_URL: ${{ secrets.SIGNAL_URL }}
         continue-on-error: true
       - name: Unit smoke
         run: npm run test:smoke
