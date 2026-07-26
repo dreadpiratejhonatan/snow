@@ -1,171 +1,116 @@
-// Playlist procedural: cada entrada embaralha faixas ORIGINAIS.
+// Playlist estilo Minecraft: cada vez que o jogo inicia, embaralha as faixas.
 //
-// Clima: aventura 16-bit / natureza (inspiração de jogos Mega Drive de exploração
-// — NÃO é a OST oficial de Pocahontas nem de Minecraft; essas são protegidas).
+// 1) Se existirem arquivos em /music/*.mp3 (ou .ogg), eles têm prioridade.
+//    Coloque aí as músicas do Minecraft que VOCÊ tiver direito de usar.
+// 2) Senão, toca faixas procedurais bem distintas (estilo C418 / exploração).
 //
-// 1) Se existir music/manifest.json + arquivos válidos → prioridade.
-// 2) Senão → faixas procedurais bem distintas (ritmo, escala e timbre).
+// Não embutimos a OST oficial do Minecraft — é protegida por copyright.
 
 const FILE_CANDIDATES = [
-  "adventure.mp3",
-  "river.mp3",
-  "forest.mp3",
-  "village.mp3",
-  "snow.mp3",
-  "theme.mp3",
+  // nomes comuns da OST (só tocam se o arquivo existir na pasta music/)
+  "sweden.mp3",
+  "sweden.ogg",
+  "key.mp3",
+  "key.ogg",
+  "subwoofer-lullaby.mp3",
+  "subwoofer_lullaby.mp3",
+  "living-mice.mp3",
+  "living_mice.mp3",
+  "haggstrom.mp3",
+  "minecraft.mp3",
+  "clark.mp3",
+  "wet-hands.mp3",
+  "wet_hands.mp3",
+  "dry-hands.mp3",
+  "mice-on-venus.mp3",
+  "alpha.mp3",
+  "beta.mp3",
 ];
 
-/** Bancos de motivos (graus). Cada faixa usa um banco — soa diferente. */
-const MOTIF_BANKS = {
-  // tema heróico / abertura
-  hero: [
-    [0, 2, 4, 5, 7, 5, 4, 2],
-    [0, 4, 5, 7, 5, 4, 2, 0],
-    [2, 4, 5, 4, 7, 5, -1, 4],
-    [0, 0, 2, 4, 5, 4, 2, -1],
-  ],
-  // flauta / rio — arcos longos
-  river: [
-    [0, 2, 3, 5, 3, 2, 0, -1],
-    [5, 3, 2, 0, 2, 3, 5, 7],
-    [2, 3, 5, 7, 5, 3, 2, 0],
-    [0, 3, -1, 5, 3, 2, 0, 2],
-  ],
-  // aldeia — saltos alegres
-  village: [
-    [0, 4, 2, 5, 4, 2, 0, 4],
-    [2, 0, 4, 5, 7, 5, 4, 2],
-    [0, 2, 4, -1, 5, 4, 2, 0],
-    [4, 5, 7, 5, 4, 2, 4, 0],
-  ],
-  // neve / mistério — dórico
-  frost: [
-    [0, 1, 3, 5, 3, 1, 0, -1],
-    [5, 3, 1, 0, 1, 3, 5, 3],
-    [0, 3, 5, 7, 5, 3, -1, 1],
-    [1, 3, 5, 3, 1, 0, 1, 3],
-  ],
-  // marcha / exploraçãoição
-  trek: [
-    [0, 0, 2, 2, 4, 4, 5, 4],
-    [0, 2, 4, 5, 4, 2, 0, 0],
-    [2, 4, 5, 7, 5, 4, 2, 4],
-    [0, 4, -1, 5, 4, 2, 0, 2],
-  ],
-  // festa / coragem
-  feast: [
-    [0, 2, 4, 7, 5, 4, 2, 0],
-    [4, 5, 7, 9, 7, 5, 4, 2],
-    [0, 4, 7, 4, 5, 2, 0, 4],
-    [2, 5, 4, 7, 5, 4, -1, 0],
-  ],
-};
+// Motivos em graus da escala (não é a OST oficial — clima C418 / exploração).
+const MOTIFS = [
+  [0, 2, 4, 5, 4, 2], // subida suave e volta
+  [4, 2, 0, 2, 4, 5], // desce e sobe
+  [0, 0, 2, 4, -1, 5], // nota longa + pausa
+  [2, 4, 5, 4, 2, 0], // arco clássico
+  [5, 4, 2, 0, 2, -1], // desce e respira
+  [0, 4, 5, 4, -1, 2], // salto de 3ª/5ª suave
+  [2, 2, 4, 5, 7, 5], // sobe (graus saturam na escala)
+  [0, 2, -1, 4, 2, 0], // silêncio no meio
+];
 
-// Faixas: escalas/ritmos bem diferentes para a playlist “mudar de música”.
+// Faixas procedurais estilo Minecraft / C418: piano lento + pad quente.
 const PROC_TRACKS = [
   {
-    id: "dawn-river",
-    name: "Rio da Aurora",
-    scale: [261.63, 293.66, 329.63, 349.23, 392.0, 440.0, 523.25], // C major
+    id: "sweden-main",
+    name: "Planície Quiet",
+    // C major pentatônico-ish (C D E G A) — clima Sweden / exploração
+    scale: [261.63, 293.66, 329.63, 392.0, 440.0, 523.25],
     pad: [130.81, 164.81, 196.0, 261.63],
-    beat: 0.42,
-    density: 0.94,
-    bright: 0.35,
-    length: 48,
-    bank: "river",
-    voice: "flute",
-    rhythm: "legato",
-  },
-  {
-    id: "wind-trail",
-    name: "Trilha do Vento",
-    scale: [293.66, 329.63, 349.23, 392.0, 440.0, 493.88, 587.33], // D mixolydian-ish
-    pad: [146.83, 174.61, 220.0, 293.66],
-    beat: 0.38,
-    density: 0.92,
-    bright: 0.4,
-    length: 44,
-    bank: "hero",
-    voice: "flute",
-    rhythm: "pulse",
-  },
-  {
-    id: "winter-village",
-    name: "Aldeia de Inverno",
-    scale: [246.94, 277.18, 311.13, 349.23, 369.99, 415.3, 493.88], // Bb-ish bright
-    pad: [123.47, 155.56, 185.0, 246.94],
-    beat: 0.36,
-    density: 0.95,
-    bright: 0.45,
-    length: 40,
-    bank: "village",
-    voice: "harp",
-    rhythm: "arp",
-  },
-  {
-    id: "frozen-path",
-    name: "Caminho Congelado",
-    scale: [220.0, 246.94, 261.63, 293.66, 329.63, 349.23, 392.0], // A minor-ish
-    pad: [110.0, 146.83, 174.61, 220.0],
-    beat: 0.48,
-    density: 0.88,
-    bright: 0.22,
-    length: 42,
-    bank: "frost",
-    voice: "bell",
-    rhythm: "legato",
-  },
-  {
-    id: "north-march",
-    name: "Marcha do Norte",
-    scale: [196.0, 220.0, 246.94, 261.63, 293.66, 329.63, 392.0],
-    pad: [98.0, 130.81, 164.81, 196.0],
-    beat: 0.34,
-    density: 0.93,
-    bright: 0.28,
-    length: 46,
-    bank: "trek",
-    voice: "brass",
-    rhythm: "pulse",
-  },
-  {
-    id: "spirit-grove",
-    name: "Bosque dos Espíritos",
-    scale: [174.61, 196.0, 220.0, 261.63, 293.66, 329.63, 349.23],
-    pad: [87.31, 110.0, 146.83, 174.61],
-    beat: 0.45,
+    beat: 1.35,
     density: 0.9,
-    bright: 0.3,
-    length: 44,
-    bank: "river",
-    voice: "flute",
-    rhythm: "arp",
+    bright: 0.1,
+    length: 36,
   },
   {
-    id: "brave-hearth",
-    name: "Lar Corajoso",
-    scale: [261.63, 311.13, 349.23, 392.0, 466.16, 523.25, 587.33], // C → brighter
-    pad: [130.81, 155.56, 196.0, 261.63],
-    beat: 0.32,
-    density: 0.96,
-    bright: 0.5,
-    length: 40,
-    bank: "feast",
-    voice: "harp",
-    rhythm: "pulse",
+    id: "key-soft",
+    name: "Chave na Neve",
+    scale: [220.0, 246.94, 261.63, 293.66, 329.63, 369.99],
+    pad: [110.0, 146.83, 174.61, 220.0],
+    beat: 1.25,
+    density: 0.88,
+    bright: 0.08,
+    length: 28,
   },
   {
-    id: "snow-dance",
-    name: "Dança na Neve",
-    scale: [329.63, 349.23, 392.0, 440.0, 493.88, 523.25, 587.33],
-    pad: [164.81, 196.0, 246.94, 329.63],
-    beat: 0.3,
-    density: 0.97,
-    bright: 0.55,
-    length: 38,
-    bank: "village",
-    voice: "bell",
-    rhythm: "arp",
+    id: "haggstrom-soft",
+    name: "Haggström Quiet",
+    scale: [196.0, 220.0, 246.94, 293.66, 329.63, 392.0],
+    pad: [98.0, 123.47, 146.83, 196.0],
+    beat: 1.1,
+    density: 0.9,
+    bright: 0.12,
+    length: 30,
+  },
+  {
+    id: "living-mice",
+    name: "Ratos Vivos",
+    scale: [174.61, 196.0, 220.0, 261.63, 293.66, 349.23],
+    pad: [87.31, 130.81, 174.61, 220.0],
+    beat: 1.3,
+    density: 0.86,
+    bright: 0.1,
+    length: 26,
+  },
+  {
+    id: "wet-hands",
+    name: "Mãos Molhadas",
+    scale: [146.83, 174.61, 196.0, 220.0, 261.63, 293.66],
+    pad: [73.42, 110.0, 146.83, 185.0],
+    beat: 1.35,
+    density: 0.85,
+    bright: 0.07,
+    length: 28,
+  },
+  {
+    id: "subwoofer",
+    name: "Canção do Subwoofer",
+    scale: [130.81, 155.56, 174.61, 196.0, 233.08, 261.63],
+    pad: [65.41, 98.0, 130.81, 164.81],
+    beat: 1.4,
+    density: 0.85,
+    bright: 0.06,
+    length: 30,
+  },
+  {
+    id: "mice-venus",
+    name: "Ratos em Vênus",
+    scale: [246.94, 277.18, 293.66, 349.23, 392.0, 440.0],
+    pad: [123.47, 155.56, 185.0, 246.94],
+    beat: 1.15,
+    density: 0.88,
+    bright: 0.14,
+    length: 28,
   },
 ];
 
@@ -522,71 +467,59 @@ export class MusicPlayer {
     this.notesLeftInTrack = track.length;
     this.silence = 0;
     this.queue = [];
-    // abre o filtro da lead conforme o timbre da faixa
-    if (this.noteFilter) {
-      const open = track.voice === "brass" ? 4200 : track.voice === "bell" ? 5200 : 3200;
-      this.noteFilter.frequency.setTargetAtTime(open, this.getCtx().currentTime, 0.2);
-    }
-    this.retunePad(track.pad, track.voice);
+    this.retunePad(track.pad);
     this.fillPhrase();
-    this.timer = 0.06;
-    // gancho imediato — motivo curto da própria faixa
-    this.playNote(0, 2);
+    // Primeira nota quase imediata (antes parecia “sem música”)
+    this.timer = 0.08;
+    this.playNote(2, 4);
     this.notesLeftInTrack = Math.max(0, this.notesLeftInTrack - 1);
-    this.queue.unshift([2, 2], [4, 2], [5, 3]);
+    // segunda nota logo em seguida — presença clara no boot
+    this.queue.unshift([4, 3], [0, 4]);
     this.onTrack?.(track.name);
   }
 
-  retunePad(freqs, voice = "flute") {
+  retunePad(freqs) {
     const ctx = this.getCtx();
     if (!ctx || !this.padOsc) return;
     const t = ctx.currentTime;
-    const padMul = voice === "brass" ? 0.7 : voice === "bell" ? 0.55 : 0.85;
     for (let i = 0; i < this.padOsc.length; i++) {
       const f = freqs[i % freqs.length] || 110;
       this.padOsc[i].o.frequency.cancelScheduledValues(t);
       const cur = Math.max(40, this.padOsc[i].o.frequency.value || f);
       this.padOsc[i].o.frequency.setValueAtTime(cur, t);
-      this.padOsc[i].o.frequency.exponentialRampToValueAtTime(Math.max(40, f), t + 1.2);
-      this.padOsc[i].o.type = i % 2 === 0 ? "sine" : "triangle";
-      const vol = (i === 0 ? 0.12 : i === 1 ? 0.08 : 0.05) * padMul;
-      this.padOsc[i].g.gain.setTargetAtTime(vol, t, 0.5);
+      this.padOsc[i].o.frequency.exponentialRampToValueAtTime(Math.max(40, f), t + 1.8);
+      this.padOsc[i].o.type = "sine";
+      const vol = i === 0 ? 0.15 : i === 1 ? 0.1 : 0.065;
+      this.padOsc[i].g.gain.setTargetAtTime(vol, t, 0.8);
     }
   }
 
   fillPhrase() {
     const track = this.track;
     if (!track) return;
-    const bank = MOTIF_BANKS[track.bank] || MOTIF_BANKS.hero;
-    const motif = bank[randInt(bank.length)];
-    const transpose = randInt(3) - 1;
+    // Motivo melódico (estilo exploração Minecraft) + variação leve
+    const motif = MOTIFS[randInt(MOTIFS.length)];
+    const transpose = randInt(3) - 1; // -1, 0, +1
     const max = track.scale.length - 1;
-    const rhythm = track.rhythm || "legato";
-
     for (let i = 0; i < motif.length && this.notesLeftInTrack > 0; i++) {
       this.notesLeftInTrack--;
       const raw = motif[i];
       if (raw < 0 || Math.random() > track.density) {
-        this.queue.push([-1, rhythm === "pulse" ? 1 : 1 + randInt(2)]);
+        this.queue.push([-1, 2 + randInt(3)]);
         continue;
       }
       const deg = Math.max(0, Math.min(max, raw + transpose));
-      let beats;
-      if (rhythm === "arp") {
-        beats = [1, 1, 1, 2, 2][randInt(5)];
-      } else if (rhythm === "pulse") {
-        beats = [1, 2, 2, 2, 3][randInt(5)];
-      } else {
-        beats = [2, 2, 3, 3, 4][randInt(5)];
-      }
+      // notas longas — piano “Sweden”, não arpeggio corrido
+      const beats = [3, 3, 4, 4, 5, 6][randInt(6)];
       this.queue.push([deg, beats]);
-      // eco curto estilo 16-bit
-      if (rhythm !== "arp" && Math.random() < 0.18) {
+      // ocasionalmente dobra a nota (eco humano do tema)
+      if (Math.random() < 0.12) {
         this.notesLeftInTrack = Math.max(0, this.notesLeftInTrack - 1);
-        this.queue.push([deg, 1]);
+        this.queue.push([deg, 2 + randInt(2)]);
       }
     }
-    this.queue.push([-1, rhythm === "arp" ? 1 + randInt(2) : 1 + randInt(2)]);
+    // respiração curta entre frases (antes era longo demais → “sem música”)
+    this.queue.push([-1, 2 + randInt(3)]);
   }
 
   playNote(degree, beats) {
@@ -594,41 +527,17 @@ export class MusicPlayer {
     const track = this.track;
     if (!ctx || !this.bus || !track || degree < 0) return;
     const base = track.scale[degree % track.scale.length];
-    const oct = Math.random() < (track.bright || 0.3) ? 2 : 1;
-    const f = base * oct;
-    const dur = Math.max(0.22, beats * this.beat * (track.rhythm === "arp" ? 0.95 : 1.15));
+    // quase nunca sobe oitava — piano médio, clima C418
+    const f = base * (Math.random() < track.bright ? 2 : 1);
+    const dur = Math.max(1.1, beats * this.beat * 1.35);
     const t0 = ctx.currentTime;
-    const voice = track.voice || "flute";
 
-    // timbres distintos por faixa (aventura 16-bit, não piano Minecraft)
-    let voices;
-    if (voice === "flute") {
-      voices = [
-        ["triangle", 0.34, 0.04, 1],
-        ["sine", 0.18, 0.06, 2],
-        ["sine", 0.08, 0.1, 1.003],
-      ];
-    } else if (voice === "harp") {
-      voices = [
-        ["triangle", 0.28, 0.01, 1],
-        ["sine", 0.2, 0.02, 2],
-        ["triangle", 0.1, 0.03, 3],
-      ];
-    } else if (voice === "brass") {
-      voices = [
-        ["sawtooth", 0.14, 0.05, 1],
-        ["square", 0.1, 0.06, 1.01],
-        ["sine", 0.12, 0.08, 0.5],
-      ];
-    } else {
-      // bell
-      voices = [
-        ["sine", 0.3, 0.01, 1],
-        ["sine", 0.16, 0.02, 2.01],
-        ["triangle", 0.1, 0.03, 3.0],
-      ];
-    }
-
+    // "piano" Minecraft: suave, emocional, audível sob o vento
+    const voices = [
+      ["sine", 0.36, 0.08, 1],
+      ["triangle", 0.16, 0.12, 1.003],
+      ["sine", 0.09, 0.18, 0.997],
+    ];
     for (const [type, vol, attack, ratio] of voices) {
       const osc = ctx.createOscillator();
       osc.type = type;
@@ -636,17 +545,17 @@ export class MusicPlayer {
       const g = ctx.createGain();
       g.gain.setValueAtTime(0, t0);
       g.gain.linearRampToValueAtTime(vol, t0 + attack);
-      g.gain.setValueAtTime(vol * 0.75, t0 + attack + dur * 0.3);
+      g.gain.setValueAtTime(vol * 0.85, t0 + attack + dur * 0.35);
       g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
       const dest = this.noteFilter || this.bus;
       osc.connect(g).connect(dest);
       if (this.echo) {
         const send = ctx.createGain();
-        send.gain.value = voice === "bell" ? 0.75 : 0.45;
+        send.gain.value = 0.62;
         g.connect(send).connect(this.echo);
       }
       osc.start(t0);
-      osc.stop(t0 + dur + 0.08);
+      osc.stop(t0 + dur + 0.12);
     }
   }
 
@@ -699,10 +608,10 @@ export class MusicPlayer {
       }
     }
 
-    // silêncio entre faixas — curto para a trilha trocar de verdade
+    // silêncio entre faixas — curto para a trilha não “sumir”
     if (this.silence > 0 || this._pendingNext) {
       if (this._pendingNext && this.silence <= 0) {
-        this.silence = this.mood === "combat" ? 0.2 + Math.random() * 0.3 : 0.35 + Math.random() * 0.45;
+        this.silence = this.mood === "combat" ? 0.25 + Math.random() * 0.4 : 0.6 + Math.random() * 0.9;
       }
       this._pendingNext = false;
       this.silence -= dt * (this.mood === "combat" ? 2.2 : 1);
@@ -719,19 +628,20 @@ export class MusicPlayer {
 
     if (!this.queue.length) {
       if (this.notesLeftInTrack <= 0) {
-        this.silence = this.mood === "combat" ? 0.25 + Math.random() * 0.35 : 0.4 + Math.random() * 0.5;
+        this.silence = this.mood === "combat" ? 0.3 + Math.random() * 0.5 : 0.7 + Math.random() * 1.0;
         return;
       }
       this.fillPhrase();
       if (!this.queue.length) {
-        this.silence = this.mood === "combat" ? 0.25 : 0.35 + Math.random() * 0.4;
+        this.silence = this.mood === "combat" ? 0.3 : 0.55 + Math.random() * 0.8;
         return;
       }
     }
 
     const [deg, beats] = this.queue.shift();
     this.playNote(deg, beats);
-    const beatScale = this.mood === "combat" ? 0.68 : 1;
-    this.timer = Math.max(0.12, beats * this.beat * beatScale);
+    // combate: ritmo mais apertado
+    const beatScale = this.mood === "combat" ? 0.72 : 1;
+    this.timer = Math.max(0.2, beats * this.beat * beatScale);
   }
 }

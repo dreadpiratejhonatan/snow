@@ -28,7 +28,7 @@ Primeira versão **oficial** (`release/v1.0`, tag `v1.0.0`).
 
 ## [Unreleased]
 
-Trabalho na branch `develop` após `v1.0.0` (cache `gh54`).
+Trabalho na branch `develop` após `v1.0.0` (cache `gh55`).
 
 ### Added
 - Desafio do dia (seed UTC) + conquistas locais
@@ -49,3 +49,4 @@ Trabalho na branch `develop` após `v1.0.0` (cache `gh54`).
 - Cast só amigos (Rita/Bruno removidos)
 - Munição mais escassa no mapa e nos drops
 - Hitscan/projéteis alinhados à crosshair
+- Trilha procedural restaurada (versão calma pré–16-bit; menos poluída)

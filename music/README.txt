@@ -1,16 +1,16 @@
-Pasta de músicas
+Pasta de músicas (estilo Minecraft)
 
-Por direitos autorais, OST oficiais (Minecraft, Pocahontas Mega Drive, etc.)
-NÃO vêm no jogo.
+Por direitos autorais, a OST oficial (C418 / Lena Raine) NÃO vem no jogo.
 
-Sem arquivos aqui, o jogo toca faixas procedurais ORIGINAIS de aventura
-16-bit / natureza (ritmos e escalas diferentes — a playlist muda de faixa).
+Sem arquivos aqui, o jogo toca faixas procedurais lentas e calmas
+(estilo exploração Minecraft — NÃO chiptune/Terraria).
 
 O browser só libera áudio após um clique/toque (skin ou dificuldade).
 
-Para usar arquivos reais seus, coloque .mp3/.ogg AQUI e liste em:
+Para usar arquivos reais, coloque os .mp3 AQUI e liste em:
 
   music/manifest.json
-  ["minha-trilha.mp3", "outra.ogg"]
+  ["sweden.mp3", "key.mp3", "haggstrom.mp3"]
 
-Sem manifest.json o jogo usa só a trilha procedural (embaralhada).
+Sem manifest.json o jogo usa só a trilha procedural (aleatória).
+A playlist é embaralhada a cada entrada no jogo.
