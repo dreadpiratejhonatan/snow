@@ -80,7 +80,7 @@ export function captureGameState(game) {
     dayTime: game.dayTime,
     seasonIndex: game.seasonIndex ?? 0,
     seasonDayAcc: game.seasonDayAcc ?? 0,
-    elapsed: game.clock?.elapsedTime ?? 0,
+    elapsed: game.elapsed ?? game.clock?.elapsedTime ?? 0,
     health: game.health,
     warmth: game.warmth,
     carried: game.carried,
@@ -191,9 +191,8 @@ export function applyGameState(game, data) {
     }
   }
 
-  if (typeof data.elapsed === "number" && game.clock) {
-    game.clock.elapsedTime = Math.max(0, data.elapsed);
-    game.clock.oldTime = performance.now();
+  if (typeof data.elapsed === "number") {
+    game.elapsed = Math.max(0, data.elapsed);
   }
 
   if (game.speedrun && data.speedrunStarted) {

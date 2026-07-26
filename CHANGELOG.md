@@ -28,8 +28,12 @@ Primeira versão **oficial** (`release/v1.0`, tag `v1.0.0`).
 
 ## [Unreleased]
 
-Trabalho na branch `develop` após `v1.0.0` (cache **`gh78`**).  
+Trabalho na branch `develop` após `v1.0.0` (cache **`gh79`**).  
 Resumo narrativo: [`docs/DEVELOP-ATE-GH63.md`](docs/DEVELOP-ATE-GH63.md) · [`DEVELOP-GH64-ATE-GH73.md`](docs/DEVELOP-GH64-ATE-GH73.md).
+
+### Fixed
+- **Lança na mão (gh79)**: reconstruída no eixo Y + braço em pose de estocada (não atravessa mais o torso)
+- **Travamentos / console (gh79)**: `THREE.Clock` → `THREE.Timer`, `PCFSoftShadowMap` → `PCFShadowMap`; removidas dezenas de PointLights nos pickups; autosave adiado do frame crítico
 
 ### Removed
 - **Personagem Ártico (gh78)**: removido do picker e de `faces/`; saves antigos com essa skin caem em Natan

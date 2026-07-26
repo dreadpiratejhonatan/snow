@@ -198,12 +198,18 @@ export class Player {
 
     this.heldWeapon = buildHeldWeaponMesh(id);
     this.weaponMount.add(this.heldWeapon);
+    this._heldWeaponBase = this.heldWeapon.position.clone();
 
     // viewmodel maior, à frente da câmera
     this.fpWeapon = buildHeldWeaponMesh(id);
     this.fpWeapon.scale.multiplyScalar(1.35);
-    this.fpWeapon.rotation.set(-0.35, 0.35, 0.1);
-    this.fpWeapon.position.set(0, 0, 0);
+    if (id === "spear") {
+      this.fpWeapon.rotation.set(-1.15, 0.35, 0.12);
+      this.fpWeapon.position.set(0.04, -0.08, 0.05);
+    } else {
+      this.fpWeapon.rotation.set(-0.35, 0.35, 0.1);
+      this.fpWeapon.position.set(0, 0, 0);
+    }
     this.fpWeaponRoot.add(this.fpWeapon);
     this.syncFpWeaponVisibility();
   }
@@ -237,11 +243,19 @@ export class Player {
         CONFIG.weapons[this.weaponIdHeld]?.fire === "projectile");
     const bowLike = this.weaponIdHeld === "bow" || this.weaponIdHeld === "crossbow";
 
-    // pose de pronto (estilo 3ª pessoa de survival): arma à frente
-    const readyR = holding ? (bowLike ? 1.05 : ranged ? 0.85 : 0.55) : 0;
-    const readyL = bowLike ? 0.95 : holding && ranged ? 0.45 : 0;
-
     const spearLike = this.weaponIdHeld === "spear";
+
+    // pose de pronto: lança com braço mais alto (estocada), não pendurada no torso
+    const readyR = holding
+      ? spearLike
+        ? 1.25
+        : bowLike
+          ? 1.05
+          : ranged
+            ? 0.85
+            : 0.55
+      : 0;
+    const readyL = bowLike ? 0.95 : holding && ranged ? 0.45 : 0;
 
     this.leftLeg.rotation.x = swing;
     this.rightLeg.rotation.x = -swing;
@@ -249,11 +263,13 @@ export class Player {
     this.leftArm.rotation.z = bowLike ? 0.35 : 0;
     // braço direito: hold + golpe / recoil (lança = estocada, não golpe de cima)
     this.rightArm.rotation.x =
-      -readyR + swing * (holding ? 0.2 : 0.8) - punch * (spearLike ? 0.7 : ranged ? 0.9 : 1.7);
-    this.rightArm.rotation.z = punch * (spearLike ? 0.05 : ranged ? 0.15 : 0.5) + (holding ? 0.12 : 0);
-    // estocada: a lança avança para frente durante o ataque
+      -readyR + swing * (holding ? 0.15 : 0.8) - punch * (spearLike ? 0.55 : ranged ? 0.9 : 1.7);
+    this.rightArm.rotation.z =
+      punch * (spearLike ? 0.04 : ranged ? 0.15 : 0.5) + (holding ? (spearLike ? 0.06 : 0.12) : 0);
+    // estocada: avança a partir da pose base (não sobrescreve X/Y)
     if (spearLike && this.heldWeapon) {
-      this.heldWeapon.position.z = 0.2 + punch * 0.45;
+      const base = this._heldWeaponBase || { x: 0.08, y: 0.02, z: 0.14 };
+      this.heldWeapon.position.set(base.x, base.y, base.z + punch * 0.5);
     }
     if (this.mesh) {
       this.mesh.rotation.x = -punch * 0.12;
