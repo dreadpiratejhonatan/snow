@@ -61,7 +61,7 @@ No cPanel, confirme:
 ## Limites
 
 - Máx. **4** jogadores por sala (3–4 via relay)
-- Relay HTTPS tem latência maior que P2P
+- Relay HTTPS tem latência maior que P2P; desde **gh93** poses são interpoladas e o poll/flush do relay é mais agressivo (ainda assim P2P é preferível)
 - Salas expiram em **30 min** (TTL renovado enquanto há poll)
 - `hostKey` / `guestKey` só no browser que criou / entrou
 

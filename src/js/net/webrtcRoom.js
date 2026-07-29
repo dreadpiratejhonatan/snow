@@ -11,9 +11,12 @@ import { buildIceServers } from "./iceConfig.js";
 
 /** Após o guest entrar, se o DataChannel não abrir, usa relay HTTPS. */
 const FAILOVER_MS = 8000;
-const RELAY_FLUSH_MS = 140;
+/** Relay: flush/poll mais agressivos (gh93) — menos lag visual no firewall. */
+const RELAY_FLUSH_MS = 50;
+const RELAY_FLUSH_URGENT_MS = 0;
 const POLL_WEBRTC_MS = 600;
-const POLL_RELAY_MS = 180;
+const POLL_RELAY_MS = 65;
+const POLL_RELAY_HOT_MS = 18;
 
 function sdpPayload(desc) {
   if (!desc) return null;
@@ -53,7 +56,9 @@ export class WebRtcRoom {
     this._polling = false;
     this._outQueue = [];
     this._flushTimer = null;
+    this._flushDelay = RELAY_FLUSH_MS;
     this._flushing = false;
+    this._lastRelayGot = false;
     this.onStatus = null;
     this.onOpen = null;
     this.onMessage = null;
@@ -375,7 +380,10 @@ export class WebRtcRoom {
       }
       const keep = this._httpReady || this.channel?.readyState !== "open";
       if (keep) {
-        const ms = this._httpReady ? POLL_RELAY_MS : POLL_WEBRTC_MS;
+        let ms = POLL_WEBRTC_MS;
+        if (this._httpReady) {
+          ms = this._lastRelayGot ? POLL_RELAY_HOT_MS : POLL_RELAY_MS;
+        }
         this._pollTimer = setTimeout(tick, ms);
       } else {
         this._polling = false;
@@ -447,6 +455,7 @@ export class WebRtcRoom {
     // Só avança o cursor se entregou (ou não há msgs). Sem onMessage, re-poll
     // devolve as mesmas — evita perder hello/snap antes do CoopSession.
     const relayMsgs = data.relayMsgs || [];
+    this._lastRelayGot = relayMsgs.length > 0;
     if (relayMsgs.length) {
       if (this.onMessage) {
         for (const entry of relayMsgs) {
@@ -499,7 +508,8 @@ export class WebRtcRoom {
       );
       this._outQueue = [...rest.slice(-(16 - Math.min(keep.length, 8))), ...keep.slice(-8)];
     }
-    this._scheduleFlush();
+    const urgent = t === "event" || t === "hello" || t === "chat";
+    this._scheduleFlush(urgent ? RELAY_FLUSH_URGENT_MS : RELAY_FLUSH_MS);
   }
 
   /** Guest reconectou: novo offer (PC limpo). */
@@ -538,12 +548,20 @@ export class WebRtcRoom {
     }
   }
 
-  _scheduleFlush() {
-    if (this._flushTimer || this._closed || !this._httpReady) return;
+  _scheduleFlush(delay = RELAY_FLUSH_MS) {
+    if (this._closed || !this._httpReady) return;
+    if (this._flushTimer) {
+      // Já agendado: só antecipa se o novo delay for menor
+      if (delay >= this._flushDelay) return;
+      clearTimeout(this._flushTimer);
+      this._flushTimer = null;
+    }
+    this._flushDelay = delay;
     this._flushTimer = setTimeout(() => {
       this._flushTimer = null;
+      this._flushDelay = RELAY_FLUSH_MS;
       this._flushRelay();
-    }, RELAY_FLUSH_MS);
+    }, delay);
   }
 
   async _flushRelay() {

@@ -126,14 +126,18 @@ export async function publishSignal(code, role, payload) {
 }
 
 export async function pollRoom(code, sinceHostIce = 0, sinceGuestIce = 0, sinceRelay = 0, role = "") {
-  return signalRequest({
-    action: "poll",
-    code,
-    sinceHostIce,
-    sinceGuestIce,
-    sinceRelay,
-    role,
-  });
+  // retries:1 — no relay o próximo poll já tenta de novo; retry longo aumenta lag
+  return signalRequest(
+    {
+      action: "poll",
+      code,
+      sinceHostIce,
+      sinceGuestIce,
+      sinceRelay,
+      role,
+    },
+    { retries: 1 }
+  );
 }
 
 /** Envia lote de mensagens de jogo via HTTPS (fallback quando WebRTC falha). */
@@ -145,6 +149,6 @@ export async function relaySend(code, role, messages) {
       role,
       messages: messages || [],
     },
-    { retries: 2 }
+    { retries: 1 }
   );
 }
