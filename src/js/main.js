@@ -1137,8 +1137,6 @@ class Game {
     this.world.onEnemyAttack = (dmg, dir, enemy) => this.onEnemyAttack(dmg, dir, enemy);
     this.world.onEnemySpawned = (enemy) => {
       playChefCutscene(this, enemy);
-      if (this.state !== "playing") return;
-      this.hud.showMsg(`${enemy.label} surgiu na neve…`, 2800);
     };
     this.world.onEnemyEvent = (ev, enemy) => {
       if (ev === "growl") {

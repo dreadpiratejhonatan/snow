@@ -32,6 +32,7 @@ Trabalho na branch `develop` após `v1.0.0` (cache **`gh93`**).
 Resumo narrativo: [`docs/DEVELOP-ATE-GH63.md`](docs/DEVELOP-ATE-GH63.md) · [`DEVELOP-GH64-ATE-GH73.md`](docs/DEVELOP-GH64-ATE-GH73.md).
 
 ### Fixed
+- **Toast de spawn de inimigos**: removido o pop-up HUD `… surgiu na neve…` ao aparecer inimigo (atrapalhava o combate); cutscenes de chef permanecem
 - **Co-op lag / teleporte (gh93)**: avatares remotos com interpolação + extrapolação; pose com velocidade; relay HTTPS com flush/poll mais rápidos; snap do host não sobrescreve pose fresca do peer
 - **Splash morta no celular (gh92)**: World só carrega depois do toque — a splash responde de imediato (antes o init travava a main thread)
 - **Hotbar mobile (gh91)**: barra de armas de novo visível no celular (acima do stick; sem “Punhos” / ✕)
