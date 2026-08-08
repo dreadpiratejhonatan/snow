@@ -305,13 +305,13 @@ html.demo-boot #splash {
 }
 
 .splash__dots {
-  position: absolute;
-  bottom: max(4.4rem, calc(env(safe-area-inset-bottom) + 3.6rem));
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 3;
+  position: static;
+  transform: none;
+  left: auto;
+  bottom: auto;
+  z-index: auto;
   display: flex;
-  gap: 0.45rem;
+  gap: 0.4rem;
   pointer-events: auto;
 }
 
@@ -320,40 +320,41 @@ html.demo-boot #splash {
 }
 
 .splash__dot {
-  width: 0.55rem;
-  height: 0.55rem;
+  width: 0.42rem;
+  height: 0.42rem;
   padding: 0;
-  border: 1px solid rgba(220, 235, 245, 0.45);
+  border: 1px solid rgba(220, 235, 245, 0.35);
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.12);
   cursor: pointer;
   transition: background 0.2s, transform 0.2s, border-color 0.2s;
 }
 
 .splash__dot.is-active {
-  background: rgba(160, 220, 235, 0.9);
-  border-color: rgba(200, 240, 250, 0.9);
-  transform: scale(1.2);
+  background: rgba(160, 220, 235, 0.85);
+  border-color: rgba(200, 240, 250, 0.85);
+  transform: scale(1.15);
 }
 
 .splash__dot:hover {
-  background: rgba(200, 230, 240, 0.55);
+  background: rgba(200, 230, 240, 0.5);
 }
 
 .splash__skip {
-  position: absolute;
-  bottom: max(1.05rem, env(safe-area-inset-bottom));
-  left: 50%;
-  z-index: 4;
-  transform: translateX(-50%);
+  position: static;
+  left: auto;
+  bottom: auto;
+  transform: none;
+  z-index: auto;
+  margin: 0;
   font-family: var(--hud-font);
-  font-size: 0.72rem;
+  font-size: 0.62rem;
   font-weight: 500;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: rgba(210, 225, 238, 0.72);
+  color: rgba(210, 225, 238, 0.55);
   pointer-events: none;
-  animation: splash-pulse 2.4s ease-in-out infinite;
+  animation: splash-pulse 2.8s ease-in-out infinite;
 }
 
 @keyframes splash-pulse {
@@ -501,26 +502,33 @@ html.demo-boot #splash {
 }
 
 .dedication--splash {
-  position: absolute;
-  left: 50%;
-  bottom: max(2.55rem, calc(env(safe-area-inset-bottom) + 1.85rem));
-  z-index: 4;
-  transform: translateX(-50%);
-  width: min(92vw, 360px);
-  padding: 0.55rem 0.75rem 0.35rem;
+  position: static;
+  left: auto;
+  bottom: auto;
+  transform: none;
+  z-index: auto;
+  width: auto;
+  max-width: min(92vw, 420px);
+  padding: 0;
   pointer-events: none;
-  /* só um véu leve — sem “caixa” pesada */
-  background: linear-gradient(
-    180deg,
-    transparent,
-    rgba(6, 10, 16, 0.35) 40%,
-    rgba(6, 10, 16, 0.55)
-  );
-  animation: dedication-in 1s ease-out both;
+  background: none;
+  animation: dedication-fade 1s ease-out both;
+}
+
+.dedication--splash .dedication__honors {
+  gap: 0.3rem 0.65rem;
 }
 
 .dedication--splash .dedication__name {
-  font-size: 0.98rem;
+  font-size: 0.92rem;
+}
+
+.dedication--splash .dedication__role {
+  font-size: 0.58rem;
+}
+
+.dedication--splash .dedication__flag {
+  font-size: 0.78rem;
 }
 
 .dedication--win {
@@ -551,11 +559,11 @@ html.demo-boot #splash {
 @keyframes dedication-in {
   from {
     opacity: 0;
-    transform: translateX(-50%) translateY(8px);
+    transform: translateY(8px);
   }
   to {
     opacity: 1;
-    transform: translateX(-50%) translateY(0);
+    transform: translateY(0);
   }
 }
 
