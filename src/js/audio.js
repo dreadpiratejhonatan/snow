@@ -676,6 +676,14 @@ export class Ambience {
     this.blip(64, 0.5, 0.22, "sine", 28, 0.4);
   }
 
+  /** Tocha apagando: sopro + crepitada curta. */
+  torchExtinguish() {
+    if (!this.started || !ctx) return;
+    this.noiseBurst(0.22, 0.14, 520, 0.7, "bandpass", 0.25);
+    this.noiseBurst(0.35, 0.1, 180, 0.5, "lowpass", 0.2);
+    this.blip(220, 0.12, 0.04, "sine", 80, 0.15);
+  }
+
   growl() {
     if (!this.started || !ctx) return;
     // duas serras graves desafinadas descendo + vibrato + respiração de ruído

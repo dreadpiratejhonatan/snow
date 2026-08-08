@@ -9,6 +9,8 @@ export class WeaponInventory {
     this.ammo = { arrow: 0, bullet: 0, shell: 0, grenade: 0 };
     /** Cartuchos no carregador por arma hitscan (weaponId → n). */
     this.mag = {};
+    /** Combustível restante da tocha (segundos na mão). */
+    this.torchFuel = 0;
   }
 
   unlock(id) {
@@ -19,7 +21,48 @@ export class WeaponInventory {
       this.equippedId = id;
       this.ensureMag(id);
     }
+    if (id === "torch") this.fillTorchFuel();
     return wasNew;
+  }
+
+  fillTorchFuel() {
+    const max = CONFIG.weapons.torch?.fuelDuration ?? 80;
+    this.torchFuel = max;
+  }
+
+  torchFuelMax() {
+    return CONFIG.weapons.torch?.fuelDuration ?? 80;
+  }
+
+  /** Fração 0..1 do combustível. */
+  torchFuelFrac() {
+    const max = this.torchFuelMax();
+    if (max <= 0) return 0;
+    return Math.max(0, Math.min(1, (this.torchFuel || 0) / max));
+  }
+
+  isTorchHeld() {
+    return this.equippedId === "torch" && (this.torchFuel || 0) > 0;
+  }
+
+  /**
+   * Queima combustível só enquanto a tocha está equipada.
+   * @returns {boolean} true se acabou de apagar neste frame
+   */
+  burnTorchFuel(dt) {
+    if (this.equippedId !== "torch") return false;
+    if ((this.torchFuel || 0) <= 0) return false;
+    this.torchFuel = Math.max(0, this.torchFuel - dt);
+    return this.torchFuel <= 0;
+  }
+
+  /** Remove arma do inventário (ex.: tocha apagada). */
+  remove(id) {
+    if (!id || id === "fists" || !this.unlocked.has(id)) return false;
+    this.unlocked.delete(id);
+    if (id === "torch") this.torchFuel = 0;
+    if (this.equippedId === id) this.equippedId = "fists";
+    return true;
   }
 
   magSize(weaponId) {
@@ -46,6 +89,8 @@ export class WeaponInventory {
 
     if (weaponId) {
       unlocked = this.unlock(weaponId);
+      // pegar outra tocha recarrega o combustível mesmo se já tinha
+      if (weaponId === "torch" && !unlocked) this.fillTorchFuel();
       const w = CONFIG.weapons[weaponId];
       if (w?.ammoType && item.ammoAmount > 0 && !item.ammoType) {
         this.addAmmo(w.ammoType, item.ammoAmount);

@@ -320,6 +320,20 @@ export class SpeechBalloonSystem {
     this._globalCd = 25 + Math.random() * 35;
   }
 
+  /**
+   * Força um balão imediatamente (eventos: tocha apagou, etc.).
+   * Em 1ª pessoa o sprite fica atrás da câmera — ainda vale em 3ª.
+   */
+  say(id, text, { duration = 3.4 } = {}) {
+    const sp = this.speakers.get(id);
+    if (!sp || !text) return false;
+    this._say(sp, text);
+    sp.showT = duration;
+    sp.forceShow = true;
+    this._globalCd = Math.max(this._globalCd, 8);
+    return true;
+  }
+
   update(dt) {
     if (!this.enabled) {
       for (const sp of this.speakers.values()) {
@@ -335,7 +349,7 @@ export class SpeechBalloonSystem {
 
     for (const sp of this.speakers.values()) {
       const pos = sp.getPosition?.();
-      const vis = sp.getVisible?.() !== false;
+      const vis = sp.forceShow || sp.getVisible?.() !== false;
       if (!pos || !vis) {
         sp.sprite.visible = false;
         if (sp.showT <= 0 && sp.waitT > 0) sp.waitT -= dt;
@@ -355,6 +369,7 @@ export class SpeechBalloonSystem {
         if (sp.showT <= 0) {
           sp.sprite.visible = false;
           sp.mat.opacity = 0;
+          sp.forceShow = false;
           sp.waitT = nextBalloonWait();
         }
       } else {
