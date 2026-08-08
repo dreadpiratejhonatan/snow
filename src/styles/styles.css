@@ -2774,8 +2774,8 @@ body.touch-more-open .touch__look {
   }
 
   body.is-touch .touch__actions {
-    grid-template-columns: repeat(2, 50px);
-    gap: 0.35rem;
+    grid-template-columns: repeat(3, 48px);
+    gap: 0.3rem;
   }
 
   body.is-touch .touch-btn {
