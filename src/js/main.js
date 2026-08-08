@@ -22,10 +22,17 @@ import {
 } from "./leaderboard.js";
 import { runSplash, dismissSplash } from "./splash.js";
 import { runSkinPicker, applySkinToPlayer, loadSkinId } from "./skins.js";
-import { runDifficultyPicker, getDifficulty } from "./difficulty.js";
-import { runMapModePicker, getMapMode } from "./mapMode.js";
+import { runDifficultyPicker, getDifficulty, loadDifficultyId } from "./difficulty.js";
+import { runMapModePicker, getMapMode, loadMapModeId } from "./mapMode.js";
 import { WebRtcRoom } from "./net/webrtcRoom.js";
 import { CoopSession } from "./net/coopSession.js";
+import {
+  roomCodeFromUrl,
+  inviteUrl,
+  extractRoomCode,
+  clearRoomFromUrl,
+  normalizeRoomCode,
+} from "./coopInvite.js";
 import { Tutorial } from "./tutorial.js";
 import { TrapInventory } from "./traps.js";
 import {
@@ -200,20 +207,55 @@ class Game {
     this.ensureWorld();
     this.setBootLoading(false);
 
-    this.state = "skin";
-    // Sempre exige escolher um personagem (rosto visível + preview girável)
     const unlockAudio = () => {
       this.ambience.unlockFromGesture();
     };
+
+    // Convite ?room=CODIGO — prioriza entrar na sala do amigo
+    const inviteCode = roomCodeFromUrl();
+
+    // Continuar primeiro: quem já joga não refaz skin → dificuldade → mapa
+    let resumeSave = null;
+    if (!inviteCode && hasMidRunSave()) {
+      const choice = await this.promptContinueOrNew({ onGesture: unlockAudio });
+      if (choice === "continue") {
+        resumeSave = loadMidRunSave();
+        this.difficultyId = getDifficulty(resumeSave?.difficulty || loadDifficultyId() || "medium").id;
+        this.difficulty = getDifficulty(this.difficultyId);
+        this.mapMode = resumeSave?.mapMode === "random" ? "random" : "classic";
+        applySkinToPlayer(this.player, loadSkinId() || "natan");
+        this.speech?.syncPlayer(this.player);
+        if (!this.input.mobile) this.setCameraMode("third");
+
+        this.tutorial = new Tutorial(this);
+        this.refreshTrapUI();
+        this.tutorial.skip();
+        const seed = (resumeSave.seed >>> 0) || this.world.seed;
+        this.recreateWorld(seed, true, {
+          difficulty: resumeSave.difficulty || this.difficultyId,
+          mapMode: this.mapMode,
+          thinPickups: false,
+        });
+        applySkinToPlayer(this.player, loadSkinId() || "natan");
+        applyGameState(this, resumeSave);
+        this.hud.showMsg("Expedição restaurada. Progresso auto-salva.", 4000);
+        this.bindWorldCombatHooks();
+        this.world.onEnemySpawned = (enemy) => this.handleEnemySpawned(enemy);
+        this.start();
+        return;
+      }
+      clearMidRunSave();
+    }
+
+    this.state = "skin";
+    // Última skin já vem selecionada — um toque em Continuar como…
     const skinId = await runSkinPicker({ force: true, onGesture: unlockAudio });
     applySkinToPlayer(this.player, skinId);
     this.speech?.syncPlayer(this.player);
-    // Começa em 3ª pessoa para ver o personagem; mouse gira a câmera
     if (!this.input.mobile) this.setCameraMode("third");
 
     this.state = "difficulty";
     const diffId = await runDifficultyPicker({ onGesture: unlockAudio });
-    // Guarda escolha; só aplica no mundo depois de Continuar/Novo (evita corromper save)
     this.difficultyId = getDifficulty(diffId).id;
     this.difficulty = getDifficulty(this.difficultyId);
 
@@ -221,20 +263,18 @@ class Game {
     const mapId = await runMapModePicker({ onGesture: unlockAudio });
     this.mapMode = getMapMode(mapId).id;
 
-    const coopChoice = await this.promptCoopMenu();
+    const coopChoice = await this.promptCoopMenu({
+      inviteCode,
+      onGesture: unlockAudio,
+    });
+    clearRoomFromUrl();
     if (coopChoice.mode === "demo") {
       await this.beginDemoRun({ fromMenu: true });
       return;
     }
 
-    let resumeSave = null;
-
     if (coopChoice.mode === "solo") {
-      if (hasMidRunSave()) {
-        const choice = await this.promptContinueOrNew();
-        if (choice === "continue") resumeSave = loadMidRunSave();
-        else clearMidRunSave();
-      }
+      /* novo solo — mid-run já foi limpo no Continuar/Novo acima */
     } else {
       clearMidRunSave();
       try {
@@ -249,20 +289,7 @@ class Game {
 
     this.tutorial = new Tutorial(this);
     this.refreshTrapUI();
-    if (resumeSave) {
-      this.tutorial.skip();
-      const seed = (resumeSave.seed >>> 0) || this.world.seed;
-      applySkinToPlayer(this.player, loadSkinId() || "natan");
-      this.mapMode = resumeSave.mapMode === "random" ? "random" : "classic";
-      this.recreateWorld(seed, true, {
-        difficulty: resumeSave.difficulty || this.difficultyId,
-        mapMode: this.mapMode,
-        thinPickups: false,
-      });
-      applySkinToPlayer(this.player, loadSkinId() || "natan");
-      applyGameState(this, resumeSave);
-      this.hud.showMsg("Expedição restaurada. Progresso auto-salva.", 4000);
-    } else if (this.coop) {
+    if (this.coop) {
       this.tutorial.skip();
     } else if (coopChoice.daily || isDailyMode()) {
       setDailyMode(true);
@@ -274,11 +301,10 @@ class Game {
       this.hud.showMsg(`Desafio do dia ${dailyLabel()} — mapa Classic compartilhado.`, 4500);
     } else {
       setDailyMode(false);
-      // solo novo: regenera mundo com o mapa escolhido
       const seed = (Math.random() * 0xffffffff) >>> 0;
       this.recreateWorld(seed, true, {
         difficulty: this.difficultyId || diffId,
-        mapMode: this.mapMode || "classic",
+        mapMode: this.mapMode || loadMapModeId() || "classic",
       });
       applySkinToPlayer(this.player, loadSkinId() || "natan");
       this.setDifficulty(this.difficultyId || diffId);
@@ -399,7 +425,7 @@ class Game {
   }
 
   /** Solo / criar sala / entrar — retorna { mode, room?, seed? }. */
-  promptCoopMenu() {
+  promptCoopMenu({ inviteCode = "", onGesture } = {}) {
     const el = document.getElementById("coop-menu");
     const status = document.getElementById("coop-status");
     const codeInput = document.getElementById("coop-code-input");
@@ -420,17 +446,46 @@ class Game {
     const codeBox = document.getElementById("coop-code-box");
     const codeDisplay = document.getElementById("coop-code-display");
     const btnCopy = document.getElementById("btn-coop-copy");
+    const btnCopyLink = document.getElementById("btn-coop-copy-link");
+    const waitHint = document.getElementById("coop-wait-hint");
+    const inviteLinkEl = document.getElementById("coop-invite-link");
     if (!el) return Promise.resolve({ mode: "solo" });
     this.setTouchUiVisible(false);
     el.hidden = false;
     el.setAttribute("aria-hidden", "false");
     this.state = "coop";
 
+    const fireGesture = () => {
+      try {
+        onGesture?.();
+      } catch {
+        /* áudio opcional */
+      }
+    };
+
+    const showInvite = (code) => {
+      const url = inviteUrl(code);
+      if (codeBox) codeBox.hidden = false;
+      if (codeDisplay) codeDisplay.textContent = code;
+      if (inviteLinkEl) {
+        inviteLinkEl.hidden = !url;
+        inviteLinkEl.textContent = url || "";
+      }
+      if (btnCopyLink) btnCopyLink.hidden = !url;
+      if (waitHint) waitHint.hidden = false;
+    };
+
     const showMode = () => {
       if (stepMode) stepMode.hidden = false;
       if (stepFriends) stepFriends.hidden = true;
       if (status) status.textContent = "";
       if (codeBox) codeBox.hidden = true;
+      if (waitHint) waitHint.hidden = true;
+      if (inviteLinkEl) {
+        inviteLinkEl.hidden = true;
+        inviteLinkEl.textContent = "";
+      }
+      if (btnCopyLink) btnCopyLink.hidden = true;
       if (joinBlock) joinBlock.hidden = false;
       if (codeInput) {
         codeInput.disabled = false;
@@ -448,23 +503,26 @@ class Game {
       if (btnRehost) btnRehost.disabled = false;
       if (btnRejoin) btnRejoin.disabled = false;
     };
-    const showFriends = () => {
+    const showFriends = (presetCode = "") => {
       if (stepMode) stepMode.hidden = true;
       if (stepFriends) stepFriends.hidden = false;
       if (status) {
         status.textContent =
-          "Crie a sala ou cole o código. Status: P2P → se falhar, relay HTTPS. 3P = só relay.";
+          "Crie a sala e compartilhe o link — ou cole o código / link do amigo.";
       }
       if (joinBlock) joinBlock.hidden = false;
+      if (waitHint) waitHint.hidden = true;
       try {
         const last = sessionStorage.getItem("neveLastRoom") || "";
-        if (last && codeInput && !codeInput.value) codeInput.value = last;
+        const fill = normalizeRoomCode(presetCode) || last;
+        if (fill && codeInput && !codeInput.value) codeInput.value = fill;
       } catch {
         /* ignore */
       }
       requestAnimationFrame(() => this.focusCoopCodeInput());
     };
-    showMode();
+    if (inviteCode) showFriends(inviteCode);
+    else showMode();
 
     return new Promise((resolve) => {
       const cleanup = () => {
@@ -483,28 +541,36 @@ class Game {
         btnRejoin?.removeEventListener("click", onRejoin);
         btnJoin?.removeEventListener("click", onJoin);
         btnCopy?.removeEventListener("click", onCopy);
+        btnCopyLink?.removeEventListener("click", onCopyLink);
       };
       const onSolo = () => {
+        fireGesture();
         setDailyMode(false);
         cleanup();
         resolve({ mode: "solo" });
       };
       const onDaily = () => {
+        fireGesture();
         setDailyMode(true);
         cleanup();
         resolve({ mode: "solo", daily: true, seed: dailySeed() });
       };
       const onDemo = () => {
+        fireGesture();
         armDemoFromMenu();
         cleanup();
         resolve({ mode: "demo" });
       };
-      const onFriends = () => showFriends();
+      const onFriends = () => {
+        fireGesture();
+        showFriends();
+      };
       const onBack = () => {
         if (btnCreate?.disabled && btnJoin?.disabled) return;
         showMode();
       };
       const onCreate = async () => {
+        fireGesture();
         btnCreate.disabled = true;
         btnJoin.disabled = true;
         if (btnPaste) btnPaste.disabled = true;
@@ -519,10 +585,9 @@ class Game {
             if (status) status.textContent = m;
           };
           room.onCode = (code) => {
-            if (codeBox) codeBox.hidden = false;
-            if (codeDisplay) codeDisplay.textContent = code;
+            showInvite(code);
             if (status) {
-              status.textContent = `Código ${code} — no outro aparelho: Com amigos → colar → Entrar.`;
+              status.textContent = `Aguardando amigo… Compartilhe o link ou o código ${code}.`;
             }
           };
           const maxPlayers = Math.min(4, Math.max(2, Number(maxPlayersEl?.value) || 2));
@@ -532,6 +597,7 @@ class Game {
             ? baseSeed
             : ((baseSeed & 0x7fffffff) | (this.mapMode === "random" ? 0x80000000 : 0)) >>> 0;
           const { code } = await room.create(seed, { maxPlayers });
+          showInvite(code);
           await this.waitForRoomOpen(room);
           cleanup();
           resolve({ mode: "host", room, seed, code });
@@ -544,6 +610,7 @@ class Game {
           if (btnRehost) btnRehost.disabled = false;
           if (btnRejoin) btnRejoin.disabled = false;
           if (joinBlock) joinBlock.hidden = false;
+          if (waitHint) waitHint.hidden = true;
           this.focusCoopCodeInput();
         }
       };
@@ -630,12 +697,14 @@ class Game {
         }
       };
       const onJoin = async () => {
-        const code = (codeInput?.value || "").trim().toUpperCase();
+        fireGesture();
+        const code = extractRoomCode(codeInput?.value || "");
         if (code.length < 4) {
-          if (status) status.textContent = "Digite o código (ex: TBVKQ3).";
+          if (status) status.textContent = "Digite o código ou cole o link do convite.";
           this.focusCoopCodeInput();
           return;
         }
+        if (codeInput) codeInput.value = code;
         btnCreate.disabled = true;
         btnJoin.disabled = true;
         if (btnPaste) btnPaste.disabled = true;
@@ -666,14 +735,16 @@ class Game {
         }
       };
       const onPaste = async () => {
+        fireGesture();
         try {
-          const text = (await navigator.clipboard.readText()).trim().toUpperCase();
-          if (!text) {
-            if (status) status.textContent = "Área de transferência vazia — digite o código.";
+          const text = await navigator.clipboard.readText();
+          const code = extractRoomCode(text);
+          if (!code) {
+            if (status) status.textContent = "Área de transferência vazia — digite o código ou cole o link.";
             this.focusCoopCodeInput();
             return;
           }
-          if (codeInput) codeInput.value = text.replace(/[^A-Z0-9]/g, "").slice(0, 8);
+          if (codeInput) codeInput.value = code;
           if (status) status.textContent = "Código colado — toque em Entrar.";
           this.focusCoopCodeInput();
         } catch {
@@ -694,6 +765,7 @@ class Game {
         this.focusCoopCodeInput();
       };
       const onCopy = async () => {
+        fireGesture();
         const code = codeDisplay?.textContent?.trim();
         if (!code || code.includes("—")) return;
         try {
@@ -703,7 +775,20 @@ class Game {
           if (status) status.textContent = `Código: ${code} (selecione e Ctrl+C)`;
         }
       };
+      const onCopyLink = async () => {
+        fireGesture();
+        const code = codeDisplay?.textContent?.trim();
+        const url = inviteUrl(code);
+        if (!url) return;
+        try {
+          await navigator.clipboard.writeText(url);
+          if (status) status.textContent = "Link do convite copiado — manda no WhatsApp.";
+        } catch {
+          if (status) status.textContent = url;
+        }
+      };
       btnCopy?.addEventListener("click", onCopy);
+      btnCopyLink?.addEventListener("click", onCopyLink);
       codeInput?.addEventListener("keydown", onCodeKey);
       joinBlock?.addEventListener("pointerdown", onJoinPointer);
       btnPaste?.addEventListener("click", onPaste);
@@ -716,6 +801,13 @@ class Game {
       btnRehost?.addEventListener("click", onRehost);
       btnRejoin?.addEventListener("click", onRejoin);
       btnJoin?.addEventListener("click", onJoin);
+
+      // Deep link ?room= — entra direto na sala do amigo
+      if (inviteCode) {
+        if (codeInput) codeInput.value = inviteCode;
+        if (status) status.textContent = `Convite ${inviteCode} — entrando…`;
+        queueMicrotask(() => onJoin());
+      }
     });
   }
 
@@ -915,15 +1007,17 @@ class Game {
     this.bindWorldCombatHooks();
   }
 
-  /** Menu Continuar / Novo jogo. */
-  promptContinueOrNew() {
+  /** Menu Continuar / Novo jogo — logo após a splash quando há save. */
+  promptContinueOrNew({ onGesture } = {}) {
     const el = document.getElementById("continue-menu");
     const summary = document.getElementById("continue-summary");
     const data = loadMidRunSave();
     if (summary && data) {
       const mins = Math.floor((data.speedrunMs || 0) / 60000);
       const secs = Math.floor(((data.speedrunMs || 0) % 60000) / 1000);
-      summary.textContent = `Baú ${data.deposited ?? 0}/10 · mochila ${data.carried ?? 0} · vida ${Math.round(data.health ?? 0)} · tempo ${mins}:${String(secs).padStart(2, "0")}`;
+      const diff = getDifficulty(data.difficulty || "medium").label;
+      const map = getMapMode(data.mapMode || "classic").label;
+      summary.textContent = `Baú ${data.deposited ?? 0}/10 · mochila ${data.carried ?? 0} · vida ${Math.round(data.health ?? 0)} · ${diff} · ${map} · ${mins}:${String(secs).padStart(2, "0")}`;
     }
     if (!el) return Promise.resolve("new");
     el.hidden = false;
@@ -931,6 +1025,11 @@ class Game {
     this.state = "continue";
     return new Promise((resolve) => {
       const done = (choice) => {
+        try {
+          onGesture?.();
+        } catch {
+          /* áudio opcional */
+        }
         el.hidden = true;
         el.setAttribute("aria-hidden", "true");
         btnCont?.removeEventListener("click", onCont);

@@ -6,6 +6,7 @@ import { Player } from "../src/js/player.js";
 import { CONFIG } from "../src/js/config.js";
 import { SecretDungeon } from "../src/js/dungeon.js";
 import { MountManager } from "../src/js/mounts.js";
+import { extractRoomCode, inviteUrl } from "../src/js/coopInvite.js";
 
 try {
   const scene = new THREE.Scene();
@@ -360,6 +361,14 @@ try {
     }
   }
   console.log("Whispers OK —", whisperMan.length, "clips bebe");
+
+  if (extractRoomCode("https://example.com/snow/?room=TBVKQ3") !== "TBVKQ3") {
+    throw new Error("extractRoomCode deveria ler ?room=");
+  }
+  if (!inviteUrl("TBVKQ3").includes("room=TBVKQ3")) {
+    throw new Error("inviteUrl deveria incluir room=");
+  }
+  console.log("Co-op invite OK");
 
   for (let i = 0; i < 60; i++) {
     world.update(0.016, i * 0.016, 0.5, 0.1, player.position);
