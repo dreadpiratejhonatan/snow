@@ -122,7 +122,7 @@ export class MountManager {
       wish.normalize();
       pos.x += wish.x * speed * dt;
       pos.z += wish.z * speed * dt;
-      if (!this.world.dungeonActive) this.world.wrapToBounds(pos);
+      // coords contínuas: o toro visual costura o mapa sem teleporte
       this.world.collide(pos, mcfg.radius, 0.5);
       // corpo do animal vira na direção do movimento
       e.mesh.rotation.y = Math.atan2(wish.x, wish.z);

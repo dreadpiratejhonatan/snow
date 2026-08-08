@@ -187,6 +187,11 @@ export class World {
   // TERRENO
   // ------------------------------------------------------------------
   getHeight(x, z) {
+    // toro: altura periódica — andando “para sempre” o relevo se repete
+    if (!this.inDungeonZone(x, z)) {
+      x = this.wrapCoord(x);
+      z = this.wrapCoord(z);
+    }
     const A = CONFIG.world.amplitude;
     const w = this.heightWarp;
     const px = w ? (x + w.ox) * w.freq : x;
@@ -293,19 +298,34 @@ export class World {
     geo.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3));
     geo.computeVertexNormals();
 
-    this.terrain = new THREE.Mesh(
-      geo,
-      new THREE.MeshStandardMaterial({
-        vertexColors: true,
-        roughness: 1,
-        metalness: 0,
-        map: this.tex.snowGround || null,
-        bumpMap: this.tex.snowGroundBump || null,
-        bumpScale: 0.25,
-      })
-    );
+    const mat = new THREE.MeshStandardMaterial({
+      vertexColors: true,
+      roughness: 1,
+      metalness: 0,
+      map: this.tex.snowGround || null,
+      bumpMap: this.tex.snowGroundBump || null,
+      bumpScale: 0.25,
+    });
+    this.terrain = new THREE.Mesh(geo, mat);
     this.terrain.receiveShadow = true;
     this.scene.add(this.terrain);
+
+    // 3×3 tiles: o chão continua quando você atravessa a costura (toro visual)
+    this.terrainTiles = [this.terrain];
+    for (let iz = -1; iz <= 1; iz++) {
+      for (let ix = -1; ix <= 1; ix++) {
+        if (ix === 0 && iz === 0) continue;
+        const tile = new THREE.Mesh(geo, mat);
+        tile.receiveShadow = true;
+        tile.position.set(ix * this.size, 0, iz * this.size);
+        tile.userData.torusIx = ix;
+        tile.userData.torusIz = iz;
+        this.scene.add(tile);
+        this.terrainTiles.push(tile);
+      }
+    }
+    this.terrain.userData.torusIx = 0;
+    this.terrain.userData.torusIz = 0;
   }
 
   buildIce() {
@@ -325,6 +345,159 @@ export class World {
     this.ice.position.y = this.waterLevel;
     this.ice.receiveShadow = true;
     this.scene.add(this.ice);
+
+    this.iceTiles = [this.ice];
+    for (let iz = -1; iz <= 1; iz++) {
+      for (let ix = -1; ix <= 1; ix++) {
+        if (ix === 0 && iz === 0) continue;
+        const tile = new THREE.Mesh(geo, mat);
+        tile.receiveShadow = true;
+        tile.position.set(ix * this.size, this.waterLevel, iz * this.size);
+        tile.userData.torusIx = ix;
+        tile.userData.torusIz = iz;
+        this.scene.add(tile);
+        this.iceTiles.push(tile);
+      }
+    }
+    this.ice.userData.torusIx = 0;
+    this.ice.userData.torusIz = 0;
+  }
+
+  /** Centra o grid 3×3 do terreno sob o jogador (células do toro). */
+  updateTorusTiles(playerPos) {
+    if (!playerPos || this.dungeonActive) return;
+    const s = this.size;
+    const ox = Math.round(playerPos.x / s) * s;
+    const oz = Math.round(playerPos.z / s) * s;
+    if (this._torusTileOx === ox && this._torusTileOz === oz) return;
+    this._torusTileOx = ox;
+    this._torusTileOz = oz;
+    for (const tile of this.terrainTiles || []) {
+      const ix = tile.userData.torusIx || 0;
+      const iz = tile.userData.torusIz || 0;
+      tile.position.x = ox + ix * s;
+      tile.position.z = oz + iz * s;
+    }
+    for (const tile of this.iceTiles || []) {
+      const ix = tile.userData.torusIx || 0;
+      const iz = tile.userData.torusIz || 0;
+      tile.position.x = ox + ix * s;
+      tile.position.z = oz + iz * s;
+      tile.position.y = this.waterLevel;
+    }
+  }
+
+  /** Imagem do ponto lógico (lx,lz) mais próxima de (px,pz) no toro. */
+  nearestImage(px, pz, lx, lz) {
+    const { dx, dz } = this.wrapDelta(px, pz, lx, lz);
+    return { x: px + dx, z: pz + dz, dx, dz };
+  }
+
+  /** Coloca um objeto na imagem do toro mais próxima do jogador (sem teleporte). */
+  presentNearPlayer(obj, lx, lz, ly, playerPos) {
+    if (!obj || !playerPos) return;
+    const n = this.nearestImage(playerPos.x, playerPos.z, lx, lz);
+    obj.position.x = n.x;
+    obj.position.z = n.z;
+    if (ly != null) obj.position.y = ly;
+  }
+
+  /**
+   * Antes da IA: meshes voltam às coords lógicas (canônicas).
+   * Depois: presentTorusVisuals recoloca tudo ao redor do jogador.
+   */
+  prepareTorusLogic() {
+    if (this.dungeonActive) return;
+    for (const e of this.enemies || []) {
+      if (!e?.mesh) continue;
+      if (!e._torus) {
+        e._torus = { x: this.wrapCoord(e.mesh.position.x), z: this.wrapCoord(e.mesh.position.z) };
+      }
+      e.mesh.position.x = e._torus.x;
+      e.mesh.position.z = e._torus.z;
+    }
+    for (const r of this.rabbits || []) {
+      if (!r) continue;
+      if (!r.userData._torus) {
+        r.userData._torus = { x: this.wrapCoord(r.position.x), z: this.wrapCoord(r.position.z) };
+      }
+      r.position.x = r.userData._torus.x;
+      r.position.z = r.userData._torus.z;
+    }
+  }
+
+  presentTorusVisuals(playerPos) {
+    if (!playerPos || this.dungeonActive) return;
+    this.updateTorusTiles(playerPos);
+
+    // grama: uma cópia deslocada para a célula do toro sob o jogador
+    if (this.grass) {
+      const s = this.size;
+      this.grass.position.x = Math.round(playerPos.x / s) * s;
+      this.grass.position.z = Math.round(playerPos.z / s) * s;
+    }
+
+    for (const e of this.enemies || []) {
+      if (!e?.mesh) continue;
+      const lx = this.wrapCoord(e.mesh.position.x);
+      const lz = this.wrapCoord(e.mesh.position.z);
+      e._torus = { x: lx, z: lz };
+      this.presentNearPlayer(e.mesh, lx, lz, e.mesh.position.y, playerPos);
+    }
+
+    for (const r of this.rabbits || []) {
+      if (!r) continue;
+      const lx = this.wrapCoord(r.position.x);
+      const lz = this.wrapCoord(r.position.z);
+      r.userData._torus = { x: lx, z: lz };
+      this.presentNearPlayer(r, lx, lz, r.position.y, playerPos);
+    }
+
+    for (const t of this.trees || []) {
+      const lx = t.userData.homeX ?? t.position.x;
+      const lz = t.userData.homeZ ?? t.position.z;
+      t.userData.homeX = lx;
+      t.userData.homeZ = lz;
+      this.presentNearPlayer(t, lx, lz, t.position.y, playerPos);
+    }
+
+    for (const c of this.colliders || []) {
+      if (!c.mesh || c.temporary) continue;
+      this.presentNearPlayer(c.mesh, c.x, c.z, c.mesh.position.y, playerPos);
+    }
+
+    for (const it of this.items || []) {
+      if (!it?.mesh || it.collected) continue;
+      const lx = it.pos?.x ?? it.mesh.position.x;
+      const lz = it.pos?.z ?? it.mesh.position.z;
+      this.presentNearPlayer(it.mesh, lx, lz, it.mesh.position.y, playerPos);
+    }
+
+    if (this.campfire && this.campfirePos) {
+      this.presentNearPlayer(
+        this.campfire,
+        this.campfirePos.x,
+        this.campfirePos.z,
+        this.campfire.position.y,
+        playerPos
+      );
+    }
+    if (this.baseGroup && this.basePos) {
+      this.presentNearPlayer(
+        this.baseGroup,
+        this.basePos.x,
+        this.basePos.z,
+        this.baseGroup.position.y,
+        playerPos
+      );
+    }
+
+    for (const t of this.placedTraps || []) {
+      if (!t?.alive || !t.mesh) continue;
+      const lx = t.pos?.x ?? t.mesh.position.x;
+      const lz = t.pos?.z ?? t.mesh.position.z;
+      this.presentNearPlayer(t.mesh, lx, lz, t.mesh.position.y, playerPos);
+    }
   }
 
   // ------------------------------------------------------------------
@@ -363,6 +536,8 @@ export class World {
     g.rotation.y = Math.random() * Math.PI * 2;
     g.scale.setScalar(s);
     g.userData.phase = Math.random() * Math.PI * 2;
+    g.userData.homeX = x;
+    g.userData.homeZ = z;
     this.scene.add(g);
     this.trees.push(g);
     // r = tronco (movimento); coverR maior = copa/tronco bloqueiam tiros
@@ -398,6 +573,11 @@ export class World {
     return "neve";
   }
 
+  /** Faixa perto da costura do toro — evita “parede dupla” de props nos dois lados. */
+  nearTorusSeam(x, z, margin = 14) {
+    return this.half - Math.abs(x) < margin || this.half - Math.abs(z) < margin;
+  }
+
   scatterTrees() {
     let placed = 0;
     let tries = 0;
@@ -406,6 +586,7 @@ export class World {
       tries++;
       const x = (Math.random() * 2 - 1) * this.bounds;
       const z = (Math.random() * 2 - 1) * this.bounds;
+      if (this.nearTorusSeam(x, z)) continue;
       const h = this.getHeight(x, z);
       if (h < this.waterLevel + 0.9 || h > 9.5) continue;
       const hx = this.home?.x ?? 0;
@@ -424,6 +605,7 @@ export class World {
           const oz = z + (Math.random() - 0.5) * 4;
           const oh = this.getHeight(ox, oz);
           if (
+            !this.nearTorusSeam(ox, oz) &&
             oh >= this.waterLevel + 0.9 &&
             oh <= 9.5 &&
             Math.hypot(ox - hx, oz - hz) > 9
@@ -443,6 +625,7 @@ export class World {
     for (let i = 0; i < CONFIG.world.rockCount; i++) {
       const x = (Math.random() * 2 - 1) * this.bounds;
       const z = (Math.random() * 2 - 1) * this.bounds;
+      if (this.nearTorusSeam(x, z)) continue;
       const h = this.getHeight(x, z);
       if (
         h < this.waterLevel + 0.3 ||
@@ -469,6 +652,7 @@ export class World {
         top,
         climbable: true,
         cover: true,
+        mesh: rock,
       });
     }
   }
@@ -532,6 +716,7 @@ export class World {
     grass.count = i;
     grass.instanceMatrix.needsUpdate = true;
     if (grass.instanceColor) grass.instanceColor.needsUpdate = true;
+    this.grass = grass;
     this.scene.add(grass);
   }
 
@@ -1094,6 +1279,7 @@ export class World {
     );
     g.add(this.smoke);
 
+    this.campfire = g;
     this.scene.add(g);
     // fogueira: dá para subir nas pedras do fogo
     this.colliders.push({ x: fx, z: fz, y: fy, r: 0.7, top: fy + 0.55, climbable: true });
@@ -1105,6 +1291,7 @@ export class World {
     const by = this.getHeight(bx, bz);
     const g = new THREE.Group();
     g.position.set(bx, by, bz);
+    this.baseGroup = g;
     this.basePos = g.position.clone();
 
     // cabana: telhado só madeira (sem cone de neve — a base do cone virava
@@ -2192,8 +2379,9 @@ export class World {
       if (!(cr >= 0.25)) continue;
       const top = c.top ?? (c.y || 0) + 3;
       const bottom = (c.y ?? 0) - 0.6;
-      const fx = ox - c.x;
-      const fz = oz - c.z;
+      const n = this.nearestImage(ox, oz, c.x, c.z);
+      const fx = ox - n.x;
+      const fz = oz - n.z;
       const b = 2 * (fx * dx + fz * dz);
       const cc = fx * fx + fz * fz - cr * cr;
       const disc = b * b - 4 * a * cc;
@@ -2224,8 +2412,9 @@ export class World {
       const top = c.top ?? (c.y || 0) + 3;
       if (pos.y > top + 0.12) continue;
       if (pos.y < (c.y ?? 0) - 0.6) continue;
-      const dx = pos.x - c.x;
-      const dz = pos.z - c.z;
+      const n = this.nearestImage(pos.x, pos.z, c.x, c.z);
+      const dx = pos.x - n.x;
+      const dz = pos.z - n.z;
       if (dx * dx + dz * dz <= cr * cr) return c;
     }
     return null;
@@ -2402,14 +2591,7 @@ export class World {
       const prev = p.mesh.position.clone();
       p.vel.y -= gravity * dt * (p.kind === "grenade" ? 1.3 : 0.55);
       p.mesh.position.addScaledVector(p.vel, dt);
-      // globo: projétil atravessa a costura do mapa
-      let wrappedShot = false;
-      if (!this.dungeonActive) {
-        const ox = p.mesh.position.x;
-        const oz = p.mesh.position.z;
-        this.wrapToBounds(p.mesh.position);
-        wrappedShot = p.mesh.position.x !== ox || p.mesh.position.z !== oz;
-      }
+      // projétil em coords contínuas (mesmo espaço do jogador — sem teleporte)
       if (p.kind !== "grenade") {
         const spd = p.vel.length();
         if (spd > 1e-3) {
@@ -2418,8 +2600,8 @@ export class World {
         }
       }
 
-      // cobertura: flecha/granada param em árvore/pedra (pula no frame da costura)
-      if (!wrappedShot) {
+      // cobertura: flecha/granada param em árvore/pedra (colisores lógicos wrap-aware)
+      {
         const travel = new THREE.Vector3().subVectors(p.mesh.position, prev);
         const travelLen = travel.length();
         if (travelLen > 1e-4) {
@@ -2774,6 +2956,8 @@ export class World {
   // ------------------------------------------------------------------
   update(dt, elapsed, night, dusk = 0, playerPos = null) {
     this.nightF = night; // usado pela IA (lobisomem/slender)
+    // IA em coords lógicas; depois apresentamos o toro ao redor do jogador
+    this.prepareTorusLogic();
     if (this.grassMat?.userData.shader) {
       this.grassMat.userData.shader.uniforms.uTime.value = elapsed;
     }
@@ -2847,6 +3031,7 @@ export class World {
     this.updateEnemies(dt, elapsed, playerPos);
     this.updateTraps(dt);
     this.updateProjectiles(dt);
+    this.presentTorusVisuals(playerPos);
   }
 
   // ------------------------------------------------------------------
@@ -3091,7 +3276,8 @@ export class World {
     if (c.roofTipY == null || !(c.roofRadius > 0)) {
       return c.top ?? c.y + 3;
     }
-    const d = Math.hypot(x - c.x, z - c.z);
+    const n = this.nearestImage(x, z, c.x, c.z);
+    const d = Math.hypot(x - n.x, z - n.z);
     const t = Math.min(1, d / c.roofRadius);
     const base = c.roofBaseY ?? 2.6;
     return c.y + c.roofTipY + (base - c.roofTipY) * t;
@@ -3105,8 +3291,9 @@ export class World {
     let y = this.groundHeight(x, z);
     for (const c of this.colliders) {
       if (!c.climbable || c.top == null) continue;
-      const dx = x - c.x;
-      const dz = z - c.z;
+      const n = this.nearestImage(x, z, c.x, c.z);
+      const dx = x - n.x;
+      const dz = z - n.z;
       // um pouco além do raio para não cair no canto da pedra
       const reach = c.r + radius * 0.55;
       if (dx * dx + dz * dz > reach * reach) continue;
@@ -3120,18 +3307,20 @@ export class World {
 
   /**
    * Resolve paredes e step-up. Retorna true se o player subiu num obstáculo.
+   * Colliders ficam em coords lógicas; o jogador pode estar em qualquer célula do toro.
    */
   collide(p, radius, stepHeight = CONFIG.player.stepHeight) {
     let stepped = false;
     for (const c of this.colliders) {
+      const n = this.nearestImage(p.x, p.z, c.x, c.z);
       const top = this.colliderTopAt(c, p.x, p.z);
       // já em cima: não empurra (fica andando no topo)
       if (c.climbable && p.y >= top - 0.2) continue;
       // bem acima (pulo por cima): ignora
       if (p.y > top + 0.5) continue;
 
-      const dx = p.x - c.x;
-      const dz = p.z - c.z;
+      const dx = p.x - n.x;
+      const dz = p.z - n.z;
       const min = c.r + radius;
       const d2 = dx * dx + dz * dz;
       if (d2 >= min * min || d2 <= 1e-8) continue;
@@ -3146,8 +3335,8 @@ export class World {
       }
 
       const d = Math.sqrt(d2);
-      p.x = c.x + (dx / d) * min;
-      p.z = c.z + (dz / d) * min;
+      p.x = n.x + (dx / d) * min;
+      p.z = n.z + (dz / d) * min;
     }
     return stepped;
   }
