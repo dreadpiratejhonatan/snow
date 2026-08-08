@@ -1439,6 +1439,134 @@ class Game {
 
   refreshInventoryUI() {
     this.hud.renderInventory(this.weapons.slots());
+    this.refreshAmmoHud();
+  }
+
+  /** Chip de munição + botão Recarregar (sempre à vista no combate). */
+  refreshAmmoHud() {
+    const w = this.weapons?.current;
+    if (!w || this.state === "splash" || this.state === "skin") {
+      this.hud.setAmmoHud({ hidden: true });
+      return;
+    }
+    if (!w.ammoType) {
+      this.hud.setAmmoHud({
+        icon: w.icon || "✊",
+        text: w.name || "Punhos",
+        canReload: false,
+        hidden: false,
+      });
+      return;
+    }
+    const size = this.weapons.magSize(w.id);
+    const mag = size > 0 ? this.weapons.mag[w.id] ?? 0 : null;
+    const reserve = this.weapons.ammo[w.ammoType] ?? 0;
+    const text =
+      mag != null ? `${mag}/${size} · ${reserve}` : `munição ${reserve}`;
+    const canReload = size > 0 && mag < size && reserve > 0;
+    const empty = (mag ?? reserve) <= 0 && reserve <= 0;
+    const low = !empty && (mag != null ? mag <= 2 : reserve <= 3);
+    this.hud.setAmmoHud({
+      icon: w.icon || "⚔",
+      text,
+      canReload,
+      low,
+      empty,
+      hidden: false,
+    });
+  }
+
+  tryReload() {
+    this.cancelWeaponCharge();
+    const r = this.weapons.reload();
+    if (r.msg) this.hud.showMsg(r.msg, 2200);
+    if (r.ok) this.ambience.reload?.(this.weapons.current);
+    this.refreshInventoryUI();
+  }
+
+  /** Modo do overlay: pause | dead | won — esconde chrome irrelevante. */
+  setOverlayMode(mode) {
+    if (this.overlay) this.overlay.dataset.mode = mode;
+    const qt = document.getElementById("quick-ticket");
+    if (qt && mode !== "pause" && mode !== "dead") qt.hidden = true;
+  }
+
+  toggleQuickTicket(force) {
+    const qt = document.getElementById("quick-ticket");
+    if (!qt) return;
+    const open = force == null ? qt.hidden : !!force;
+    qt.hidden = !open;
+    if (open) {
+      const status = document.getElementById("qt-status");
+      if (status) {
+        status.textContent = "";
+        status.classList.remove("is-error");
+      }
+      const title = document.getElementById("qt-title");
+      if (title && !title.value) {
+        const ctx =
+          this.state === "dead"
+            ? "Morri — "
+            : this.input?.mobile
+              ? "Celular — "
+              : this.coop
+                ? "Co-op — "
+                : "";
+        title.value = ctx;
+        title.focus();
+      }
+    }
+  }
+
+  async submitQuickTicket() {
+    const typeEl = document.getElementById("qt-type");
+    const titleEl = document.getElementById("qt-title");
+    const bodyEl = document.getElementById("qt-body");
+    const nameEl = document.getElementById("qt-name");
+    const status = document.getElementById("qt-status");
+    const type = typeEl?.value === "feature" ? "feature" : "bug";
+    const title = (titleEl?.value || "").trim();
+    let body = (bodyEl?.value || "").trim();
+    const name = (nameEl?.value || "").trim();
+    const ctx = [
+      `build ${window.SNOW_BUILD || "?"}`,
+      this.input?.mobile ? "mobile" : "desktop",
+      this.state,
+      this.difficultyId || "?",
+      this.coop ? "coop" : "solo",
+    ].join(" · ");
+    if (body.length < 10) body = `${body}\n\n[${ctx}]`.trim();
+    else body = `${body}\n\n—\n${ctx}`;
+    const setStatus = (msg, isError = false) => {
+      if (!status) return;
+      status.textContent = msg;
+      status.classList.toggle("is-error", isError);
+    };
+    if (title.length < 3) {
+      setStatus("Título precisa ter pelo menos 3 caracteres.", true);
+      return;
+    }
+    if (body.length < 10) {
+      setStatus("Descreva um pouco mais (mín. 10 caracteres).", true);
+      return;
+    }
+    setStatus("Enviando…");
+    try {
+      const base = String(globalThis.SNOW_API_BASE || "").replace(/\/+$/, "");
+      const api = base ? `${base}/tickets.php` : "api/tickets.php";
+      const res = await fetch(api, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "create", type, title, body, name }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || `Erro ${res.status}`);
+      setStatus(`Enviado! ${data.ticket?.id || "ok"} — obrigado.`);
+      if (titleEl) titleEl.value = "";
+      if (bodyEl) bodyEl.value = "";
+    } catch (err) {
+      setStatus(err.message || "Falha ao enviar. Tente o board completo.", true);
+    }
   }
 
   updateGhostHud() {
@@ -1569,21 +1697,24 @@ class Game {
     document.exitPointerLock();
     this.input.clearKeys();
     if (this.clickHint) this.clickHint.hidden = true;
+    this.setOverlayMode("dead");
     this.overlayTitle.textContent = hardcore ? "Hardcore — fim da linha" : "Você morreu";
     this.overlayMsg.textContent = hardcore
       ? `${reason} Sem segunda chance. Sua expedição acabou.`
       : `${reason} O que você carregava caiu no chão. Itens no baú estão seguros. Renasça na base.`;
+    const winPanel = document.getElementById("win-panel");
+    if (winPanel) winPanel.hidden = true;
     const btnResume = document.getElementById("btn-resume");
     if (btnResume) {
+      btnResume.hidden = false;
       if (hardcore) {
         btnResume.textContent = "Nova partida";
         btnResume.onclick = () => this.restart();
       } else {
         btnResume.textContent = "Renascer na base";
+        btnResume.onclick = null;
       }
     }
-    const btnSkin = document.getElementById("btn-skin");
-    if (btnSkin) btnSkin.hidden = true;
     this.overlay.hidden = false;
   }
 
@@ -1611,12 +1742,12 @@ class Game {
     document.exitPointerLock();
     this.input.clearKeys();
     if (this.clickHint) this.clickHint.hidden = true;
+    this.setOverlayMode("won");
     this.overlayTitle.textContent = "Você sobreviveu!";
     this.overlayMsg.textContent =
       "Você entrou para a história da neve — caminho aberto por Jorge (1º a zerar) e Caio (1º a testar). Envie seu tempo ao ranking.";
-    document.getElementById("btn-resume").hidden = true;
-    const btnSkin = document.getElementById("btn-skin");
-    if (btnSkin) btnSkin.hidden = true;
+    const btnResume = document.getElementById("btn-resume");
+    if (btnResume) btnResume.hidden = true;
     const winPanel = document.getElementById("win-panel");
     if (winPanel) winPanel.hidden = false;
     const winTime = document.getElementById("win-time");
@@ -2253,6 +2384,9 @@ class Game {
     document.getElementById("btn-restart").addEventListener("click", () => this.restart());
     document.getElementById("btn-skin")?.addEventListener("click", () => this.openSkinPickerFromPause());
     document.getElementById("btn-pet-toggle")?.addEventListener("click", () => this.togglePet());
+    document.getElementById("btn-ticket-quick")?.addEventListener("click", () => this.toggleQuickTicket());
+    document.getElementById("qt-submit")?.addEventListener("click", () => void this.submitQuickTicket());
+    this.hud.onReload = () => this.tryReload();
     this.refreshPetButton();
     document.getElementById("btn-submit-score")?.addEventListener("click", () => this.submitWinScore());
     document.getElementById("btn-help-close")?.addEventListener("click", () => this.closeHelp());
@@ -2544,14 +2678,17 @@ class Game {
     if (this.clickHint) this.clickHint.hidden = true;
     const winPanel = document.getElementById("win-panel");
     if (winPanel) winPanel.hidden = true;
+    this.setOverlayMode("pause");
     this.overlayTitle.textContent = "Pausado";
     this.overlayMsg.textContent = this.input.mobile
-      ? "Progresso salvo · Continuar · Ranking · ? = ajuda."
+      ? "Progresso salvo · Continuar · Ranking · Reportar problema."
       : "Progresso salvo. Continuar · Ranking (T) · Ajuda (H) · Reiniciar apaga o save.";
-    document.getElementById("btn-resume").textContent = "Continuar";
-    document.getElementById("btn-resume").hidden = false;
-    const btnSkin = document.getElementById("btn-skin");
-    if (btnSkin) btnSkin.hidden = false;
+    const btnResume = document.getElementById("btn-resume");
+    if (btnResume) {
+      btnResume.textContent = "Continuar";
+      btnResume.hidden = false;
+      btnResume.onclick = null;
+    }
     this.refreshPetButton();
     this.overlay.hidden = false;
   }
@@ -2681,12 +2818,9 @@ class Game {
       setTimeout(() => this.persistSave(), 0);
     }
 
-    if (this.input.wasPressed("KeyR")) {
-      this.cancelWeaponCharge();
-      const r = this.weapons.reload();
-      if (r.msg) this.hud.showMsg(r.msg, 2200);
-      if (r.ok) this.ambience.reload?.(this.weapons.current);
-      this.refreshInventoryUI();
+    if (this.input.wasPressed("KeyR") || this.input._tapReload) {
+      this.input._tapReload = false;
+      this.tryReload();
     }
     if (this.input.wasPressed("KeyC")) {
       this.tryCraftFence();
@@ -3298,7 +3432,17 @@ class Game {
       ctx.fill();
     };
 
-    dot(world.basePos.x, world.basePos.z, "#ffb03c", 4);
+    // base pulsa quando o frio aperta (guia visual → fogueira)
+    const cold = (this.warmth ?? 100) < 35;
+    const pulse = cold ? 4 + Math.sin(performance.now() * 0.008) * 2.2 : 4;
+    if (cold) {
+      const [bx, by] = toScreen(world.basePos.x, world.basePos.z);
+      ctx.fillStyle = "rgba(255, 176, 60, 0.28)";
+      ctx.beginPath();
+      ctx.arc(bx, by, pulse + 5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    dot(world.basePos.x, world.basePos.z, "#ffb03c", pulse);
 
     for (const it of world.items) {
       if (it.collected || !it.discovered) continue;
@@ -3327,6 +3471,15 @@ class Game {
     ctx.fill();
     ctx.stroke();
     ctx.restore();
+
+    // legenda compacta (também no HTML; reforço no canvas p/ desktop)
+    if (!this.input?.mobile) {
+      ctx.fillStyle = "rgba(0,0,0,0.45)";
+      ctx.fillRect(4, S - 18, 118, 14);
+      ctx.fillStyle = "rgba(230,240,248,0.9)";
+      ctx.font = "10px sans-serif";
+      ctx.fillText("🏠 base  ◆ loot  ▲ você", 8, S - 7);
+    }
   }
 
   loop(timestamp) {

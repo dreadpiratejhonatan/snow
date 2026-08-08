@@ -28,10 +28,11 @@ Primeira versão **oficial** (`release/v1.0`, tag `v1.0.0`).
 
 ## [Unreleased]
 
-Trabalho na branch `develop` após `v1.0.0` (cache **`gh100`**).  
+Trabalho na branch `develop` após `v1.0.0` (cache **`gh101`**).  
 Resumo narrativo: [`docs/DEVELOP-ATE-GH63.md`](docs/DEVELOP-ATE-GH63.md) · [`DEVELOP-GH64-ATE-GH73.md`](docs/DEVELOP-GH64-ATE-GH73.md).
 
 ### Changed
+- **Usabilidade (gh101)**: frio pulsa na barra 🔥 + “→ fogueira”; morte/vitória sem dump do pause; munição + Recarregar sempre visíveis (botão R no touch); legenda do minimapa + base pulsa no frio; reportar problema rápido no pause/morte
 - **Mapa-globo (gh100)**: o mundo envolve nos eixos X/Z — chegar à borda leva ao lado oposto (sem parede preta); névoa aperta na costura; minimapa e IA usam distância wrap-aware
 - **Boot mais rápido (gh99)**: **Continuar expedição** logo após a splash; última skin/dificuldade/mapa lembradas para um toque
 - **Co-op convite (gh99)**: link `?room=CODIGO` + Copiar link + “Aguardando amigo…”; colar link do WhatsApp também funciona

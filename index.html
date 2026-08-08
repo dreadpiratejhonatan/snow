@@ -13,10 +13,10 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
-  <link rel="stylesheet" href="src/styles/styles.css?v=gh100" />
+  <link rel="stylesheet" href="src/styles/styles.css?v=gh101" />
   <script>
-    // Build id — no console deve aparecer gh100 (se for antigo, limpe o cache)
-    window.SNOW_BUILD = "gh100";
+    // Build id — no console deve aparecer gh101 (se for antigo, limpe o cache)
+    window.SNOW_BUILD = "gh101";
     console.info("[Neve] build", window.SNOW_BUILD);
     // Evita flash do splash quando ?demo=1 (antes do bundle carregar)
     try {
@@ -122,9 +122,10 @@
           <span class="hud__bar-label">❤</span>
           <div class="hud__bar-track"><div id="health-fill" class="hud__bar-fill hud__bar-fill--health"></div></div>
         </div>
-        <div class="hud__bar">
+        <div class="hud__bar hud__bar--warmth">
           <span class="hud__bar-label">🔥</span>
           <div class="hud__bar-track"><div id="warmth-fill" class="hud__bar-fill hud__bar-fill--warmth"></div></div>
+          <span id="warmth-cue" class="hud__warmth-cue" hidden>→ fogueira</span>
         </div>
         <div id="items-info" class="hud__items">🎒 0 · 📦 0/10</div>
       </div>
@@ -138,7 +139,15 @@
         <div id="inv-detail" class="inv-bar__detail">✊ Punhos — dano 12</div>
       </div>
 
-      <canvas id="minimap" class="hud__minimap" width="180" height="180"></canvas>
+      <div class="hud__minimap-wrap">
+        <canvas id="minimap" class="hud__minimap" width="180" height="180"></canvas>
+        <p id="minimap-legend" class="hud__minimap-legend" aria-hidden="true">🏠 base · ◆ loot · ▲ você</p>
+      </div>
+      <div id="ammo-hud" class="ammo-hud" hidden aria-live="polite">
+        <span id="ammo-hud-icon" class="ammo-hud__icon">⚔</span>
+        <span id="ammo-hud-text" class="ammo-hud__text">—</span>
+        <button type="button" id="btn-reload-hud" class="ammo-hud__btn" hidden>Recarregar</button>
+      </div>
 
       <div id="bear-info" class="hud__bear" hidden>
         <span id="enemy-label" class="hud__bar-label">Urso</span>
@@ -215,6 +224,7 @@
       <div class="touch__actions">
         <button type="button" id="btn-sprint" class="touch-btn" title="Correr" aria-label="Correr">🏃</button>
         <button type="button" id="btn-interact" class="touch-btn" title="Interagir" aria-label="Interagir">◉</button>
+        <button type="button" id="btn-reload" class="touch-btn" title="Recarregar" aria-label="Recarregar">R</button>
         <button type="button" id="btn-jump" class="touch-btn touch-btn--big" title="Pular" aria-label="Pular">⤒</button>
         <button type="button" id="btn-attack" class="touch-btn touch-btn--big touch-btn--attack" title="Atacar" aria-label="Atacar">⚔</button>
       </div>
@@ -356,7 +366,7 @@
       </div>
     </div>
 
-    <div id="overlay" class="overlay" hidden>
+    <div id="overlay" class="overlay" hidden data-mode="pause">
       <div class="overlay__panel">
         <h2 id="overlay-title">Pausado</h2>
         <p id="overlay-msg">Pressione o botão para continuar.</p>
@@ -383,19 +393,33 @@
           <h3 class="win-panel__board-title">Melhores tempos</h3>
           <ol id="leaderboard-list" class="win-panel__list"></ol>
         </div>
-        <aside class="dedication dedication--pause" id="dedication-pause" aria-label="Dedicatórias">
+        <aside class="dedication dedication--pause overlay-pause-only" id="dedication-pause" aria-label="Dedicatórias">
           <p class="dedication__line">
             Dedicado a <strong>CAIO</strong> <span class="dedication__muted">(1º a testar)</span>
             · <strong>JORGE</strong> <span class="dedication__muted">(1º a zerar)</span>
           </p>
         </aside>
         <button id="btn-resume" type="button" class="menu__btn">Continuar</button>
-        <button id="btn-rank-pause" type="button" class="menu__btn menu__btn--ghost">Ranking (T)</button>
-        <button id="btn-help-pause" type="button" class="menu__btn menu__btn--ghost">Ajuda / FAQ</button>
-        <button id="btn-release-pause" type="button" class="menu__btn menu__btn--ghost">O que mudou</button>
-        <a id="btn-tickets-pause" class="menu__btn menu__btn--ghost" href="tickets/" target="_blank" rel="noopener">Sugestões / Board</a>
-        <button id="btn-pet-toggle" type="button" class="menu__btn menu__btn--ghost" aria-pressed="false">Husky: desligado</button>
-        <button id="btn-skin" type="button" class="menu__btn menu__btn--ghost">Trocar skin</button>
+        <button id="btn-rank-pause" type="button" class="menu__btn menu__btn--ghost overlay-pause-only">Ranking (T)</button>
+        <button id="btn-help-pause" type="button" class="menu__btn menu__btn--ghost overlay-pause-only">Ajuda / FAQ</button>
+        <button id="btn-release-pause" type="button" class="menu__btn menu__btn--ghost overlay-pause-only">O que mudou</button>
+        <button id="btn-ticket-quick" type="button" class="menu__btn menu__btn--ghost">Reportar problema</button>
+        <div id="quick-ticket" class="quick-ticket" hidden>
+          <p class="quick-ticket__title">Sugestão rápida</p>
+          <select id="qt-type" class="quick-ticket__input" aria-label="Tipo">
+            <option value="bug">Bug</option>
+            <option value="feature">Ideia</option>
+          </select>
+          <input id="qt-title" class="quick-ticket__input" type="text" maxlength="80" placeholder="Título curto" autocomplete="off" />
+          <textarea id="qt-body" class="quick-ticket__input quick-ticket__body" maxlength="2000" rows="3" placeholder="O que aconteceu? (mín. 10 caracteres)"></textarea>
+          <input id="qt-name" class="quick-ticket__input" type="text" maxlength="24" placeholder="Seu nome (opcional)" autocomplete="nickname" />
+          <button id="qt-submit" type="button" class="menu__btn">Enviar</button>
+          <p id="qt-status" class="quick-ticket__status" aria-live="polite"></p>
+          <a class="quick-ticket__board" href="tickets/" target="_blank" rel="noopener">Abrir board completo</a>
+        </div>
+        <a id="btn-tickets-pause" class="menu__btn menu__btn--ghost overlay-pause-only" href="tickets/" target="_blank" rel="noopener">Sugestões / Board</a>
+        <button id="btn-pet-toggle" type="button" class="menu__btn menu__btn--ghost overlay-pause-only" aria-pressed="false">Husky: desligado</button>
+        <button id="btn-skin" type="button" class="menu__btn menu__btn--ghost overlay-pause-only">Trocar skin</button>
         <button id="btn-restart" type="button" class="menu__btn menu__btn--ghost">Reiniciar</button>
       </div>
     </div>
@@ -437,6 +461,7 @@
           <li>Ranking online (<kbd>T</kbd>) via HostGator — tempos falsos filtrados</li>
           <li><strong>Board de sugestões</strong> — envie ideias em cards (estilo Jira); a comunidade vê tudo</li>
           <li><strong>Mapa-globo</strong>: atravessar a borda leva ao lado oposto — sem parede preta no fim do mundo</li>
+          <li><strong>Usabilidade</strong>: frio na barra 🔥, munição + Recarregar no celular, morte limpa, reportar bug no pause</li>
           <li><strong>Estações</strong> do ano ciclam (chão, grama, neve, gelo e frio mudam) · cobertura atrás de pedras/baú bloqueia ataques</li>
           <li><strong>Trilha</strong> procedural calma (estilo exploração) — desbloqueia no clique da skin/dificuldade</li>
           <li><strong>Co-op</strong> com relay HTTPS se firewall bloquear P2P (precisa HostGator <code>api/signal.php</code>)</li>
@@ -542,6 +567,6 @@
     </div>
   </div>
 
-  <script type="module" src="src/js/main.js?v=gh100"></script>
+  <script type="module" src="src/js/main.js?v=gh101"></script>
 </body>
 </html>
