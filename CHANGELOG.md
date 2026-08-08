@@ -28,10 +28,12 @@ Primeira versão **oficial** (`release/v1.0`, tag `v1.0.0`).
 
 ## [Unreleased]
 
-Trabalho na branch `develop` após `v1.0.0` (cache **`gh98`**).  
+Trabalho na branch `develop` após `v1.0.0` (cache **`gh99`**).  
 Resumo narrativo: [`docs/DEVELOP-ATE-GH63.md`](docs/DEVELOP-ATE-GH63.md) · [`DEVELOP-GH64-ATE-GH73.md`](docs/DEVELOP-GH64-ATE-GH73.md).
 
 ### Changed
+- **Boot mais rápido (gh99)**: **Continuar expedição** logo após a splash; última skin/dificuldade/mapa lembradas para um toque
+- **Co-op convite (gh99)**: link `?room=CODIGO` + Copiar link + “Aguardando amigo…”; colar link do WhatsApp também funciona
 - **Roster (gh98)**: personagem de teste **Robertson** removido (skin + NPC); ficam Natan, Jorge Bolado, Caio, Lorenzo e ZÉ
 - **Balões de fala (gh97)**: intervalos aleatórios médios/longos (espaçados); no máximo um balão por vez; fauna para de spammar
 - **Sussurros (gh97)**: também mais espaçados (vies longo)

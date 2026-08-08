@@ -15,6 +15,11 @@ Documentação completa: [`docs/V1-OFICIAL.md`](docs/V1-OFICIAL.md) · Tag Git: 
 ### [gh95] — Sussurros no vento (8 ago 2026)
 - Quatro áudios místicos filtrados sussurram ao acaso enquanto você joga
 
+### [gh99] — Voltar a jogar + convite co-op (8 ago 2026)
+- **Continuar expedição** aparece logo após a splash (sem refazer menus)
+- Última skin / dificuldade / mapa lembradas para um toque
+- Co-op: **Copiar link do convite** (`?room=`) + tela “Aguardando amigo…”
+
 ### [gh98] — Remoção do Robertson (8 ago 2026)
 - Personagem de teste **Robertson** saiu do seletor e do mundo (skin + NPC)
 - **Balões de fala** permanecem nos personagens restantes

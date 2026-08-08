@@ -133,7 +133,9 @@ export function runSkinPicker({ force = true, onGesture } = {}) {
 
   // Ordem visual aleatória a cada abertura do picker
   const skins = shuffleSkins(listSkins());
-  let selected = null; // obrigatório clicar num card
+  // Última skin salva já vem selecionada → um toque em "Continuar como…"
+  let selected = loadSkinId() || null;
+  if (selected && !CONFIG.skins[selected]) selected = null;
   let preview = null;
   if (canvas) {
     try {
@@ -144,12 +146,27 @@ export function runSkinPicker({ force = true, onGesture } = {}) {
   }
 
   const nSkins = skins.length;
-  if (btn) {
-    btn.disabled = true;
-    btn.textContent = "Escolha um personagem";
-  }
-  if (hint) {
-    hint.textContent = `Clique num dos ${nSkins} rostos. Arraste o boneco para girar e ver o rosto.`;
+  if (selected) {
+    try {
+      preview?.setSkin(selected);
+    } catch {
+      /* preview opcional */
+    }
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = `Continuar como ${getSkin(selected).name}`;
+    }
+    if (hint) {
+      hint.textContent = "Confirme ou toque noutro rosto. Arraste o boneco para girar.";
+    }
+  } else {
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = "Escolha um personagem";
+    }
+    if (hint) {
+      hint.textContent = `Clique num dos ${nSkins} rostos. Arraste o boneco para girar e ver o rosto.`;
+    }
   }
 
   const render = () => {

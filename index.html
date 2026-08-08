@@ -13,10 +13,10 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
-  <link rel="stylesheet" href="src/styles/styles.css?v=gh98" />
+  <link rel="stylesheet" href="src/styles/styles.css?v=gh99" />
   <script>
-    // Build id — no console deve aparecer gh98 (se for antigo, limpe o cache)
-    window.SNOW_BUILD = "gh98";
+    // Build id — no console deve aparecer gh99 (se for antigo, limpe o cache)
+    window.SNOW_BUILD = "gh99";
     console.info("[Neve] build", window.SNOW_BUILD);
     // Evita flash do splash quando ?demo=1 (antes do bundle carregar)
     try {
@@ -253,7 +253,7 @@
         <div id="coop-step-friends" class="coop-step" hidden>
           <button id="btn-coop-back" type="button" class="boot-back">← Voltar</button>
           <h2 class="boot-title">Co-op</h2>
-          <p class="boot-sub">Um cria a sala. Os outros colam o código.</p>
+          <p class="boot-sub">Um cria a sala. Compartilhe o <strong>link</strong> ou o código.</p>
           <label class="coop-menu__join-label">Jogadores
             <select id="coop-max-players" class="coop-menu__input">
               <option value="2" selected>2 jogadores</option>
@@ -269,12 +269,15 @@
           <div id="coop-code-box" class="coop-menu__code-box" hidden>
             <p class="coop-menu__code-label">Código da sala</p>
             <p id="coop-code-display" class="coop-menu__code">————</p>
+            <p id="coop-wait-hint" class="coop-menu__wait" hidden>Aguardando amigo entrar…</p>
+            <p id="coop-invite-link" class="coop-menu__invite-link" hidden></p>
+            <button id="btn-coop-copy-link" type="button" class="menu__btn" hidden>Copiar link do convite</button>
             <button id="btn-coop-copy" type="button" class="menu__btn menu__btn--ghost">Copiar código</button>
           </div>
 
           <div id="coop-join-block" class="coop-menu__join">
-            <p class="coop-menu__join-label">Já tem um código?</p>
-            <input id="coop-code-input" class="coop-menu__input" type="text" maxlength="8" placeholder="TBVKQ3" autocomplete="off" spellcheck="false" inputmode="text" aria-label="Código da sala" />
+            <p class="coop-menu__join-label">Já tem um código ou link?</p>
+            <input id="coop-code-input" class="coop-menu__input" type="text" maxlength="128" placeholder="TBVKQ3 ou cole o link" autocomplete="off" spellcheck="false" inputmode="text" aria-label="Código ou link da sala" />
             <div class="coop-menu__join-actions">
               <button id="btn-coop-paste" type="button" class="menu__btn menu__btn--ghost">Colar</button>
               <button id="btn-coop-join" type="button" class="menu__btn">Entrar</button>
@@ -334,7 +337,7 @@
         <p class="boot-brand">Neve Selvagem</p>
         <h2 class="boot-title">Expedição salva</h2>
         <p id="continue-summary" class="boot-sub">Há um progresso guardado neste aparelho.</p>
-        <button id="btn-continue-game" type="button" class="menu__btn">Continuar</button>
+        <button id="btn-continue-game" type="button" class="menu__btn">Continuar expedição</button>
         <button id="btn-new-game" type="button" class="menu__btn menu__btn--ghost">Novo jogo</button>
       </div>
     </div>
@@ -418,7 +421,8 @@
         <ul class="help-overlay__list">
           <li>Pickups no chão mais legíveis (lanterna, kit, mapa, munição…) + partículas ao pegar</li>
           <li>NPCs reagem a dano (flash, knockback) e aggro; sons de teleporte/tiro</li>
-          <li>Menus de entrada redesenhados — co-op em <strong>2 passos</strong> (Solo vs Com um amigo)</li>
+          <li>Menus de entrada redesenhados — co-op em <strong>2 passos</strong>; convite por <strong>link</strong> (<code>?room=</code>) ou código</li>
+          <li><strong>Continuar expedição</strong> logo após a splash; última skin/dificuldade/mapa lembradas</li>
           <li><strong>Dificuldade</strong> Fácil / Médio / Difícil (depois da skin) — muda loot, inimigos, dano e frio</li>
           <li>Quatro chefs novos: <strong>Panda</strong>, <strong>Saci</strong>, <strong>T-Rex gatling</strong> e <strong>Boto-cor-de-rosa</strong> (troféu final no lago)</li>
           <li>Vitória: itens do baú + troféu do urso alfa + <strong>Troféu do Boto</strong></li>
@@ -537,6 +541,6 @@
     </div>
   </div>
 
-  <script type="module" src="src/js/main.js?v=gh98"></script>
+  <script type="module" src="src/js/main.js?v=gh99"></script>
 </body>
 </html>

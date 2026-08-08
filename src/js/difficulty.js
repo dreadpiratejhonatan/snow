@@ -1,5 +1,7 @@
 /** Dificuldade da run: Fácil / Médio / Difícil (Médio = balance base). */
 
+const STORAGE_KEY = "neveLastDifficulty";
+
 export const DIFFICULTIES = {
   easy: {
     id: "easy",
@@ -48,8 +50,29 @@ export function getDifficulty(id) {
   return DIFFICULTIES[id] || DIFFICULTIES.medium;
 }
 
+export function loadDifficultyId() {
+  try {
+    const id = localStorage.getItem(STORAGE_KEY);
+    if (id && DIFFICULTIES[id]) return id;
+  } catch {
+    /* private mode */
+  }
+  return null;
+}
+
+export function saveDifficultyId(id) {
+  const resolved = getDifficulty(id).id;
+  try {
+    localStorage.setItem(STORAGE_KEY, resolved);
+  } catch {
+    /* private mode */
+  }
+  return resolved;
+}
+
 /**
  * Overlay #difficulty-picker — depois da skin, antes do co-op.
+ * Destaca a última escolha para um toque rápido.
  * @param {{ onGesture?: () => void }} [opts]
  * @returns {Promise<"easy"|"medium"|"hard"|"hardcore">}
  */
@@ -57,16 +80,27 @@ export function runDifficultyPicker({ onGesture } = {}) {
   const el = document.getElementById("difficulty-picker");
   if (!el) return Promise.resolve("medium");
 
+  const last = loadDifficultyId() || "medium";
+  const sub = el.querySelector(".boot-sub");
+  if (sub) {
+    sub.textContent = `Última: ${getDifficulty(last).label} — toque nela ou escolha outra.`;
+  }
+  for (const btn of el.querySelectorAll("[data-difficulty]")) {
+    const id = btn.getAttribute("data-difficulty");
+    btn.classList.toggle("is-selected", id === last);
+  }
+
   el.hidden = false;
   el.setAttribute("aria-hidden", "false");
 
   return new Promise((resolve) => {
     const finish = (id) => {
+      const resolved = saveDifficultyId(id);
       el.hidden = true;
       el.setAttribute("aria-hidden", "true");
       el.removeEventListener("click", onClick);
       el.removeEventListener("pointerdown", onPointerDown);
-      resolve(getDifficulty(id).id);
+      resolve(resolved);
     };
 
     const fireGesture = () => {

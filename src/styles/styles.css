@@ -708,6 +708,12 @@ html.demo-boot #splash {
   border-color: rgba(110, 196, 212, 0.35);
 }
 
+.difficulty-card.is-selected {
+  border-color: rgba(110, 196, 212, 0.75);
+  background: rgba(30, 70, 90, 0.55);
+  box-shadow: 0 0 0 1px rgba(110, 196, 212, 0.25);
+}
+
 .difficulty-card__name {
   font-family: var(--display);
   font-size: 1.15rem;
@@ -801,6 +807,24 @@ html.demo-boot #splash {
   font-weight: 700;
   letter-spacing: 0.28em;
   color: #9adce8;
+}
+
+.coop-menu__wait {
+  margin: 0 0 0.65rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #e8d49a;
+}
+
+.coop-menu__invite-link {
+  margin: 0 0 0.65rem;
+  padding: 0.55rem 0.65rem;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.28);
+  font-size: 0.72rem;
+  line-height: 1.35;
+  color: rgba(190, 220, 230, 0.9);
+  word-break: break-all;
 }
 
 .coop-menu__status {
