@@ -6,6 +6,10 @@ Documentação completa: [`docs/V1-OFICIAL.md`](docs/V1-OFICIAL.md) · Tag Git: 
 
 ## Atualizações recentes (pós-v1.0)
 
+### [gh94] — Robertson + balões de fala (8 ago 2026)
+- Novo personagem **Robertson** (velho bravo) no seletor; também spawna no mundo e briga com todo mundo
+- **Balões de fala** seguem personagens e NPCs próximos com conversa aleatória
+
 ### [gh92] — Splash responde no celular (26 jul 2026)
 - Toque na splash volta a funcionar: o mundo só carrega depois do “continuar” (sumia o travamento no Android)
 
@@ -77,7 +81,7 @@ Documentação completa: [`docs/V1-OFICIAL.md`](docs/V1-OFICIAL.md) · Tag Git: 
 - Vitória exige **Troféu do Urso Alfa** + **Troféu do Boto**
 
 ## Personagens
-- **Natan**, **Jorge Bolado**, **Caio**, **Lorenzo**, **ZÉ**
+- **Natan**, **Jorge Bolado**, **Caio**, **Lorenzo**, **ZÉ**, **Robertson**
 - Preview 3D; cards em ordem aleatória; rosto só na frente da cabeça
 
 ## Mundo e áudio

@@ -28,8 +28,12 @@ Primeira versão **oficial** (`release/v1.0`, tag `v1.0.0`).
 
 ## [Unreleased]
 
-Trabalho na branch `develop` após `v1.0.0` (cache **`gh93`**).  
+Trabalho na branch `develop` após `v1.0.0` (cache **`gh94`**).  
 Resumo narrativo: [`docs/DEVELOP-ATE-GH63.md`](docs/DEVELOP-ATE-GH63.md) · [`DEVELOP-GH64-ATE-GH73.md`](docs/DEVELOP-GH64-ATE-GH73.md).
+
+### Added
+- **Robertson (gh94)**: personagem jogável velho/bravo + NPC no mundo que briga com todo mundo
+- **Balões de fala (gh94)**: conversa aleatória em balões que seguem personagens e NPCs próximos
 
 ### Fixed
 - **Toast de spawn de inimigos**: removido o pop-up HUD `… surgiu na neve…` ao aparecer inimigo (atrapalhava o combate); cutscenes de chef permanecem
@@ -43,7 +47,7 @@ Resumo narrativo: [`docs/DEVELOP-ATE-GH63.md`](docs/DEVELOP-ATE-GH63.md) · [`DE
 - **Tutorial/ajuda: montarias (gh86)**: passo 6/7 ensina a domar; FAQ e controles mencionam mula, cavalo, pônei, dromedário e panda
 
 ### Changed
-- **Roster (gh89)**: removidos **Neymar** e **MEGA BRAIN** do seletor (voltam a 5 personagens)
+- **Roster (gh89/gh94)**: Neymar/MEGA BRAIN saíram; agora **Robertson** entra (6 personagens)
 - **Domar montarias mais fácil (gh85)**: basta ~28% de dano (HP ≤ 72%); ao enfraquecer o animal para de atacar; alcance de interação maior; mula/cavalo/dromedário/pônei/panda um pouco mais fracos
 
 ### Fixed
