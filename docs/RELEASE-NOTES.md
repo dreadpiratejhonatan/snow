@@ -6,6 +6,9 @@ Documentação completa: [`docs/V1-OFICIAL.md`](docs/V1-OFICIAL.md) · Tag Git: 
 
 ## Atualizações recentes (pós-v1.0)
 
+### [gh95] — Sussurros Baby baby (8 ago 2026)
+- Quatro áudios místicos filtrados sussurram **“Baby, baby”** ao acaso enquanto você joga
+
 ### [gh94] — Robertson + balões de fala (8 ago 2026)
 - Novo personagem **Robertson** (velho bravo) no seletor; também spawna no mundo e briga com todo mundo
 - **Balões de fala** seguem personagens e NPCs próximos com conversa aleatória

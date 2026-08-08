@@ -354,6 +354,19 @@ try {
   }
   console.log("Season ground OK — summer green / winter snow");
 
+  // sussurros Baby baby (clips filtrados)
+  const fs = await import("node:fs");
+  const whisperMan = JSON.parse(fs.readFileSync("music/whispers/manifest.json", "utf8"));
+  if (!Array.isArray(whisperMan) || whisperMan.length < 4) {
+    throw new Error("music/whispers/manifest.json deveria listar 4 clips");
+  }
+  for (const name of whisperMan) {
+    if (!fs.existsSync(`music/whispers/${name}`)) {
+      throw new Error(`whisper ausente: ${name}`);
+    }
+  }
+  console.log("Whispers OK —", whisperMan.length, "clips");
+
   for (let i = 0; i < 60; i++) {
     world.update(0.016, i * 0.016, 0.5, 0.1, player.position);
   }
