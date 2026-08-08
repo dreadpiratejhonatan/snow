@@ -28,11 +28,14 @@ Primeira versão **oficial** (`release/v1.0`, tag `v1.0.0`).
 
 ## [Unreleased]
 
-Trabalho na branch `develop` após `v1.0.0` (cache **`gh95`**).  
+Trabalho na branch `develop` após `v1.0.0` (cache **`gh96`**).  
 Resumo narrativo: [`docs/DEVELOP-ATE-GH63.md`](docs/DEVELOP-ATE-GH63.md) · [`DEVELOP-GH64-ATE-GH73.md`](docs/DEVELOP-GH64-ATE-GH73.md).
 
+### Changed
+- **Sussurros (gh96)**: texto/áudio corrigidos para **“Bebe, bebe”** (português do Brasil)
+
 ### Added
-- **Sussurros Baby baby (gh95)**: 4 clips místicos filtrados em `music/whispers/` tocam 100% ao acaso durante a partida
+- **Sussurros Bebe bebe (gh95/gh96)**: 4 clips místicos filtrados em `music/whispers/` tocam 100% ao acaso durante a partida
 - **Robertson (gh94)**: personagem jogável velho/bravo + NPC no mundo que briga com todo mundo
 - **Balões de fala (gh94)**: conversa aleatória em balões que seguem personagens e NPCs próximos
 

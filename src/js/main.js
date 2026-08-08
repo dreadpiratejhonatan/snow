@@ -98,9 +98,9 @@ class Game {
     this.ambience.onWhisper = () => {
       if (this.state !== "playing") return;
       const lines = [
-        "…baby… baby…",
-        "…baby, baby…",
-        "…uma voz no vento: baby…",
+        "…bebe… bebe…",
+        "…bebe, bebe…",
+        "…uma voz no vento: bebe…",
         "…alguém sussurra no gelo",
       ];
       this.hud?.showMsg(lines[(Math.random() * lines.length) | 0], 3400);
