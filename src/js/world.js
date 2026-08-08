@@ -187,31 +187,58 @@ export class World {
   // TERRENO
   // ------------------------------------------------------------------
   getHeight(x, z) {
-    // toro: altura periódica — andando “para sempre” o relevo se repete
+    // Relevo periódico no toro: h(x+size)=h(x) com ciclos inteiros —
+    // atravessar a costura continua a mesma geografia (sem “salto” de cenário).
     if (!this.inDungeonZone(x, z)) {
       x = this.wrapCoord(x);
       z = this.wrapCoord(z);
     }
     const A = CONFIG.world.amplitude;
     const w = this.heightWarp;
-    const px = w ? (x + w.ox) * w.freq : x;
-    const pz = w ? (z + w.oz) * w.freq : z;
+    const s = this.size;
+    const TAU = Math.PI * 2;
+    // fases / intensidade (mapa aleatório) sem quebrar o período = size
+    let phU = 0;
+    let phV = 0;
+    let ridgeMul = 1;
+    let a1 = 0.45;
+    let a2 = 0.22;
+    let a3 = 0.28;
+    let a4 = 0.1;
+    if (w) {
+      phU = (w.ox / s) * TAU;
+      phV = (w.oz / s) * TAU;
+      ridgeMul = w.ridgeMul ?? 1;
+      const f = w.freq ?? 1;
+      a1 *= 0.9 + (f - 0.9) * 0.25;
+      a2 *= 0.9 + (f - 0.9) * 0.2;
+    }
+    const u = (x / s) * TAU;
+    const v = (z / s) * TAU;
     let h =
       CONFIG.world.baseHeight +
-      Math.sin(px * 0.035) * Math.cos(pz * 0.032) * A * 0.45 +
-      Math.sin(px * 0.09 + pz * 0.05) * A * 0.2 +
-      Math.cos(px * 0.021 - pz * 0.062) * A * 0.28 +
-      Math.sin((px + pz) * 0.13) * A * 0.08;
-    const ridge = Math.pow(Math.abs(Math.sin(px * 0.012) * Math.sin(pz * 0.01)), 2.2);
-    h += ridge * A * 1.7 * (w?.ridgeMul ?? 1);
+      Math.sin(u + phU) * Math.cos(v + phV) * A * a1 +
+      Math.sin(2 * u + v + phU * 0.7) * A * a2 +
+      Math.cos(u - 2 * v + phV) * A * a3 +
+      Math.sin(3 * u + 2 * v) * A * a4;
+    const ridge = Math.pow(Math.abs(Math.sin(u + phU) * Math.sin(v + phV)), 2.2);
+    h += ridge * A * 1.7 * ridgeMul;
     if (w) {
-      const dl = Math.hypot(x - w.lakeX, z - w.lakeZ);
+      const dl = this.wrapDistXZ({ x, z }, { x: w.lakeX, z: w.lakeZ });
       if (dl < w.lakeR) {
         const t = 1 - dl / w.lakeR;
         h -= w.lakeDepth * t * t;
       }
     }
     return h;
+  }
+
+  /** Variação de cor do terreno alinhada ao período do mapa (sem costura). */
+  _terrainShade(x, z) {
+    const TAU = Math.PI * 2;
+    const u = (x / this.size) * TAU;
+    const v = (z / this.size) * TAU;
+    return 0.98 + Math.sin(2 * u + 3 * v) * 0.02;
   }
 
   /** Dentro do "bolso" da dungeon secreta (x≈400)? Chão vira o piso da arena. */
@@ -285,18 +312,28 @@ export class World {
 
     const pos = geo.attributes.position;
     const colors = [];
+    const normals = [];
     const col = new THREE.Color();
+    // passo ≈ espaçamento do grid (normais wrap-aware = iluminação contínua na costura)
+    const e = this.size / CONFIG.world.segments;
     for (let i = 0; i < pos.count; i++) {
       const x = pos.getX(i);
       const z = pos.getZ(i);
       const h = this.getHeight(x, z);
       pos.setY(i, h);
       this.colorAt(x, z, h, col);
-      const v = 0.98 + Math.sin(x * 1.7 + z * 2.3) * 0.02;
+      const v = this._terrainShade(x, z);
       colors.push(col.r * v, col.g * v, col.b * v);
+      const hx = this.getHeight(x + e, z) - this.getHeight(x - e, z);
+      const hz = this.getHeight(x, z + e) - this.getHeight(x, z - e);
+      let nx = -hx / (2 * e);
+      let ny = 1;
+      let nz = -hz / (2 * e);
+      const len = Math.hypot(nx, ny, nz) || 1;
+      normals.push(nx / len, ny / len, nz / len);
     }
     geo.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3));
-    geo.computeVertexNormals();
+    geo.setAttribute("normal", new THREE.Float32BufferAttribute(normals, 3));
 
     const mat = new THREE.MeshStandardMaterial({
       vertexColors: true,
@@ -385,6 +422,12 @@ export class World {
       tile.position.z = oz + iz * s;
       tile.position.y = this.waterLevel;
     }
+    for (const tile of this.grassTiles || []) {
+      const ix = tile.userData.torusIx || 0;
+      const iz = tile.userData.torusIz || 0;
+      tile.position.x = ox + ix * s;
+      tile.position.z = oz + iz * s;
+    }
   }
 
   /** Imagem do ponto lógico (lx,lz) mais próxima de (px,pz) no toro. */
@@ -429,13 +472,6 @@ export class World {
   presentTorusVisuals(playerPos) {
     if (!playerPos || this.dungeonActive) return;
     this.updateTorusTiles(playerPos);
-
-    // grama: uma cópia deslocada para a célula do toro sob o jogador
-    if (this.grass) {
-      const s = this.size;
-      this.grass.position.x = Math.round(playerPos.x / s) * s;
-      this.grass.position.z = Math.round(playerPos.z / s) * s;
-    }
 
     for (const e of this.enemies || []) {
       if (!e?.mesh) continue;
@@ -565,35 +601,34 @@ export class World {
   biomeAt(x, z) {
     const hx = this.home?.x ?? 0;
     const hz = this.home?.z ?? 0;
-    const dist = Math.hypot(x - hx, z - hz);
+    const dist = this.wrapDistXZ({ x, z }, { x: hx, z: hz });
     if (dist < 14) return "clareira";
     const h = this.getHeight(x, z);
     if (h > 7.2) return "montanha";
-    // duas manchas de floresta densa (seed-ish via posição)
-    const a = Math.sin(x * 0.045) * Math.cos(z * 0.038);
-    if (a > 0.35 && dist > 22 && dist < this.bounds * 0.85) return "floresta";
+    // manchas de floresta periódicas (mesmo padrão após dar a volta no mapa)
+    const TAU = Math.PI * 2;
+    const u = (x / this.size) * TAU;
+    const v = (z / this.size) * TAU;
+    const a = Math.sin(2 * u) * Math.cos(2 * v);
+    if (a > 0.35 && dist > 22 && dist < this.half * 0.9) return "floresta";
     return "neve";
-  }
-
-  /** Faixa perto da costura do toro — evita “parede dupla” de props nos dois lados. */
-  nearTorusSeam(x, z, margin = 14) {
-    return this.half - Math.abs(x) < margin || this.half - Math.abs(z) < margin;
   }
 
   scatterTrees() {
     let placed = 0;
     let tries = 0;
     const target = CONFIG.world.treeCount;
+    // quase até a borda do período — a floresta continua pela costura do toro
+    const lim = this.half - 0.75;
     while (placed < target && tries < target * 16) {
       tries++;
-      const x = (Math.random() * 2 - 1) * this.bounds;
-      const z = (Math.random() * 2 - 1) * this.bounds;
-      if (this.nearTorusSeam(x, z)) continue;
+      const x = (Math.random() * 2 - 1) * lim;
+      const z = (Math.random() * 2 - 1) * lim;
       const h = this.getHeight(x, z);
       if (h < this.waterLevel + 0.9 || h > 9.5) continue;
       const hx = this.home?.x ?? 0;
       const hz = this.home?.z ?? 0;
-      if (Math.hypot(x - hx, z - hz) < 9) continue; // clareira da base
+      if (this.wrapDistXZ({ x, z }, { x: hx, z: hz }) < 9) continue; // clareira da base
       const biome = this.biomeAt(x, z);
       // densidades relativas
       if (biome === "montanha" && Math.random() > 0.35) continue;
@@ -607,10 +642,11 @@ export class World {
           const oz = z + (Math.random() - 0.5) * 4;
           const oh = this.getHeight(ox, oz);
           if (
-            !this.nearTorusSeam(ox, oz) &&
+            Math.abs(ox) < lim &&
+            Math.abs(oz) < lim &&
             oh >= this.waterLevel + 0.9 &&
             oh <= 9.5 &&
-            Math.hypot(ox - hx, oz - hz) > 9
+            this.wrapDistXZ({ x: ox, z: oz }, { x: hx, z: hz }) > 9
           ) {
             this.makeTree(ox, oz);
             placed++;
@@ -624,14 +660,14 @@ export class World {
   }
 
   scatterRocks() {
+    const lim = this.half - 0.75;
     for (let i = 0; i < CONFIG.world.rockCount; i++) {
-      const x = (Math.random() * 2 - 1) * this.bounds;
-      const z = (Math.random() * 2 - 1) * this.bounds;
-      if (this.nearTorusSeam(x, z)) continue;
+      const x = (Math.random() * 2 - 1) * lim;
+      const z = (Math.random() * 2 - 1) * lim;
       const h = this.getHeight(x, z);
       if (
         h < this.waterLevel + 0.3 ||
-        Math.hypot(x - (this.home?.x ?? 0), z - (this.home?.z ?? 0)) < 9
+        this.wrapDistXZ({ x, z }, { x: this.home?.x ?? 0, z: this.home?.z ?? 0 }) < 9
       )
         continue;
       const r = 0.5 + Math.random() * 1.7;
@@ -697,12 +733,13 @@ export class World {
 
     const dummy = new THREE.Object3D();
     const col = new THREE.Color();
+    const lim = this.half - 0.75;
     let i = 0;
     let tries = 0;
     while (i < count && tries < count * 8) {
       tries++;
-      const x = (Math.random() * 2 - 1) * this.bounds;
-      const z = (Math.random() * 2 - 1) * this.bounds;
+      const x = (Math.random() * 2 - 1) * lim;
+      const z = (Math.random() * 2 - 1) * lim;
       const y = this.getHeight(x, z);
       if (y < this.waterLevel + 0.7 || y > 9.5) continue;
       dummy.position.set(x, y, z);
@@ -720,6 +757,22 @@ export class World {
     if (grass.instanceColor) grass.instanceColor.needsUpdate = true;
     this.grass = grass;
     this.scene.add(grass);
+
+    // 3×3: grama continua pela costura (sem “pop” ao trocar de célula)
+    this.grassTiles = [grass];
+    grass.userData.torusIx = 0;
+    grass.userData.torusIz = 0;
+    for (let iz = -1; iz <= 1; iz++) {
+      for (let ix = -1; ix <= 1; ix++) {
+        if (ix === 0 && iz === 0) continue;
+        const tile = grass.clone();
+        tile.position.set(ix * this.size, 0, iz * this.size);
+        tile.userData.torusIx = ix;
+        tile.userData.torusIz = iz;
+        this.scene.add(tile);
+        this.grassTiles.push(tile);
+      }
+    }
   }
 
   // ------------------------------------------------------------------
@@ -923,7 +976,7 @@ export class World {
       const z = pos.getZ(i);
       const h = pos.getY(i);
       this.colorAt(x, z, h, col);
-      const v = 0.98 + Math.sin(x * 1.7 + z * 2.3) * 0.02;
+      const v = this._terrainShade(x, z);
       colAttr.setXYZ(i, col.r * v, col.g * v, col.b * v);
     }
     colAttr.needsUpdate = true;

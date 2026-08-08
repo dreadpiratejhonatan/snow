@@ -480,6 +480,20 @@ try {
       throw new Error(`torus: árvore deveria aparecer perto do jogador (d=${d.toFixed(1)})`);
     }
   }
+  // relevo contínuo na costura: mesma altura/“geografia” dos dois lados
+  const seamZ = 12;
+  const hL = world.getHeight(-world.half + 0.01, seamZ);
+  const hR = world.getHeight(world.half - 0.01, seamZ);
+  if (Math.abs(hL - hR) > 0.08) {
+    throw new Error(`torus: altura na costura deveria coincidir (L=${hL.toFixed(3)} R=${hR.toFixed(3)})`);
+  }
+  const hAcross = world.getHeight(world.half + 1, seamZ);
+  const hWrapped = world.getHeight(-world.half + 1, seamZ);
+  if (Math.abs(hAcross - hWrapped) > 0.05) {
+    throw new Error(
+      `torus: altura além de +half deveria = imagem wrap (a=${hAcross.toFixed(3)} w=${hWrapped.toFixed(3)})`
+    );
+  }
   console.log("Torus seamless OK — player x:", player.position.x.toFixed(1), "tileOx:", world._torusTileOx);
   console.log("SMOKE OK — pos final:", player.position.toArray().map((n) => n.toFixed(2)).join(", "));
 } catch (err) {
