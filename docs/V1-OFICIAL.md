@@ -45,7 +45,7 @@ Sobrevivência 3D na neve (Three.js no navegador). Explore, colete suprimentos, 
 
 ### Personagens
 
-Natan, Jorge Bolado, Caio, Lorenzo, **ZÉ** — rostos em `faces/`, cards embaralhados no picker. (Neymar e MEGA BRAIN foram removidos do roster.)
+Natan, Jorge Bolado, Caio, Lorenzo, **ZÉ**, **Robertson** — rostos em `faces/`, cards embaralhados no picker. Balões de fala seguem os personagens.
 
 ### Dificuldade
 

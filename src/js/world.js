@@ -14,6 +14,7 @@ import {
   createPonyMesh,
   createSlenderMesh,
   createChuckMesh,
+  createRobertsonMesh,
   createPandaMesh,
   createSaciMesh,
   createTrexMesh,
@@ -2020,6 +2021,8 @@ export class World {
         return createSlenderMesh();
       case "chuck":
         return createChuckMesh();
+      case "robertson":
+        return createRobertsonMesh();
       case "panda":
         return createPandaMesh(this.tex, { scale: cfg.scale || 1.4 });
       case "saci":

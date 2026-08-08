@@ -40,6 +40,7 @@ import { dailySeed, dailyLabel, isDailyMode, setDailyMode } from "./daily.js";
 import { unlockAchievement, listAchievements } from "./achievements.js";
 import { playChefCutscene, updateCinematic, isCinematicActive } from "./cutscene.js";
 import { GameChat } from "./chat.js";
+import { SpeechBalloonSystem, robertsonSpawnLine } from "./speechBalloons.js";
 import {
   DemoBot,
   wantsDemoFromUrl,
@@ -126,6 +127,7 @@ class Game {
     this.mapMode = "classic";
     this._saveAcc = 0;
     this._minimapAcc = 0;
+    this.speech = null;
     this.lowFx = isTouchDevice();
     // THREE.Timer (Clock está deprecated desde r183)
     this.timer = new THREE.Timer();
@@ -151,6 +153,7 @@ class Game {
   ensureWorld() {
     if (this.world) return;
     this.initThree();
+    if (!this.speech) this.speech = new SpeechBalloonSystem(this.scene, this.camera);
   }
 
   /** Um único rAF — começa cedo para a trilha tickar nos menus. */
@@ -198,6 +201,7 @@ class Game {
     };
     const skinId = await runSkinPicker({ force: true, onGesture: unlockAudio });
     applySkinToPlayer(this.player, skinId);
+    this.speech?.syncPlayer(this.player);
     // Começa em 3ª pessoa para ver o personagem; mouse gira a câmera
     if (!this.input.mobile) this.setCameraMode("third");
 
@@ -277,9 +281,7 @@ class Game {
       }
     }
     this.bindWorldCombatHooks();
-    this.world.onEnemySpawned = (enemy) => {
-      playChefCutscene(this, enemy);
-    };
+    this.world.onEnemySpawned = (enemy) => this.handleEnemySpawned(enemy);
     this.start();
   }
 
@@ -320,9 +322,7 @@ class Game {
     this.tutorial.skip();
     this.refreshTrapUI();
     this.bindWorldCombatHooks();
-    this.world.onEnemySpawned = (enemy) => {
-      playChefCutscene(this, enemy);
-    };
+    this.world.onEnemySpawned = (enemy) => this.handleEnemySpawned(enemy);
     this.demoBot = new DemoBot(this);
     this.start();
     this.setDemoBanner(true);
@@ -878,6 +878,7 @@ class Game {
 
     this.pet?.dispose?.();
     this.pet = null;
+    this.speech?.clear();
     if (diffOpts?.mapMode) this.mapMode = diffOpts.mapMode === "random" ? "random" : "classic";
     this.world = new World(this.scene, {
       seed,
@@ -896,6 +897,7 @@ class Game {
     this._saciCutDone = false;
     this._trexCutDone = false;
     this.setCameraMode(this.cameraMode);
+    this.speech?.syncPlayer(this.player);
     this.initSurvival();
     if (diffOpts) {
       this.setDifficulty(diffOpts.difficulty || this.difficultyId, {
@@ -963,6 +965,7 @@ class Game {
       onGesture: () => this.ambience.unlockFromGesture(),
     });
     applySkinToPlayer(this.player, skinId);
+    this.speech?.syncPlayer(this.player);
     this.hud.showMsg(`Skin: ${CONFIG.skins[skinId]?.name || skinId}`, 2200);
     this.overlay.hidden = false;
   }
@@ -1135,9 +1138,7 @@ class Game {
     this._freezingWarned = false;
 
     this.world.onEnemyAttack = (dmg, dir, enemy) => this.onEnemyAttack(dmg, dir, enemy);
-    this.world.onEnemySpawned = (enemy) => {
-      playChefCutscene(this, enemy);
-    };
+    this.world.onEnemySpawned = (enemy) => this.handleEnemySpawned(enemy);
     this.world.onEnemyEvent = (ev, enemy) => {
       if (ev === "growl") {
         this.ambience.growl();
@@ -2669,6 +2670,8 @@ class Game {
       this.hud.showMsg("O husky farejou algo próximo…", 2200);
     }
 
+    this.updateSpeechBalloons(dt);
+
     this.updateInteractions(dt);
     this.updateSurvival(dt, night);
     this.updateEnemyHud();
@@ -3088,6 +3091,42 @@ class Game {
     const e = this.world.nearestHostile(this.player.position, 28);
     if (e) this.hud.setEnemy(e.label, e.hp, e.maxHp);
     else this.hud.setEnemy(null);
+  }
+
+  handleEnemySpawned(enemy) {
+    playChefCutscene(this, enemy);
+    if (enemy?.type === "robertson" && this.state === "playing") {
+      this.hud.showMsg(`${enemy.label}: “${robertsonSpawnLine()}”`, 3600);
+    }
+  }
+
+  /** Balões de fala seguem o jogador, o parceiro co-op e os NPCs (conversa aleatória). */
+  updateSpeechBalloons(dt) {
+    if (!this.speech || this.state !== "playing") return;
+    this.speech.syncPlayer(this.player);
+    const remotes = this.coop?.remotes;
+    const aliveRemote = new Set();
+    if (remotes?.size) {
+      for (const [peerId, remote] of remotes) {
+        const id = `remote:${peerId}`;
+        aliveRemote.add(id);
+        this.speech.track(id, {
+          skinId: remote.skinId || "natan",
+          offsetY: 2.45,
+          getPosition: () => remote.position,
+          getVisible: () => !!remote.mesh?.visible,
+        });
+      }
+    }
+    for (const id of [...this.speech.speakers.keys()]) {
+      if (id.startsWith("remote") && !aliveRemote.has(id)) this.speech.untrack(id);
+    }
+    this.speech.syncEnemies(this.world?.enemies, {
+      allCharacters: true,
+      playerPos: this.player.position,
+      maxDist: 40,
+    });
+    this.speech.update(dt);
   }
 
   drawMinimap() {

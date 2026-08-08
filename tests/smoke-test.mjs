@@ -45,9 +45,13 @@ try {
   }
   console.log("Enemies OK —", world.enemies.length, "elite hp:", world.bear?.hp, world.bear?.state);
   const types = new Set(world.enemies.map((e) => e.type));
-  for (const t of ["bear_minion", "bear_elite", "wolf", "werewolf", "mula", "slender", "chuck"]) {
+  for (const t of ["bear_minion", "bear_elite", "wolf", "werewolf", "mula", "slender", "chuck", "robertson"]) {
     if (!types.has(t)) throw new Error(`inimigo ausente: ${t}`);
   }
+  if (!CONFIG.skins.robertson) throw new Error("skin robertson ausente");
+  if (CONFIG.enemies.robertson?.ai !== "brawler") throw new Error("robertson deveria ser brawler");
+  player.applySkin("robertson");
+  if (player.skinId !== "robertson") throw new Error("applySkin robertson falhou");
   // ptero é spawn atrasado / raro — força um agora
   const ptero = world.spawnEnemyNow("ptero");
   if (!ptero || ptero.type !== "ptero") throw new Error("ptero não spawnou");
@@ -133,7 +137,17 @@ try {
   a.fightRival(0.016, 1, b, 1, {});
   if (b.hp >= hpBefore) throw new Error("NPC deveria ferir outro NPC");
 
-  console.log("Arsenal + skins + traps + drops + NPC fight OK");
+  // Robertson briga com todo mundo (prioridade a rivais)
+  let rob = world.enemies.find((e) => e.type === "robertson" && e.alive);
+  if (!rob) rob = world.spawnEnemyNow("robertson");
+  const victim = world.spawnEnemyNow("wolf");
+  const vHp = victim.hp;
+  rob.attackCd = 0;
+  rob.mesh.position.copy(victim.mesh.position);
+  rob.updateBrawler(0.016, 1, player.position, 50, 1, {});
+  if (victim.hp >= vHp) throw new Error("Robertson deveria atacar outro NPC");
+
+  console.log("Arsenal + skins + traps + drops + NPC fight + Robertson OK");
 
   // minimapa orientado ao player: frente = cima na tela (mesma fórmula de drawMinimap)
   const mapToScreen = (px, pz, x, z, yaw, S = 180, viewRange = 72) => {
