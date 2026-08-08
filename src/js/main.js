@@ -2182,16 +2182,7 @@ class Game {
       const mul = season?.fogDensityMul ?? 1;
       let near = this._baseFogNear / mul;
       let far = this._baseFogFar / Math.sqrt(mul);
-      // perto da “costura” do globo: névoa aperta para não ver o abismo preto
-      const half = this.world?.half ?? 120;
-      const px = this.player?.position?.x ?? 0;
-      const pz = this.player?.position?.z ?? 0;
-      const edgeDist = Math.min(half - Math.abs(px), half - Math.abs(pz));
-      if (edgeDist < 55) {
-        const t = Math.max(0, edgeDist) / 55;
-        far = Math.min(far, 38 + t * 55);
-        near = Math.min(near, far * 0.35);
-      }
+      // toro contínuo: sem “névoa de borda” (não há fim do mapa)
       this.scene.fog.near = near;
       this.scene.fog.far = far;
     }

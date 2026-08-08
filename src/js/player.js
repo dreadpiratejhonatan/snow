@@ -433,11 +433,9 @@ export class Player {
       this.onGround = false;
     }
 
-    // 1) movimento horizontal
+    // 1) movimento horizontal — coords contínuas (toro visual sem teleporte)
     this.position.x += this.velocity.x * dt;
     this.position.z += this.velocity.z * dt;
-    // globo: sai por um lado → entra pelo outro (dungeon usa paredes próprias)
-    if (!this.world.dungeonActive) this.world.wrapToBounds(this.position);
 
     // 2) step-up / paredes (antes da gravidade, senão “desce” no mesmo frame)
     const stepped = this.world.collide(this.position, cfg.radius, cfg.stepHeight);

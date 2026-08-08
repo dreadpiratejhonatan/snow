@@ -13,7 +13,7 @@ try {
   const world = new World(scene);
   console.log("World OK — colliders:", world.colliders.length, "trees:", world.trees.length);
 
-  // Globo: atravessar a borda envolve para o lado oposto
+  // Globo/toro: utilitário lógico ainda envolve; o jogador anda contínuo (sem teleporte)
   const edge = { x: world.half + 3, y: 0, z: 10 };
   world.wrapToBounds(edge);
   if (!(edge.x < 0)) throw new Error("wrapToBounds deveria passar +X para -X");
@@ -22,6 +22,12 @@ try {
     { x: -world.half + 1, z: 0 }
   );
   if (!(seam < 3.5)) throw new Error(`wrapDistXZ na costura deveria ser ~2, veio ${seam}`);
+  if (!world.terrainTiles || world.terrainTiles.length < 9) {
+    throw new Error("torus: terreno deveria ter grid 3×3");
+  }
+  if (!world.campfire || !world.baseGroup) {
+    throw new Error("torus: campfire/baseGroup precisam existir p/ apresentar na costura");
+  }
   console.log("World wrap (globe) OK — seam dist:", seam.toFixed(2));
 
   const camera = new THREE.PerspectiveCamera(75, 1.6, 0.1, 500);
@@ -384,6 +390,43 @@ try {
   for (let i = 0; i < 60; i++) {
     world.update(0.016, i * 0.016, 0.5, 0.1, player.position);
   }
+
+  // Toro orgânico: atravessar +half sem teleporte; tiles recentram sob o jogador
+  const seamX0 = world.half - 2;
+  player.position.set(seamX0, world.groundHeight(seamX0, 5), 5);
+  const xBefore = player.position.x;
+  for (let i = 0; i < 50; i++) {
+    player.position.x += 1.2;
+    world.collide(player.position, CONFIG.player.radius, CONFIG.player.stepHeight);
+    player.position.y = world.supportHeight(
+      player.position.x,
+      player.position.z,
+      player.position.y,
+      CONFIG.player.radius,
+      CONFIG.player.stepHeight
+    );
+    world.update(0.016, i * 0.016, 0.2, 0.1, player.position);
+  }
+  if (!(player.position.x > xBefore + 40) || !(player.position.x > world.half + 20)) {
+    throw new Error(
+      `torus: jogador deveria seguir contínuo além de +half (x=${player.position.x.toFixed(1)})`
+    );
+  }
+  const expectOx = Math.round(player.position.x / world.size) * world.size;
+  if (world._torusTileOx !== expectOx) {
+    throw new Error(
+      `torus: tiles X=${world._torusTileOx} deveriam recentrar em ${expectOx}`
+    );
+  }
+  // árvore apresentada perto do jogador (imagem do toro), não teleportada com o body
+  if (world.trees.length) {
+    const t = world.trees[0];
+    const d = Math.hypot(t.position.x - player.position.x, t.position.z - player.position.z);
+    if (d > world.half + 20) {
+      throw new Error(`torus: árvore deveria aparecer perto do jogador (d=${d.toFixed(1)})`);
+    }
+  }
+  console.log("Torus seamless OK — player x:", player.position.x.toFixed(1), "tileOx:", world._torusTileOx);
   console.log("SMOKE OK — pos final:", player.position.toArray().map((n) => n.toFixed(2)).join(", "));
 } catch (err) {
   console.error("SMOKE FAIL:", err);

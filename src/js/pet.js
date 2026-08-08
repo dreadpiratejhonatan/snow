@@ -86,7 +86,7 @@ export class HuskyPet {
       const nz = playerPos.z + (dz / (dist || 1)) * follow;
       this.pos.x += (nx - this.pos.x) * Math.min(1, dt * speed);
       this.pos.z += (nz - this.pos.z) * Math.min(1, dt * speed);
-      this.world.wrapToBounds(this.pos);
+      // segue o jogador em coords contínuas (sem teleporte na costura)
     }
     const gy = this.world.groundHeight(this.pos.x, this.pos.z);
     this.pos.y = gy;
