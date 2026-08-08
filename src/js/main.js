@@ -2052,6 +2052,10 @@ class Game {
     v.groundTintMul = lerp(cur.groundTintMul ?? 0, nxt.groundTintMul ?? 0);
     v.leafTintMul = lerp(cur.leafTintMul ?? 0, nxt.leafTintMul ?? 0);
     v.grassTintMul = lerp(cur.grassTintMul ?? 0, nxt.grassTintMul ?? 0);
+    v.windMul = lerp(cur.windMul ?? 1, nxt.windMul ?? 1);
+    v.rainMul = lerp(cur.rainMul ?? 0, nxt.rainMul ?? 0);
+    v.flowerMul = lerp(cur.flowerMul ?? 0, nxt.flowerMul ?? 0);
+    v.sandMul = lerp(cur.sandMul ?? 0, nxt.sandMul ?? 0);
     lerpHex(v.iceColor, cur.iceColor, nxt.iceColor);
     lerpHex(v.fogTint, cur.fogTint, nxt.fogTint);
     lerpHex(v.groundTint, cur.groundTint, nxt.groundTint);
@@ -2201,7 +2205,7 @@ class Game {
       this.hemi.color.lerp(this._tmpColorB.copy(this._tmpColorA), 0.12);
     }
 
-    this.hud.updateTime(this.dayTime, night, season);
+    this.hud.updateTime(this.dayTime, night, season, this._weather);
     return night;
   }
 
@@ -2904,9 +2908,19 @@ class Game {
     this.coop?.tick(dt);
 
     const night = this.updateDayNight(dt);
+    this.worldEvents?.update(dt, this, night);
+    const wx =
+      this.worldEvents?.ambient?.(this, night) || {
+        rain: 0,
+        sand: 0,
+        wind: this._seasonVisual?.windMul ?? 1,
+        snowBoost: 0,
+      };
+    this._weather = wx;
+    this.world.setWeather?.(wx);
+    this.hud.updateTime(this.dayTime, night, this._seasonVisual, wx);
     this.world.update(dt, this.elapsed, night, this.duskF, this.player.position);
     this.dungeon?.update(dt, this);
-    this.worldEvents?.update(dt, this, night);
     this.pet?.update(dt, this.player.position);
     if (this.pet?.justSniffed) {
       this.hud.showMsg("O husky farejou algo próximo…", 2200);
@@ -2937,6 +2951,12 @@ class Game {
       bearChasing: threat.chasing,
       bearDist: threat.dist,
       lowHealth: this.health < 35 && !this.ended,
+      seasonId: this._seasonVisual?.id || this.getSeason()?.id,
+      snowMul: this._seasonVisual?.snowMul ?? 0,
+      rain: wx.rain || 0,
+      sand: wx.sand || 0,
+      wind: wx.wind || 1,
+      weather: wx.type || null,
     });
 
     this.input.endFrame();

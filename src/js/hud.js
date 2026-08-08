@@ -63,15 +63,17 @@ export class HUD {
     });
   }
 
-  updateTime(dayTime, night, season = null) {
+  updateTime(dayTime, night, season = null, weather = null) {
     if (!this.timeEl) return;
     const totalMinutes = ((dayTime * 24 + 6) % 24) * 60;
     const hh = String(Math.floor(totalMinutes / 60)).padStart(2, "0");
     const mm = String(Math.floor(totalMinutes % 60)).padStart(2, "0");
     const icon = night > 0.5 ? "🌙" : "🌞";
     const seasonBit = season?.icon ? ` ${season.icon}` : "";
-    this.timeEl.textContent = `${icon} ${hh}:${mm}${seasonBit}`;
-    if (season?.label) this.timeEl.title = season.label;
+    const weatherBit = weather?.icon ? ` ${weather.icon}` : "";
+    this.timeEl.textContent = `${icon} ${hh}:${mm}${seasonBit}${weatherBit}`;
+    const bits = [season?.label, weather?.label].filter(Boolean);
+    if (bits.length) this.timeEl.title = bits.join(" · ");
   }
 
   updateCameraMode(mode, { facingFront = false } = {}) {

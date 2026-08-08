@@ -375,6 +375,39 @@ try {
   }
   console.log("Season ground OK — summer green / winter snow");
 
+  // clima imersivo: flores / chuva / areia / vento por estação
+  const spring = CONFIG.world.seasons.find((s) => s.id === "spring");
+  if (!(spring?.flowerMul > 0.5) || !(spring?.rainMul > 0.2)) {
+    throw new Error("season: primavera deveria ter flores e chuva");
+  }
+  if (!(summer?.sandMul > 0.3) || !(winter?.windMul > 1)) {
+    throw new Error("season: verão areia / inverno vento ausentes");
+  }
+  world.applySeason(spring, { recolorTerrain: false });
+  if (!world.flowers || !world.rain || !world.sand) {
+    throw new Error("world: flowers/rain/sand deveriam existir");
+  }
+  if (!world.flowers.visible) {
+    throw new Error("season: flores deveriam aparecer na primavera");
+  }
+  world.setWeather({ rain: 0.8, sand: 0, wind: 1.2, snowBoost: 0 });
+  world.updateRainfall(0.05, 1, { x: 0, y: 4, z: 0 });
+  if (!world.rain.visible || world.rain.material.opacity < 0.3) {
+    throw new Error("weather: chuva deveria ficar visível com rain=0.8");
+  }
+  world.setWeather({ rain: 0, sand: 0.9, wind: 1.8, snowBoost: 0 });
+  world.updateSandstorm(0.05, 1, { x: 0, y: 4, z: 0 });
+  if (!world.sand.visible) {
+    throw new Error("weather: areia deveria ficar visível com sand=0.9");
+  }
+  const { WorldEvents } = await import("../src/js/worldEvents.js");
+  const wxEv = new WorldEvents();
+  const ambSpring = wxEv.ambient({ _seasonVisual: spring }, 0.1);
+  if (!(ambSpring.rain > 0.05) || !(ambSpring.wind > 0.3)) {
+    throw new Error("weather: ambient primavera deveria ter garoa/vento");
+  }
+  console.log("Immersive weather OK — flowers/rain/sand/ambient");
+
   // sussurros Bebe bebe (clips filtrados pt-BR)
   const fs = await import("node:fs");
   const whisperMan = JSON.parse(fs.readFileSync("music/whispers/manifest.json", "utf8"));
