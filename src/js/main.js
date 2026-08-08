@@ -3128,7 +3128,8 @@ class Game {
       if (id.startsWith("remote") && !aliveRemote.has(id)) this.speech.untrack(id);
     }
     this.speech.syncEnemies(this.world?.enemies, {
-      allCharacters: true,
+      // só personagens (Robertson etc.) — fauna quieta, balões espaçados
+      allCharacters: false,
       playerPos: this.player.position,
       maxDist: 40,
     });

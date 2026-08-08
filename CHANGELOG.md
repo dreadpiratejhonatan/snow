@@ -28,10 +28,12 @@ Primeira versão **oficial** (`release/v1.0`, tag `v1.0.0`).
 
 ## [Unreleased]
 
-Trabalho na branch `develop` após `v1.0.0` (cache **`gh96`**).  
+Trabalho na branch `develop` após `v1.0.0` (cache **`gh97`**).  
 Resumo narrativo: [`docs/DEVELOP-ATE-GH63.md`](docs/DEVELOP-ATE-GH63.md) · [`DEVELOP-GH64-ATE-GH73.md`](docs/DEVELOP-GH64-ATE-GH73.md).
 
 ### Changed
+- **Balões de fala (gh97)**: intervalos aleatórios médios/longos (espaçados); no máximo um balão por vez; fauna para de spammar
+- **Sussurros (gh97)**: também mais espaçados (vies longo)
 - **Sussurros (gh96)**: texto/áudio corrigidos para **“Bebe, bebe”** (português do Brasil)
 
 ### Added
