@@ -545,10 +545,6 @@ html.demo-boot #splash {
   }
 }
 
-/* “Continuar” um pouco mais legível no fundo escuro */
-.splash__skip {
-  color: rgba(210, 225, 238, 0.72);
-}
 
 .menu[hidden],
 .overlay[hidden],
