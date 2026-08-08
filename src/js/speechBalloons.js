@@ -273,14 +273,19 @@ export class SpeechBalloonSystem {
    * Balões nos NPCs-personagem (skinId / talks).
    * Fauna fica quieta — evita spam de balões “no relógio”.
    */
-  syncEnemies(enemies, { allCharacters = false, playerPos = null, maxDist = 42 } = {}) {
+  syncEnemies(
+    enemies,
+    { allCharacters = false, playerPos = null, maxDist = 42, distFn = null } = {}
+  ) {
     const alive = new Set();
+    const measure =
+      distFn || ((a, b) => (a && b ? a.distanceTo(b) : Infinity));
     for (const e of enemies || []) {
       if (!e?.alive || !e.mesh) continue;
       const isChar = !!(e.cfg?.talks || e.cfg?.skinId);
       if (!isChar && !allCharacters) continue;
       if (playerPos && maxDist > 0) {
-        const d = e.mesh.position.distanceTo(playerPos);
+        const d = measure(e.mesh.position, playerPos);
         const limit = isChar ? maxDist * 1.35 : maxDist;
         if (d > limit) continue;
       }

@@ -15,6 +15,10 @@ Documentação completa: [`docs/V1-OFICIAL.md`](docs/V1-OFICIAL.md) · Tag Git: 
 ### [gh95] — Sussurros no vento (8 ago 2026)
 - Quatro áudios místicos filtrados sussurram ao acaso enquanto você joga
 
+### [gh100] — Mapa como globo (8 ago 2026)
+- O mapa **não tem parede no fim**: atravessar a borda leva ao lado oposto (topologia de esfera/globo)
+- Névoa aperta perto da costura (some o abismo preto); inimigos, loot e minimapa acompanham
+
 ### [gh99] — Voltar a jogar + convite co-op (8 ago 2026)
 - **Continuar expedição** aparece logo após a splash (sem refazer menus)
 - Última skin / dificuldade / mapa lembradas para um toque

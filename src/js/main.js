@@ -1320,7 +1320,7 @@ class Game {
   tryCraftFence() {
     const fire = this.world.campfirePos;
     if (!fire) return;
-    const dist = this.player.position.distanceTo(fire);
+    const dist = this.world.wrapDistXZ(this.player.position, fire);
     if (dist > (CONFIG.trapPlaceMaxDist || 35)) {
       this.hud.showMsg("Craft só perto da fogueira da base.", 2200);
       return;
@@ -1385,7 +1385,7 @@ class Game {
       return;
     }
     const maxD = CONFIG.trapPlaceMaxDist || 35;
-    const fireDist = this.player.position.distanceTo(this.world.campfirePos);
+    const fireDist = this.world.wrapDistXZ(this.player.position, this.world.campfirePos);
     if (fireDist > maxD) {
       this.hud.showMsg("Armadilhas só perto da base (fogueira).", 2600);
       return;
@@ -2049,8 +2049,20 @@ class Game {
     }
     if (this.scene.fog && this._baseFogNear != null) {
       const mul = season?.fogDensityMul ?? 1;
-      this.scene.fog.near = this._baseFogNear / mul;
-      this.scene.fog.far = this._baseFogFar / Math.sqrt(mul);
+      let near = this._baseFogNear / mul;
+      let far = this._baseFogFar / Math.sqrt(mul);
+      // perto da “costura” do globo: névoa aperta para não ver o abismo preto
+      const half = this.world?.half ?? 120;
+      const px = this.player?.position?.x ?? 0;
+      const pz = this.player?.position?.z ?? 0;
+      const edgeDist = Math.min(half - Math.abs(px), half - Math.abs(pz));
+      if (edgeDist < 55) {
+        const t = Math.max(0, edgeDist) / 55;
+        far = Math.min(far, 38 + t * 55);
+        near = Math.min(near, far * 0.35);
+      }
+      this.scene.fog.near = near;
+      this.scene.fog.far = far;
     }
     // névoa ganha tom verde-azulado sob a aurora
     if (aurora > 0.05) {
@@ -2796,7 +2808,7 @@ class Game {
       sprint: this.input.sprint,
       onGround: this.player.onGround,
       onIce: this.world.isOnIce(this.player.position.x, this.player.position.z),
-      fireDist: this.player.position.distanceTo(this.world.campfirePos),
+      fireDist: this.world.wrapDistXZ(this.player.position, this.world.campfirePos),
       bearChasing: threat.chasing,
       bearDist: threat.dist,
       lowHealth: this.health < 35 && !this.ended,
@@ -2828,10 +2840,12 @@ class Game {
     }
 
     const item = this.world.nearestItem(p, 2.6);
-    const chestDist = p.distanceTo(this.world.chestPos);
+    const chestDist = this.world.wrapDistXZ(p, this.world.chestPos);
     const gift = this.world.auroraGift;
     const giftNear =
-      gift?.visible && gift.userData.landed && p.distanceTo(gift.position) < 6;
+      gift?.visible &&
+      gift.userData.landed &&
+      this.world.wrapDistXZ(p, gift.position) < 6;
     const useKey = this.input.mobile ? "◉" : "E";
     const caveNear = this.dungeon?.nearEntrance(p);
     // demo bot pulsa E para loot — não deixa ele domar/montar sem querer
@@ -3157,7 +3171,7 @@ class Game {
   updateSurvival(dt, night) {
     if (this.ended) return;
     const s = CONFIG.survival;
-    const fireDist = this.player.position.distanceTo(this.world.campfirePos);
+    const fireDist = this.world.wrapDistXZ(this.player.position, this.world.campfirePos);
 
     if (fireDist < s.fireRadius) {
       this.warmth = Math.min(s.maxWarmth, this.warmth + s.warmthRegen * dt);
@@ -3228,6 +3242,7 @@ class Game {
       allCharacters: false,
       playerPos: this.player.position,
       maxDist: 40,
+      distFn: (a, b) => this.world.wrapDistXZ(a, b),
     });
     this.speech.update(dt);
   }
@@ -3245,10 +3260,9 @@ class Game {
     const cos = Math.cos(yaw);
     const sin = Math.sin(yaw);
 
-    // mundo → tela: player no centro, yaw faz a frente apontar para cima
+    // mundo → tela: player no centro; deltas wrap-aware (globo)
     const toScreen = (x, z) => {
-      const dx = x - p.x;
-      const dz = z - p.z;
+      const { dx, dz } = world.wrapDelta(p.x, p.z, x, z);
       return [S / 2 + (dx * cos - dz * sin) * scale, S / 2 + (dx * sin + dz * cos) * scale];
     };
 
@@ -3258,7 +3272,7 @@ class Game {
     ctx.rect(0, 0, S, S);
     ctx.clip();
 
-    // terreno pré-renderizado, centrado e rotacionado com o olhar
+    // terreno pré-renderizado em grade 3×3 (costura do globo)
     const srcS = world.minimapCanvas.width || S;
     const mapPx = srcS / world.size; // px do canvas-fonte por unidade mundo
     const imgScale = scale / mapPx;
@@ -3268,7 +3282,11 @@ class Game {
     ctx.rotate(yaw);
     ctx.scale(imgScale, imgScale);
     ctx.translate(-ppx, -ppy);
-    ctx.drawImage(world.minimapCanvas, 0, 0);
+    for (let oz = -1; oz <= 1; oz++) {
+      for (let ox = -1; ox <= 1; ox++) {
+        ctx.drawImage(world.minimapCanvas, ox * srcS, oz * srcS);
+      }
+    }
     ctx.restore();
 
     const dot = (x, z, color, r = 3) => {
@@ -3289,7 +3307,7 @@ class Game {
 
     for (const e of world.enemies || []) {
       if (!e.alive) continue;
-      if (e.mesh.position.distanceTo(p) > viewRange * 1.2) continue;
+      if (world.wrapDistXZ(e.mesh.position, p) > viewRange * 1.2) continue;
       const color = e.type === "wolf" ? "#c0c8d0" : e.type === "bear_elite" ? "#ff2020" : "#ff8040";
       dot(e.mesh.position.x, e.mesh.position.z, color, e.type === "bear_elite" ? 5 : 3);
     }

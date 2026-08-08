@@ -1024,7 +1024,7 @@ export class World {
   tryCollectAuroraGift(playerPos) {
     const g = this.auroraGift;
     if (!g?.visible || !g.userData.landed) return false;
-    if (playerPos.distanceTo(g.position) > 2.8) return false;
+    if (this.wrapDistXZ(playerPos, g.position) > 2.8) return false;
     g.visible = false;
     return true;
   }
@@ -1723,7 +1723,7 @@ export class World {
     let bestD = maxDist;
     for (const it of this.items) {
       if (it.collected) continue;
-      const d = playerPos.distanceTo(it.pos);
+      const d = this.wrapDistXZ(playerPos, it.pos);
       if (d < bestD) {
         bestD = d;
         best = it;
@@ -1847,7 +1847,7 @@ export class World {
         }
         pos.needsUpdate = true;
       }
-      if (!it.discovered && playerPos && playerPos.distanceTo(it.pos) < 22) {
+      if (!it.discovered && playerPos && this.wrapDistXZ(playerPos, it.pos) < 22) {
         it.discovered = true;
         this._justDiscovered = it;
       }
@@ -1920,7 +1920,7 @@ export class World {
   updateRabbits(dt, playerPos) {
     for (const r of this.rabbits) {
       const d = r.userData;
-      const distPlayer = playerPos ? r.position.distanceTo(playerPos) : 99;
+      const distPlayer = playerPos ? this.wrapDistXZ(r.position, playerPos) : 99;
       const scared = distPlayer < 4.5;
 
       if (d.state === "idle") {
@@ -1930,7 +1930,8 @@ export class World {
           d.hopT = 0;
           d.speed = scared ? 3.4 : 1.6;
           if (scared && playerPos) {
-            d.dir = Math.atan2(r.position.x - playerPos.x, r.position.z - playerPos.z) + (Math.random() - 0.5) * 0.6;
+            const { dx, dz } = this.wrapDelta(playerPos.x, playerPos.z, r.position.x, r.position.z);
+            d.dir = Math.atan2(dx, dz) + (Math.random() - 0.5) * 0.6;
           } else {
             d.dir = Math.random() * Math.PI * 2;
           }
@@ -1941,9 +1942,9 @@ export class World {
         const nx = r.position.x + Math.sin(d.dir) * d.speed * dt;
         const nz = r.position.z + Math.cos(d.dir) * d.speed * dt;
         const nh = this.getHeight(nx, nz);
-        if (nh > this.waterLevel + 0.5 && Math.abs(nx) < this.bounds && Math.abs(nz) < this.bounds) {
-          r.position.x = nx;
-          r.position.z = nz;
+        if (nh > this.waterLevel + 0.5) {
+          r.position.x = this.wrapCoord(nx);
+          r.position.z = this.wrapCoord(nz);
         } else {
           d.dir += Math.PI;
         }
@@ -2143,7 +2144,7 @@ export class World {
     let bestD = range;
     for (const e of this.enemies) {
       if (!e.alive || e.tamed) continue;
-      const d = e.mesh.position.distanceTo(pos);
+      const d = this.wrapDistXZ(e.mesh.position, pos);
       if (d < bestD) {
         bestD = d;
         best = e;
@@ -2158,7 +2159,7 @@ export class World {
     const hit = [];
     for (const e of this.enemies) {
       if (!e.alive) continue;
-      const d = e.mesh.position.distanceTo(pos);
+      const d = this.wrapDistXZ(e.mesh.position, pos);
       if (d > radius) continue;
       const falloff = 1 - (d / radius) * 0.6;
       this._applyDamage(e, Math.round(dmg * falloff), { from: pos });
@@ -2401,6 +2402,14 @@ export class World {
       const prev = p.mesh.position.clone();
       p.vel.y -= gravity * dt * (p.kind === "grenade" ? 1.3 : 0.55);
       p.mesh.position.addScaledVector(p.vel, dt);
+      // globo: projétil atravessa a costura do mapa
+      let wrappedShot = false;
+      if (!this.dungeonActive) {
+        const ox = p.mesh.position.x;
+        const oz = p.mesh.position.z;
+        this.wrapToBounds(p.mesh.position);
+        wrappedShot = p.mesh.position.x !== ox || p.mesh.position.z !== oz;
+      }
       if (p.kind !== "grenade") {
         const spd = p.vel.length();
         if (spd > 1e-3) {
@@ -2409,8 +2418,8 @@ export class World {
         }
       }
 
-      // cobertura: flecha/granada param em árvore/pedra
-      {
+      // cobertura: flecha/granada param em árvore/pedra (pula no frame da costura)
+      if (!wrappedShot) {
         const travel = new THREE.Vector3().subVectors(p.mesh.position, prev);
         const travelLen = travel.length();
         if (travelLen > 1e-4) {
@@ -2440,7 +2449,7 @@ export class World {
           const center = e.mesh.position.clone();
           center.y += 0.9 * (e.cfg.scale || 1);
           const hitR = 0.9 * (e.cfg.scale || 1) + 0.35;
-          if (p.mesh.position.distanceTo(center) < hitR) {
+          if (this.wrapDist(p.mesh.position, center) < hitR) {
             this._applyDamage(e, p.damage, {
               slowElite: p.slowElite,
               from: p.mesh.position.clone(),
@@ -2712,7 +2721,7 @@ export class World {
     let bestD = maxDist;
     for (const e of this.enemies) {
       if (!e.alive || e.tamed) continue;
-      const d = e.mesh.position.distanceTo(playerPos);
+      const d = this.wrapDistXZ(e.mesh.position, playerPos);
       if (d < bestD) {
         bestD = d;
         best = e;
@@ -2724,7 +2733,7 @@ export class World {
   anyEnemyChasing(playerPos) {
     for (const e of this.enemies) {
       if (e.alive && (e.state === "chase" || e.state === "flee")) {
-        return { chasing: true, dist: e.mesh.position.distanceTo(playerPos) };
+        return { chasing: true, dist: this.wrapDistXZ(e.mesh.position, playerPos) };
       }
     }
     return { chasing: false, dist: 999 };
@@ -2901,7 +2910,7 @@ export class World {
     const cfg = CONFIG.traps[type];
     if (!cfg) return false;
     const maxD = CONFIG.trapPlaceMaxDist || 35;
-    if (this.campfirePos.distanceTo(new THREE.Vector3(x, 0, z)) > maxD) return false;
+    if (this.wrapDistXZ(this.campfirePos, { x, z }) > maxD) return false;
 
     const y = this.groundHeight(x, z);
     const mesh = this.createTrapMesh(type);
@@ -2940,7 +2949,7 @@ export class World {
       let bestD = cfg.lureRadius || 28;
       for (const e of this.enemies) {
         if (!e.alive || e.tamed) continue;
-        const d = e.mesh.position.distanceTo(trap.pos);
+        const d = this.wrapDistXZ(e.mesh.position, trap.pos);
         if (d < bestD) {
           bestD = d;
           best = e;
@@ -2981,7 +2990,7 @@ export class World {
         if (led) led.material.opacity = 0.5 + Math.sin(performance.now() * 0.01) * 0.5;
         for (const e of this.enemies) {
           if (!e.alive || e.tamed) continue;
-          if (e.mesh.position.distanceTo(t.pos) < (t.cfg.triggerRadius || 2.8)) {
+          if (this.wrapDistXZ(e.mesh.position, t.pos) < (t.cfg.triggerRadius || 2.8)) {
             this.explodeAt(t.pos.clone().setY(t.pos.y + 0.5), t.cfg.damage || 70, t.cfg.explodeRadius || 5);
             this.removeTrap(t);
             this.placedTraps.splice(i, 1);
@@ -2999,7 +3008,7 @@ export class World {
         if (Math.random() < dt * 0.4) {
           for (const e of this.enemies) {
             if (!e.alive || e.tamed) continue;
-            if (e.mesh.position.distanceTo(t.pos) < (t.cfg.lureRadius || 28)) {
+            if (this.wrapDistXZ(e.mesh.position, t.pos) < (t.cfg.lureRadius || 28)) {
               e.lurePos = t.pos.clone();
               e.lureTimer = Math.max(e.lureTimer || 0, 4);
               if (e.state === "wander") e.state = "chase";
@@ -3020,9 +3029,59 @@ export class World {
     return new THREE.Vector3(sx, this.groundHeight(sx, sz), sz);
   }
 
+  /**
+   * Mundo em topologia de esfera/globo (toro no plano XZ):
+   * sai por um lado → entra pelo oposto. Sem parede no fim do mapa.
+   */
+  wrapCoord(v) {
+    const s = this.size;
+    const h = this.half;
+    // faixa canônica [-half, half)
+    return ((((v + h) % s) + s) % s) - h;
+  }
+
+  /** Envolve posição no mapa (ignora Y). Sem efeito na dungeon. */
+  wrapToBounds(v) {
+    if (!v || this.dungeonActive) return v;
+    v.x = this.wrapCoord(v.x);
+    v.z = this.wrapCoord(v.z);
+    return v;
+  }
+
+  /** @deprecated use wrapToBounds — mantido p/ saves/docs antigos */
   clampToBounds(v) {
-    v.x = THREE.MathUtils.clamp(v.x, -this.bounds, this.bounds);
-    v.z = THREE.MathUtils.clamp(v.z, -this.bounds, this.bounds);
+    return this.wrapToBounds(v);
+  }
+
+  /**
+   * Delta XZ mais curto entre dois pontos (atravessa a “costura” do globo).
+   * @returns {{ dx: number, dz: number }}
+   */
+  wrapDelta(ax, az, bx, bz) {
+    const s = this.size;
+    const h = this.half;
+    let dx = bx - ax;
+    let dz = bz - az;
+    if (dx > h) dx -= s;
+    else if (dx < -h) dx += s;
+    if (dz > h) dz -= s;
+    else if (dz < -h) dz += s;
+    return { dx, dz };
+  }
+
+  /** Distância horizontal wrap-aware (ou 3D se ambos tiverem y). */
+  wrapDist(a, b) {
+    if (!a || !b) return Infinity;
+    const { dx, dz } = this.wrapDelta(a.x, a.z, b.x, b.z);
+    const dy = (b.y ?? 0) - (a.y ?? 0);
+    return Math.hypot(dx, dz, dy);
+  }
+
+  /** Distância só no plano XZ (aggro / minimapa). */
+  wrapDistXZ(a, b) {
+    if (!a || !b) return Infinity;
+    const { dx, dz } = this.wrapDelta(a.x, a.z, b.x, b.z);
+    return Math.hypot(dx, dz);
   }
 
   /**
