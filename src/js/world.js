@@ -1448,11 +1448,11 @@ export class World {
 
   _addLootGlow(g, color, r = 0.48) {
     const glow = new THREE.Mesh(
-      new THREE.CircleGeometry(r, 20),
+      new THREE.CircleGeometry(r, 22),
       new THREE.MeshBasicMaterial({
         color: color ?? 0xa8d0e8,
         transparent: true,
-        opacity: 0.32,
+        opacity: 0.42,
         depthWrite: false,
         blending: THREE.AdditiveBlending,
       })
@@ -1460,7 +1460,22 @@ export class World {
     glow.rotation.x = -Math.PI / 2;
     glow.position.y = 0.015;
     glow.userData.isGlow = true;
-    g.add(glow);
+    // halo externo suave
+    const halo = new THREE.Mesh(
+      new THREE.RingGeometry(r * 0.92, r * 1.35, 28),
+      new THREE.MeshBasicMaterial({
+        color: color ?? 0xa8d0e8,
+        transparent: true,
+        opacity: 0.18,
+        side: THREE.DoubleSide,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+      })
+    );
+    halo.rotation.x = -Math.PI / 2;
+    halo.position.y = 0.018;
+    halo.userData.isGlow = true;
+    g.add(glow, halo);
     g.userData.glow = glow;
     return glow;
   }
@@ -2464,7 +2479,8 @@ export class World {
       }
     }
 
-    if (!(bestT > 0.5)) bestT = Math.min(maxDist, 40);
+    // perto demais: mantém o ponto no raio (não joga a mira para 40m)
+    if (!(bestT > 0.15)) bestT = Math.min(maxDist, 12);
     return origin.clone().addScaledVector(d, bestT);
   }
 
@@ -2527,17 +2543,68 @@ export class World {
   }) {
     let mesh;
     if (kind === "grenade") {
-      mesh = new THREE.Mesh(
-        new THREE.SphereGeometry(0.12, 8, 6),
-        new THREE.MeshStandardMaterial({ color: 0x3a4a34, roughness: 0.8 })
+      mesh = new THREE.Group();
+      const body = new THREE.Mesh(
+        new THREE.SphereGeometry(0.13, 10, 8),
+        new THREE.MeshStandardMaterial({
+          color: 0x3a4a34,
+          roughness: 0.55,
+          metalness: 0.45,
+          map: this.tex?.metal || null,
+        })
       );
+      const band = new THREE.Mesh(
+        new THREE.TorusGeometry(0.1, 0.018, 6, 12),
+        new THREE.MeshStandardMaterial({ color: 0x8a9a4a, roughness: 0.5, metalness: 0.6 })
+      );
+      band.rotation.x = Math.PI / 2;
+      const pin = new THREE.Mesh(
+        new THREE.TorusGeometry(0.045, 0.01, 4, 8),
+        new THREE.MeshStandardMaterial({ color: 0xc8c0a0, metalness: 0.8, roughness: 0.3 })
+      );
+      pin.position.y = 0.12;
+      mesh.add(body, band, pin);
     } else {
-      mesh = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.02, 0.02, 0.55, 5),
-        new THREE.MeshStandardMaterial({ color: 0xc8b48a, roughness: 0.9 })
+      // flecha: haste + ponta + penas
+      mesh = new THREE.Group();
+      const shaft = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.016, 0.018, 0.62, 6),
+        new THREE.MeshStandardMaterial({
+          color: 0xc4a06a,
+          roughness: 0.85,
+          map: this.tex?.plank || null,
+        })
       );
-      // aponta o eixo Y do cilindro na direção do voo
-      mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
+      const tip = new THREE.Mesh(
+        new THREE.ConeGeometry(0.035, 0.12, 6),
+        new THREE.MeshStandardMaterial({
+          color: 0xb8c4d0,
+          roughness: 0.3,
+          metalness: 0.75,
+          map: this.tex?.metal || null,
+        })
+      );
+      tip.position.y = 0.37;
+      const nock = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.02, 0.014, 0.06, 5),
+        new THREE.MeshStandardMaterial({ color: 0x5a3a22, roughness: 0.9 })
+      );
+      nock.position.y = -0.32;
+      const featherMat = new THREE.MeshStandardMaterial({
+        color: 0xd85a3a,
+        roughness: 0.7,
+        side: THREE.DoubleSide,
+      });
+      for (let i = 0; i < 3; i++) {
+        const a = (i / 3) * Math.PI * 2;
+        const feather = new THREE.Mesh(new THREE.PlaneGeometry(0.08, 0.16), featherMat);
+        feather.position.set(Math.cos(a) * 0.03, -0.22, Math.sin(a) * 0.03);
+        feather.rotation.y = a;
+        feather.rotation.x = 0.35;
+        mesh.add(feather);
+      }
+      mesh.add(shaft, tip, nock);
+      mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.clone().normalize());
     }
     mesh.position.copy(pos);
     this.scene.add(mesh);
@@ -2551,7 +2618,25 @@ export class World {
       slowElite,
       ttl: Math.max(1.5, ttl),
       resting: false,
+      trail: kind === "arrow" ? this._makeArrowTrail(pos) : null,
     });
+  }
+
+  _makeArrowTrail(pos) {
+    const geo = new THREE.BufferGeometry();
+    const n = 8;
+    const arr = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) arr.set([pos.x, pos.y, pos.z], i * 3);
+    geo.setAttribute("position", new THREE.BufferAttribute(arr, 3));
+    const mat = new THREE.LineBasicMaterial({
+      color: 0xffe0a8,
+      transparent: true,
+      opacity: 0.55,
+      depthWrite: false,
+    });
+    const line = new THREE.Line(geo, mat);
+    this.scene.add(line);
+    return { mesh: line, pts: arr, n, i: 0 };
   }
 
   explodeAt(pos, dmg, radius) {
@@ -2567,6 +2652,16 @@ export class World {
     this.onExplosion?.(pos);
   }
 
+  _disposeProjectile(p) {
+    if (p?.trail?.mesh) {
+      this.scene.remove(p.trail.mesh);
+      p.trail.mesh.geometry?.dispose?.();
+      p.trail.mesh.material?.dispose?.();
+      p.trail = null;
+    }
+    if (p?.mesh) this.scene.remove(p.mesh);
+  }
+
   updateProjectiles(dt) {
     const gravity = 14;
     for (let i = this.projectiles.length - 1; i >= 0; i--) {
@@ -2576,20 +2671,21 @@ export class World {
         p.fuse -= dt;
         if (p.fuse <= 0) {
           this.explodeAt(p.mesh.position.clone(), p.damage, p.explodeRadius || 5);
-          this.scene.remove(p.mesh);
+          this._disposeProjectile(p);
           this.projectiles.splice(i, 1);
           continue;
         }
       }
       if (p.ttl <= 0) {
-        this.scene.remove(p.mesh);
+        this._disposeProjectile(p);
         this.projectiles.splice(i, 1);
         continue;
       }
       if (p.resting) continue;
 
       const prev = p.mesh.position.clone();
-      p.vel.y -= gravity * dt * (p.kind === "grenade" ? 1.3 : 0.55);
+      // flecha quase reta (mira = impacto); granada mantém arco
+      p.vel.y -= gravity * dt * (p.kind === "grenade" ? 1.3 : 0.06);
       p.mesh.position.addScaledVector(p.vel, dt);
       // projétil em coords contínuas (mesmo espaço do jogador — sem teleporte)
       if (p.kind !== "grenade") {
@@ -2597,6 +2693,15 @@ export class World {
         if (spd > 1e-3) {
           const dirN = p.vel.clone().multiplyScalar(1 / spd);
           p.mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dirN);
+        }
+        if (p.trail?.pts) {
+          const t = p.trail;
+          const idx = (t.i % t.n) * 3;
+          t.pts[idx] = p.mesh.position.x;
+          t.pts[idx + 1] = p.mesh.position.y;
+          t.pts[idx + 2] = p.mesh.position.z;
+          t.i++;
+          t.mesh.geometry.attributes.position.needsUpdate = true;
         }
       }
 
@@ -2612,13 +2717,19 @@ export class World {
             if (coverHit) p.mesh.position.copy(prev).addScaledVector(tdir, Math.max(0.05, stopDist - 0.05));
             if (p.kind === "grenade") {
               this.explodeAt(p.mesh.position.clone(), p.damage, p.explodeRadius || 5);
-              this.scene.remove(p.mesh);
+              this._disposeProjectile(p);
               this.projectiles.splice(i, 1);
               continue;
             }
             p.resting = true;
             p.ttl = Math.min(p.ttl, 2.5);
             p.vel.set(0, 0, 0);
+            if (p.trail?.mesh) {
+              this.scene.remove(p.trail.mesh);
+              p.trail.mesh.geometry?.dispose?.();
+              p.trail.mesh.material?.dispose?.();
+              p.trail = null;
+            }
             continue;
           }
         }
@@ -2637,7 +2748,7 @@ export class World {
               from: p.mesh.position.clone(),
             });
             this.onProjectileHit?.(e);
-            this.scene.remove(p.mesh);
+            this._disposeProjectile(p);
             this.projectiles.splice(i, 1);
             break;
           }
@@ -2811,77 +2922,197 @@ export class World {
       color: color ?? 0xc8d0d8,
       map: T.metal || null,
       bumpMap: T.metalBump || null,
-      bumpScale: 0.06,
-      roughness: 0.35,
-      metalness: 0.65,
+      bumpScale: 0.08,
+      roughness: 0.28,
+      metalness: 0.72,
       emissive: color ?? 0xc8d0d8,
-      emissiveIntensity: 0.22,
+      emissiveIntensity: 0.28,
     });
     const wood = new THREE.MeshStandardMaterial({
-      color: 0x6b4423,
+      color: 0x7a5230,
       map: T.plank || T.crate || null,
       bumpMap: T.plankBump || T.crateBump || null,
-      bumpScale: 0.08,
-      roughness: 0.9,
+      bumpScale: 0.1,
+      roughness: 0.88,
       metalness: 0.05,
+    });
+    const dark = new THREE.MeshStandardMaterial({
+      color: 0x2a2a32,
+      roughness: 0.55,
+      metalness: 0.45,
+      map: T.metal || null,
+    });
+    const leather = new THREE.MeshStandardMaterial({
+      color: 0x5a3a24,
+      roughness: 0.92,
+      map: T.cloth || T.plank || null,
     });
     const w = CONFIG.weapons[weaponId];
     const fire = w?.fire;
-    if (fire === "hitscan" || weaponId === "ak47" || weaponId === "revolver" || weaponId === "shotgun") {
-      const body = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.14, 0.55), mat);
-      body.position.y = 0.2;
-      const stock = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.12, 0.22), wood);
-      stock.position.set(0, 0.18, -0.28);
-      const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.45, 6), mat);
+    if (weaponId === "revolver") {
+      const frame = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.14, 0.38), dark);
+      frame.position.set(0, 0.22, 0.05);
+      const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.032, 0.38, 8), mat);
       barrel.rotation.x = Math.PI / 2;
-      barrel.position.set(0, 0.24, 0.4);
-      g.add(body, stock, barrel);
-    } else if (fire === "projectile" || weaponId === "bow" || weaponId === "crossbow") {
-      const limb = new THREE.Mesh(new THREE.TorusGeometry(0.32, 0.035, 6, 14, Math.PI), wood);
-      limb.rotation.y = Math.PI / 2;
-      limb.position.y = 0.4;
-      // glow azulado sutil nas cordas
+      barrel.position.set(0, 0.26, 0.32);
+      const cyl = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.11, 10), mat);
+      cyl.rotation.z = Math.PI / 2;
+      cyl.position.set(0, 0.2, 0.08);
+      const grip = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.16, 0.1), wood);
+      grip.position.set(0, 0.1, -0.12);
+      grip.rotation.x = 0.35;
+      g.add(frame, barrel, cyl, grip);
+    } else if (weaponId === "shotgun") {
+      const stock = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.14, 0.32), wood);
+      stock.position.set(0, 0.18, -0.28);
+      const body = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, 0.4), dark);
+      body.position.set(0, 0.22, 0.08);
+      for (const sx of [-0.035, 0.035]) {
+        const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.03, 0.55, 7), mat);
+        barrel.rotation.x = Math.PI / 2;
+        barrel.position.set(sx, 0.26, 0.42);
+        g.add(barrel);
+      }
+      const band = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.06, 0.08), leather);
+      band.position.set(0, 0.2, -0.05);
+      g.add(stock, body, band);
+    } else if (fire === "hitscan" || weaponId === "ak47") {
+      const body = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.15, 0.52), dark);
+      body.position.set(0, 0.22, 0.1);
+      const stock = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.12, 0.26), wood);
+      stock.position.set(0, 0.18, -0.28);
+      const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.034, 0.5, 8), mat);
+      barrel.rotation.x = Math.PI / 2;
+      barrel.position.set(0, 0.26, 0.48);
+      const sight = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.06, 0.04), mat);
+      sight.position.set(0, 0.32, 0.28);
+      g.add(body, stock, barrel, sight);
+      if (weaponId === "ak47") {
+        const mag = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.26, 0.1), dark);
+        mag.position.set(0, 0.05, 0.12);
+        mag.rotation.x = 0.28;
+        const handguard = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.08, 0.22), wood);
+        handguard.position.set(0, 0.22, 0.32);
+        g.add(mag, handguard);
+      }
+    } else if (weaponId === "crossbow") {
+      const stock = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, 0.55), wood);
+      stock.position.set(0, 0.18, 0.05);
+      const limbs = new THREE.Mesh(new THREE.BoxGeometry(0.78, 0.05, 0.07), mat);
+      limbs.position.set(0, 0.26, 0.28);
       const string = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.01, 0.01, 0.6, 4),
+        new THREE.CylinderGeometry(0.008, 0.008, 0.72, 4),
+        new THREE.MeshStandardMaterial({ color: 0xe8e0d0, emissive: 0x605040, emissiveIntensity: 0.2 })
+      );
+      string.rotation.z = Math.PI / 2;
+      string.position.set(0, 0.26, 0.22);
+      const bolt = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.45, 5), wood);
+      bolt.rotation.x = Math.PI / 2;
+      bolt.position.set(0, 0.28, 0.4);
+      const tip = new THREE.Mesh(new THREE.ConeGeometry(0.025, 0.08, 5), mat);
+      tip.rotation.x = Math.PI / 2;
+      tip.position.set(0, 0.28, 0.62);
+      g.add(stock, limbs, string, bolt, tip);
+    } else if (fire === "projectile" || weaponId === "bow") {
+      const limb = new THREE.Mesh(new THREE.TorusGeometry(0.36, 0.04, 7, 18, Math.PI), wood);
+      limb.rotation.y = Math.PI / 2;
+      limb.position.y = 0.42;
+      const wrap = new THREE.Mesh(new THREE.TorusGeometry(0.36, 0.018, 5, 14, Math.PI), leather);
+      wrap.rotation.y = Math.PI / 2;
+      wrap.position.y = 0.42;
+      const string = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.01, 0.01, 0.68, 4),
         new THREE.MeshStandardMaterial({
-          color: 0xa8d0ff,
-          emissive: 0x4080c0,
-          emissiveIntensity: 0.4,
-          roughness: 0.3,
+          color: 0xf0e8d8,
+          emissive: 0x506080,
+          emissiveIntensity: 0.35,
+          roughness: 0.35,
         })
       );
-      string.position.y = 0.4;
-      const arrow = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.55, 5), wood);
+      string.position.y = 0.42;
+      const arrow = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.014, 0.58, 5), wood);
       arrow.rotation.x = Math.PI / 2;
-      arrow.position.set(0, 0.4, 0.2);
-      g.add(limb, string, arrow);
+      arrow.position.set(0, 0.42, 0.22);
+      const tip = new THREE.Mesh(new THREE.ConeGeometry(0.028, 0.09, 5), mat);
+      tip.rotation.x = Math.PI / 2;
+      tip.position.set(0, 0.42, 0.52);
+      g.add(limb, wrap, string, arrow, tip);
     } else if (weaponId === "grenade") {
-      g.add(new THREE.Mesh(new THREE.SphereGeometry(0.16, 10, 8), mat));
+      const ball = new THREE.Mesh(new THREE.SphereGeometry(0.15, 12, 10), mat);
+      ball.position.y = 0.16;
+      const band = new THREE.Mesh(
+        new THREE.TorusGeometry(0.12, 0.02, 6, 14),
+        new THREE.MeshStandardMaterial({ color: 0x8a9a4a, metalness: 0.55, roughness: 0.45 })
+      );
+      band.rotation.x = Math.PI / 2;
+      band.position.y = 0.16;
+      const pin = new THREE.Mesh(new THREE.TorusGeometry(0.045, 0.01, 4, 8), mat);
+      pin.position.y = 0.3;
+      g.add(ball, band, pin);
     } else if (weaponId === "torch") {
-      const stick = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.05, 0.55, 6), wood);
+      const stick = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.05, 0.55, 7), wood);
       stick.position.y = 0.35;
+      const wrap = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.06, 0.12, 7), leather);
+      wrap.position.y = 0.55;
       const flame = new THREE.Mesh(
-        new THREE.ConeGeometry(0.1, 0.22, 6),
+        new THREE.ConeGeometry(0.11, 0.26, 7),
         new THREE.MeshStandardMaterial({
           color: 0xff9a3c,
           emissive: 0xff6a20,
-          emissiveIntensity: 0.7,
-          roughness: 0.6,
+          emissiveIntensity: 0.85,
+          roughness: 0.55,
         })
       );
-      flame.position.y = 0.72;
-      g.add(stick, flame);
+      flame.position.y = 0.74;
+      const core = new THREE.Mesh(
+        new THREE.ConeGeometry(0.05, 0.14, 5),
+        new THREE.MeshBasicMaterial({ color: 0xffe08a })
+      );
+      core.position.y = 0.7;
+      g.add(stick, wrap, flame, core);
+      g.userData.pulse = [flame, core];
+    } else if (weaponId === "axe") {
+      const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.038, 0.7, 7), wood);
+      handle.position.y = 0.38;
+      const head = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.22, 0.07), mat);
+      head.position.set(0.1, 0.68, 0);
+      const bit = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.26, 0.02), mat);
+      bit.position.set(0.28, 0.68, 0);
+      g.add(handle, head, bit);
+    } else if (weaponId === "spear") {
+      const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.026, 0.95, 7), wood);
+      shaft.position.y = 0.5;
+      const tip = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.2, 6), mat);
+      tip.position.y = 1.05;
+      const wrap = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.1, 6), leather);
+      wrap.position.y = 0.9;
+      g.add(shaft, tip, wrap);
     } else {
-      // melee: lâmina
-      const blade = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.55, 0.04), mat);
-      blade.position.y = 0.4;
-      const hilt = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.2, 6), wood);
-      hilt.position.y = 0.1;
-      g.add(blade, hilt);
+      // melee / claymore / relic
+      const blade = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.62, 0.035), mat);
+      blade.position.y = 0.48;
+      const tip = new THREE.Mesh(new THREE.ConeGeometry(0.045, 0.12, 5), mat);
+      tip.position.y = 0.85;
+      const guard = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.04, 0.06), dark);
+      guard.position.y = 0.2;
+      const hilt = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.04, 0.22, 7), wood);
+      hilt.position.y = 0.08;
+      const pommel = new THREE.Mesh(new THREE.SphereGeometry(0.04, 8, 6), mat);
+      pommel.position.y = -0.02;
+      g.add(blade, tip, guard, hilt, pommel);
+      if (weaponId === "relic") {
+        blade.material = new THREE.MeshStandardMaterial({
+          color: 0x9a5aff,
+          emissive: 0x7a3aef,
+          emissiveIntensity: 0.65,
+          roughness: 0.25,
+          metalness: 0.35,
+        });
+        tip.material = blade.material;
+      }
     }
-    // partículas sutis ao redor da arma (sem PointLight — dezenas delas travavam o frame)
-    this._addLootParticles(g, color ?? 0xc8d0d8, this.lowFx ? 0 : 3);
-    this._addLootGlow(g, color, 0.4);
+    this._addLootParticles(g, color ?? 0xc8d0d8, this.lowFx ? 0 : 5);
+    this._addLootGlow(g, color, 0.48);
     this._addRarityRing(g, this.lootRarity("weapon", weaponId));
     g.traverse((m) => {
       if (m.isMesh && !m.userData.isGlow) {

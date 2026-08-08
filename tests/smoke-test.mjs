@@ -179,12 +179,24 @@ try {
   console.log("Minimap orientation OK");
 
   // Mira: com órbita, tiro deve seguir a câmera (não só o corpo)
+  player.setCameraMode("third");
   player.orbitYaw = Math.PI / 2;
   player.orbitPitch = 0;
+  player.syncCamera();
   const aim = player.getAimFire(world, 50);
   const camDir = player.cameraLookDirection;
   if (aim.dir.dot(camDir) < 0.85) {
     throw new Error("getAimFire deveria alinhar com a direção da câmera/crosshair");
+  }
+  // ponto sob a mira perto não deve ser jogado para 40m
+  const nearHit = world.rayAimPoint(
+    new THREE.Vector3(0, 2, 0),
+    new THREE.Vector3(0, 0, -1),
+    80
+  );
+  const nearDist = nearHit.distanceTo(new THREE.Vector3(0, 2, 0));
+  if (nearDist > 25) {
+    throw new Error(`rayAimPoint perto demais não deveria ir longe (d=${nearDist.toFixed(1)})`);
   }
   player.orbitYaw = 0;
   console.log("Aim/crosshair OK");

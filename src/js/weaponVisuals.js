@@ -53,13 +53,19 @@ export function buildHeldWeaponMesh(weaponId) {
   const dark = new THREE.MeshStandardMaterial({ color: 0x2a2a30, roughness: 0.7, metalness: 0.4 });
 
   if (weaponId === "bow") {
-    // arco clássico (como em RPGs 3ª pessoa): curva + corda + flecha nocked
-    const limb = new THREE.Mesh(new THREE.TorusGeometry(0.55, 0.035, 6, 16, Math.PI), wood);
+    // arco clássico: curva + wrap + corda + flecha com penas
+    const limb = new THREE.Mesh(new THREE.TorusGeometry(0.55, 0.038, 7, 18, Math.PI), wood);
     limb.rotation.z = Math.PI / 2;
     limb.position.set(0.05, 0.15, 0.25);
+    const wrap = new THREE.Mesh(
+      new THREE.TorusGeometry(0.55, 0.016, 5, 14, Math.PI),
+      new THREE.MeshStandardMaterial({ color: 0x4a3020, roughness: 0.95 })
+    );
+    wrap.rotation.z = Math.PI / 2;
+    wrap.position.set(0.05, 0.15, 0.25);
     const string = new THREE.Mesh(
       new THREE.CylinderGeometry(0.008, 0.008, 1.05, 4),
-      new THREE.MeshBasicMaterial({ color: 0xe8e0d0 })
+      new THREE.MeshBasicMaterial({ color: 0xf2ebe0 })
     );
     string.position.set(0.05, 0.15, 0.25);
     const arrow = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.9, 5), wood);
@@ -68,7 +74,13 @@ export function buildHeldWeaponMesh(weaponId) {
     const tip = new THREE.Mesh(new THREE.ConeGeometry(0.03, 0.1, 5), metal);
     tip.rotation.x = Math.PI / 2;
     tip.position.set(0.05, 0.15, 1.0);
-    g.add(limb, string, arrow, tip);
+    const feather = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.06, 0.12),
+      new THREE.MeshStandardMaterial({ color: 0xd85a3a, side: THREE.DoubleSide, roughness: 0.7 })
+    );
+    feather.position.set(0.05, 0.15, 0.22);
+    feather.rotation.y = 0.4;
+    g.add(limb, wrap, string, arrow, tip, feather);
     g.scale.setScalar(1.15);
   } else if (weaponId === "crossbow") {
     const stock = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.14, 0.7), wood);
