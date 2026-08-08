@@ -429,7 +429,17 @@ try {
       throw new Error(`item ${it.name}: mesh trapType=${it.mesh?.userData?.trapType} ≠ ${it.trapId}`);
     }
   }
-  console.log("Trap visuals OK —", groundTraps.map((t) => t.trapId).join(", "));
+  const spawn = world.getSpawn();
+  const nearTraps = groundTraps.filter((t) => world.wrapDistXZ(spawn, t.pos) < 22);
+  if (nearTraps.length < 3) {
+    throw new Error(`armadilhas perto do spawn sumiram (${nearTraps.length}/3+)`);
+  }
+  for (const t of nearTraps) {
+    if (!t.mesh?.visible || !t.mesh.parent) {
+      throw new Error(`trap ${t.trapId} sem mesh visível na cena`);
+    }
+  }
+  console.log("Trap visuals OK —", groundTraps.map((t) => t.trapId).join(", "), "near", nearTraps.length);
 
   for (let i = 0; i < 60; i++) {
     world.update(0.016, i * 0.016, 0.5, 0.1, player.position);

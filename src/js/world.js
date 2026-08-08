@@ -470,7 +470,9 @@ export class World {
       if (!it?.mesh || it.collected) continue;
       const lx = it.pos?.x ?? it.mesh.position.x;
       const lz = it.pos?.z ?? it.mesh.position.z;
-      this.presentNearPlayer(it.mesh, lx, lz, it.mesh.position.y, playerPos);
+      const ly = this.groundHeight(lx, lz) + 0.18;
+      it.mesh.visible = true;
+      this.presentNearPlayer(it.mesh, lx, lz, ly, playerPos);
     }
 
     if (this.campfire && this.campfirePos) {
@@ -1452,7 +1454,7 @@ export class World {
       new THREE.MeshBasicMaterial({
         color: color ?? 0xa8d0e8,
         transparent: true,
-        opacity: 0.42,
+        opacity: 0.55,
         depthWrite: false,
         blending: THREE.AdditiveBlending,
       })
@@ -1805,10 +1807,12 @@ export class World {
     let z = 0;
     const ox = this.home?.x ?? 0;
     const oz = this.home?.z ?? 0;
-    for (let tries = 0; tries < 60; tries++) {
+    let placed = false;
+    for (let tries = 0; tries < 80; tries++) {
       if (nearBase) {
+        // anel perto do spawn — fácil de achar no celular (antes 12–30m sumia na névoa)
         const a = Math.random() * Math.PI * 2;
-        const r = 12 + Math.random() * 18;
+        const r = 7 + Math.random() * 10;
         x = ox + Math.cos(a) * r;
         z = oz + Math.sin(a) * r;
       } else {
@@ -1816,18 +1820,36 @@ export class World {
         z = (Math.random() * 2 - 1) * this.bounds * 0.92;
       }
       const h = this.getHeight(x, z);
-      const farFromBase = Math.hypot(x - ox, z - oz) > (nearBase ? 8 : 30);
-      if (h > this.waterLevel + 0.6 && farFromBase) break;
+      const distHome = Math.hypot(x - ox, z - oz);
+      const farFromBase = distHome > (nearBase ? 5.5 : 30);
+      const flat = this.getSlope(x, z) < 0.85;
+      if (h > this.waterLevel + 0.6 && farFromBase && (!nearBase || flat)) {
+        placed = true;
+        break;
+      }
+    }
+    // fallback garantido: perto da fogueira, no chão andável
+    if (!placed && nearBase) {
+      const a = Math.random() * Math.PI * 2;
+      x = ox + Math.cos(a) * 9;
+      z = oz + Math.sin(a) * 9;
     }
     const kind = this._lootKind({ ...def, countsForWin, saveId });
-    const mesh = def.weaponId
-      ? this.createWeaponPickupMesh(def.weaponId, def.color)
-      : def.trapId
-        ? this.createTrapPickupMesh(def.trapId, def.color)
-        : this.createItemMesh(def.color, kind);
-    const y = this.groundHeight(x, z) + 0.12;
+    let mesh;
+    try {
+      mesh = def.weaponId
+        ? this.createWeaponPickupMesh(def.weaponId, def.color)
+        : def.trapId
+          ? this.createTrapPickupMesh(def.trapId, def.color)
+          : this.createItemMesh(def.color, kind);
+    } catch (err) {
+      console.warn("[Neve] loot mesh falhou, fallback caixa:", def?.name, err);
+      mesh = this.createItemMesh(def.color ?? 0xa8d0e8, "crate");
+    }
+    const y = this.groundHeight(x, z) + 0.18;
     mesh.position.set(x, y, z);
-    mesh.userData.baseScale = 1;
+    mesh.visible = true;
+    mesh.userData.baseScale = mesh.scale.x || 1;
     this.scene.add(mesh);
     this.items.push({
       name: def.name,
@@ -1836,7 +1858,7 @@ export class World {
       mesh,
       pos: new THREE.Vector3(x, y, z),
       collected: false,
-      discovered: !!def.weaponId || !!nearBase,
+      discovered: !!def.weaponId || !!nearBase || !!def.trapId,
       phase: Math.random() * Math.PI * 2,
       weaponId: def.weaponId || null,
       ammoType: def.ammoType || null,
@@ -1901,6 +1923,8 @@ export class World {
       const rng = createRng((this.seed ^ 0x9e3779b9) >>> 0);
       for (const it of this.items || []) {
         if (it.countsForWin || it.collected) continue;
+        // armadilhas / cura perto da base sempre ficam (guia visual no começo)
+        if (it.trapId || it.healthHeal) continue;
         if (rng() > loot) this.collectItem(it, { instant: true });
       }
       this._diffLootThinned = true;
@@ -2015,14 +2039,19 @@ export class World {
         it.mesh.rotation.x = 0;
         it.mesh.rotation.z = 0;
       }
-      it.mesh.position.y = it.pos.y + bob;
-      // highlight perto do jogador
+      // assenta no chão (altura do toro no XZ atual do mesh)
+      const gy = this.groundHeight(it.mesh.position.x, it.mesh.position.z) + 0.18;
+      it.pos.y = this.groundHeight(it.pos.x, it.pos.z) + 0.18;
+      it.mesh.position.y = gy + bob;
+      it.mesh.visible = true;
+      // highlight perto do jogador (distância wrap-aware — coords contínuas)
       let near = 0;
       if (playerPos) {
-        const d = playerPos.distanceTo(it.pos);
-        if (d < 4) near = 1 - d / 4;
+        const d = this.wrapDistXZ(playerPos, it.pos);
+        if (d < 6) near = 1 - d / 6;
       }
-      const breathe = 1 + Math.sin(elapsed * 3.5 + it.phase) * 0.03 + near * 0.12;
+      const base = it.mesh.userData.baseScale || 1;
+      const breathe = base * (1 + Math.sin(elapsed * 3.5 + it.phase) * 0.03 + near * 0.12);
       it.mesh.scale.setScalar(breathe);
       const glow = it.mesh.userData.glow;
       if (glow?.material) {
@@ -3422,19 +3451,21 @@ export class World {
   createTrapPickupMesh(trapId, color) {
     const type = CONFIG.traps[trapId] ? trapId : "mine";
     const g = this.createTrapMesh(type);
-    // pickups um pouco maiores e legíveis
-    const scale = type === "fence" ? 0.85 : type === "bait" ? 1.25 : 1.15;
+    // pickups maiores e legíveis na neve
+    const scale = type === "fence" ? 1.05 : type === "bait" ? 1.45 : 1.35;
     g.scale.setScalar(scale);
+    g.userData.baseScale = scale;
     const glowColor =
       color ??
       (type === "mine" ? 0xff4040 : type === "bait" ? 0xc87840 : 0x8a6a40);
-    this._addLootGlow(g, glowColor, type === "fence" ? 0.55 : 0.42);
+    this._addLootGlow(g, glowColor, type === "fence" ? 0.7 : 0.55);
     this._addRarityRing(g, "rare");
-    this._addLootParticles(g, glowColor, this.lowFx ? 0 : type === "bait" ? 4 : 3);
+    this._addLootParticles(g, glowColor, this.lowFx ? 2 : type === "bait" ? 5 : 4);
     g.userData.trapType = type;
     if (!g.userData.lootAnim) {
       g.userData.lootAnim = type === "fence" ? "sway" : type === "bait" ? "wobble" : "pulse";
     }
+    g.visible = true;
     return g;
   }
 
