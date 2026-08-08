@@ -97,7 +97,13 @@ class Game {
     };
     this.ambience.onWhisper = () => {
       if (this.state !== "playing") return;
-      this.hud?.showMsg("…alguém fala no vento", 3000);
+      const lines = [
+        "…baby… baby…",
+        "…baby, baby…",
+        "…uma voz no vento: baby…",
+        "…alguém sussurra no gelo",
+      ];
+      this.hud?.showMsg(lines[(Math.random() * lines.length) | 0], 3400);
     };
     this._ammoWarnAt = 0;
     this.weapons = new WeaponInventory();

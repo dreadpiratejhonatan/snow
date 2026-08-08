@@ -65,12 +65,17 @@ export class Ambience {
     this.gust = 0;
     this.gustTarget = 0;
     this.gustTimer = 0;
-    /** Sussurros distantes — bem raros (minutos entre um e outro). */
-    this.whisperTimer = 90 + Math.random() * 120;
+    /** Sussurros "Baby, baby" — intervalo 100% aleatório. */
+    this.whisperTimer = 20 + Math.random() * 70;
     this.musicOn = true;
     this.music = null;
     this.onTrackChange = null; // (nome) => void — preenchido pelo Game
-    this.onWhisper = null; // () => void — msg atmosférica opcional
+    this.onWhisper = null; // (info?) => void — msg atmosférica opcional
+    /** @type {AudioBuffer[]} */
+    this._whisperBuffers = [];
+    this._whisperReady = false;
+    this._whisperLoad = null;
+    this._lastWhisperIdx = -1;
   }
 
   /** AudioContext existe e está tocando de verdade. */
@@ -194,6 +199,83 @@ export class Ambience {
     lfo.start();
 
     this.startMusic();
+    void this.loadWhisperSamples();
+    return true;
+  }
+
+  /**
+   * Carrega music/whispers/*.wav (manifest.json) — clips filtrados "Baby, baby".
+   * Falha silenciosa → cai no sussurro sintético.
+   */
+  async loadWhisperSamples() {
+    if (this._whisperReady || this._whisperLoad) return this._whisperLoad;
+    if (typeof fetch === "undefined" || typeof document === "undefined") return null;
+    this._whisperLoad = (async () => {
+      try {
+        await resumeContext();
+        if (!ctx) return;
+        const base = new URL("music/whispers/", window.location.href).href;
+        const manRes = await fetch(new URL("manifest.json", base).href, { cache: "no-store" });
+        if (!manRes.ok) return;
+        const ct = (manRes.headers.get("content-type") || "").toLowerCase();
+        if (ct.includes("text/html")) return;
+        const list = await manRes.json();
+        if (!Array.isArray(list) || !list.length) return;
+        const buffers = [];
+        // Embaralha a ordem de carga; playback também é aleatório
+        const names = list.map(String).sort(() => Math.random() - 0.5);
+        for (const name of names) {
+          try {
+            const url = new URL(name, base).href;
+            const res = await fetch(url, { cache: "force-cache" });
+            if (!res.ok) continue;
+            const raw = await res.arrayBuffer();
+            const buf = await ctx.decodeAudioData(raw.slice(0));
+            if (buf?.duration > 0.2) buffers.push(buf);
+          } catch {
+            /* um arquivo ruim não derruba os outros */
+          }
+        }
+        if (buffers.length) {
+          this._whisperBuffers = buffers;
+          this._whisperReady = true;
+        }
+      } catch {
+        /* sem clips — usa sintético */
+      }
+    })();
+    return this._whisperLoad;
+  }
+
+  /** Toca um buffer de sussurro com filtro místico (eco + lowpass). */
+  _playWhisperBuffer(buffer) {
+    if (!ctx || !buffer || !master) return false;
+    const src = ctx.createBufferSource();
+    src.buffer = buffer;
+    // leve variação de pitch a cada vez (ainda 100% aleatório)
+    src.playbackRate.value = 0.92 + Math.random() * 0.18;
+
+    const hp = ctx.createBiquadFilter();
+    hp.type = "highpass";
+    hp.frequency.value = 160 + Math.random() * 40;
+    const lp = ctx.createBiquadFilter();
+    lp.type = "lowpass";
+    lp.frequency.value = 2800 + Math.random() * 900;
+    lp.Q.value = 0.7;
+
+    const gain = ctx.createGain();
+    const vol = 0.09 + Math.random() * 0.07;
+    const t0 = ctx.currentTime;
+    gain.gain.setValueAtTime(0.0001, t0);
+    gain.gain.exponentialRampToValueAtTime(vol, t0 + 0.12);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + Math.max(0.8, buffer.duration) + 0.35);
+
+    src.connect(hp).connect(lp).connect(gain);
+    gain.connect(master);
+    // cauda no eco do vento (espaço aberto)
+    if (echoIn) gain.connect(echoIn);
+
+    src.start(t0);
     return true;
   }
 
@@ -655,31 +737,45 @@ export class Ambience {
   }
 
   /**
-   * Sussurro sintetizado (formantes baixos + ruído), bem quieto e com eco.
-   * Não deve competir com a trilha — só atmosfera.
+   * Sussurro místico — prioriza clips "Baby, baby" (filtrados);
+   * senão formantes sintéticos. Sempre aleatório.
    */
   whisper() {
     if (!ctx) return;
-    const vol = 0.014 + Math.random() * 0.01;
-    // sopro / consoante
-    this.noiseBurst(0.55 + Math.random() * 0.45, vol * 0.7, 280 + Math.random() * 180, 0.55, "bandpass", 0.85);
-    // “vogais” mudas (2–3 formantes)
-    const base = 140 + Math.random() * 90;
-    const syllables = 2 + ((Math.random() * 2) | 0);
-    for (let i = 0; i < syllables; i++) {
-      const delay = 180 + i * (220 + Math.random() * 160);
-      setTimeout(() => {
-        if (!ctx) return;
-        this.blip(base * (1 + i * 0.12), 0.22, vol, "sine", base * 0.85, 0.9);
-        this.blip(base * 2.1, 0.18, vol * 0.45, "triangle", base * 1.7, 0.75);
-      }, delay);
+    void this.loadWhisperSamples();
+
+    let playedSample = false;
+    const bufs = this._whisperBuffers;
+    if (bufs?.length) {
+      let idx = (Math.random() * bufs.length) | 0;
+      // evita repetir o mesmo clip em seguida quando há 2+
+      if (bufs.length > 1 && idx === this._lastWhisperIdx) {
+        idx = (idx + 1 + ((Math.random() * (bufs.length - 1)) | 0)) % bufs.length;
+      }
+      this._lastWhisperIdx = idx;
+      playedSample = this._playWhisperBuffer(bufs[idx]);
     }
-    // cauda de vento filtrado
-    setTimeout(() => {
-      if (ctx) this.noiseBurst(0.7, vol * 0.35, 520 + Math.random() * 200, 1.2, "bandpass", 0.7);
-    }, 400 + syllables * 200);
+
+    if (!playedSample) {
+      const vol = 0.014 + Math.random() * 0.01;
+      this.noiseBurst(0.55 + Math.random() * 0.45, vol * 0.7, 280 + Math.random() * 180, 0.55, "bandpass", 0.85);
+      const base = 140 + Math.random() * 90;
+      const syllables = 2 + ((Math.random() * 2) | 0);
+      for (let i = 0; i < syllables; i++) {
+        const delay = 180 + i * (220 + Math.random() * 160);
+        setTimeout(() => {
+          if (!ctx) return;
+          this.blip(base * (1 + i * 0.12), 0.22, vol, "sine", base * 0.85, 0.9);
+          this.blip(base * 2.1, 0.18, vol * 0.45, "triangle", base * 1.7, 0.75);
+        }, delay);
+      }
+      setTimeout(() => {
+        if (ctx) this.noiseBurst(0.7, vol * 0.35, 520 + Math.random() * 200, 1.2, "bandpass", 0.7);
+      }, 400 + syllables * 200);
+    }
+
     try {
-      this.onWhisper?.();
+      this.onWhisper?.({ sample: playedSample });
     } catch {
       /* HUD opcional */
     }
@@ -764,14 +860,16 @@ export class Ambience {
       }
     }
 
-    // sussurros: muito esporádicos; um pouco mais à noite / longe do combate
+    // sussurros "Baby, baby": 100% aleatório (intervalo + chance + clip)
     this.whisperTimer -= dt;
     if (this.whisperTimer <= 0) {
-      // 2–5 min até a próxima tentativa
-      this.whisperTimer = 120 + Math.random() * 180;
-      const inCombat = !!(s.bearChasing && s.bearDist < 22);
-      const nightBoost = s.night > 0.45 ? 0.55 : 0.22;
-      const chance = inCombat ? 0.08 : nightBoost;
+      // próxima janela: ~25s–4min (distribuição uniforme)
+      this.whisperTimer = 25 + Math.random() * 215;
+      const inCombat = !!(s.bearChasing && s.bearDist < 18);
+      // combate quase silencia; noite / neve aberta favorece o místico
+      let chance = 0.35 + Math.random() * 0.55;
+      if (s.night > 0.45) chance = Math.min(1, chance + 0.2);
+      if (inCombat) chance *= 0.12;
       if (Math.random() < chance) this.whisper();
     }
 
