@@ -1,6 +1,5 @@
 import * as THREE from "three";
 import { CONFIG } from "./config.js";
-import { getSkin, loadFaceTexture } from "./skins.js";
 
 /** Meshes low-poly: urso (escala/cor) e lobo. */
 export function createBearMesh(tex, { scale = 1, color = 0x7a5c42, dark = 0x54402a } = {}) {
@@ -637,86 +636,6 @@ export function createPteroMesh() {
   return g;
 }
 
-/** Robertson: humanoide velho e bravo (pele + rosto da skin). */
-export function createRobertsonMesh() {
-  const skinDef = getSkin("robertson");
-  const suit = new THREE.MeshStandardMaterial({
-    color: skinDef?.suit ?? 0x3a342e,
-    roughness: 0.85,
-  });
-  const shirt = new THREE.MeshStandardMaterial({
-    color: skinDef?.shirt ?? 0x6a2a22,
-    roughness: 0.9,
-  });
-  const skin = new THREE.MeshStandardMaterial({
-    color: skinDef?.skin ?? 0xd2aa82,
-    roughness: 0.7,
-  });
-  const hair = new THREE.MeshStandardMaterial({ color: 0xa8a8b0, roughness: 1 });
-  const faceMat = new THREE.MeshStandardMaterial({
-    color: 0xffffff,
-    roughness: 0.55,
-    side: THREE.FrontSide,
-  });
-  const g = new THREE.Group();
-
-  const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.16, 0.7, 10), suit);
-  torso.position.y = 1.15;
-  const chest = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.28, 0.2), shirt);
-  chest.position.set(0, 1.28, 0.12);
-  const head = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.34, 0.32), skin);
-  head.position.y = 1.72;
-  const hairCap = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.12, 0.34), hair);
-  hairCap.position.y = 1.92;
-  const beard = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.1, 0.08), hair);
-  beard.position.set(0, 1.55, 0.14);
-  const facePlane = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 0.32), faceMat);
-  facePlane.position.set(0, 1.72, 0.175);
-  g.add(torso, chest, head, hairCap, beard, facePlane);
-
-  const armGeo = new THREE.CylinderGeometry(0.055, 0.065, 0.55, 6);
-  for (const side of [-1, 1]) {
-    const arm = new THREE.Mesh(armGeo, suit);
-    arm.position.set(side * 0.28, 1.2, 0.02);
-    arm.rotation.z = side * 0.45;
-    g.add(arm);
-  }
-  const fistGeo = new THREE.SphereGeometry(0.07, 8, 6);
-  for (const side of [-1, 1]) {
-    const fist = new THREE.Mesh(fistGeo, skin);
-    fist.position.set(side * 0.38, 0.92, 0.12);
-    g.add(fist);
-  }
-
-  const legs = [];
-  const legGeo = new THREE.CylinderGeometry(0.08, 0.09, 0.7, 6);
-  for (const side of [-1, 1]) {
-    const leg = new THREE.Mesh(legGeo, suit);
-    leg.position.set(side * 0.1, 0.35, 0);
-    legs.push(leg);
-    g.add(leg);
-  }
-  g.userData.legs = legs;
-  g.userData.faceMat = faceMat;
-  g.scale.setScalar(1.05);
-  g.traverse((m) => {
-    if (m.isMesh) {
-      m.castShadow = true;
-      m.receiveShadow = true;
-    }
-  });
-
-  if (skinDef?.face) {
-    loadFaceTexture(skinDef.face).then((tex) => {
-      if (!tex || !faceMat) return;
-      faceMat.map = tex;
-      faceMat.color.setHex(0xffffff);
-      faceMat.needsUpdate = true;
-    });
-  }
-  return g;
-}
-
 /** Chuck: boneco pequeno de macacão com faca. */
 export function createChuckMesh() {
   const overall = new THREE.MeshStandardMaterial({ color: 0x2c5aa8, roughness: 0.95 });
@@ -828,7 +747,7 @@ export class Enemy {
     for (const e of this.world.enemies) {
       if (e === this || !e.alive || e.tamed) continue;
       // mesma facção ainda briga se estiver muito perto (caos);
-      // Robertson ignora lealdade e briga com qualquer um no alcance
+      // brawler: ignora lealdade e briga com qualquer um no alcance
       const same = e.faction === this.faction;
       const d = this.mesh.position.distanceTo(e.mesh.position);
       const limit = fightAll || !same ? maxDist : maxDist * 0.55;
@@ -1045,7 +964,7 @@ export class Enemy {
     let speedMul = this.slowTimer > 0 ? 0.45 : 1;
     const ai = cfg.ai || (this.type === "wolf" ? "wolf" : "bear");
 
-    // Robertson / brawler: prioriza qualquer rival, depois o jogador
+    // brawler: prioriza qualquer rival, depois o jogador
     if (ai === "brawler" || cfg.fightEveryone) {
       this.updateBrawler(dt, elapsed, playerPos, dist, speedMul, hooks);
       return;

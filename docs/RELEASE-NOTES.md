@@ -15,8 +15,11 @@ Documentação completa: [`docs/V1-OFICIAL.md`](docs/V1-OFICIAL.md) · Tag Git: 
 ### [gh95] — Sussurros no vento (8 ago 2026)
 - Quatro áudios místicos filtrados sussurram ao acaso enquanto você joga
 
-### [gh94] — Robertson + balões de fala (8 ago 2026)
-- Novo personagem **Robertson** (velho bravo) no seletor; também spawna no mundo e briga com todo mundo
+### [gh98] — Remoção do Robertson (8 ago 2026)
+- Personagem de teste **Robertson** saiu do seletor e do mundo (skin + NPC)
+- **Balões de fala** permanecem nos personagens restantes
+
+### [gh94] — Balões de fala (8 ago 2026)
 - **Balões de fala** seguem personagens e NPCs próximos com conversa aleatória
 
 ### [gh92] — Splash responde no celular (26 jul 2026)
@@ -90,7 +93,7 @@ Documentação completa: [`docs/V1-OFICIAL.md`](docs/V1-OFICIAL.md) · Tag Git: 
 - Vitória exige **Troféu do Urso Alfa** + **Troféu do Boto**
 
 ## Personagens
-- **Natan**, **Jorge Bolado**, **Caio**, **Lorenzo**, **ZÉ**, **Robertson**
+- **Natan**, **Jorge Bolado**, **Caio**, **Lorenzo**, **ZÉ**
 - Preview 3D; cards em ordem aleatória; rosto só na frente da cabeça
 
 ## Mundo e áudio

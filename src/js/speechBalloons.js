@@ -21,18 +21,6 @@ const COMMON_LINES = [
 
 /** Falas por skin (somam às genéricas). */
 const SKIN_LINES = {
-  robertson: [
-    "Isso não tá bom.",
-    "Oh, this is not good.",
-    "Sai da frente!",
-    "Eu brigo com todo mundo!",
-    "Velho, bravo e ainda de pé.",
-    "Vem que eu te pego!",
-    "Não me provocem…",
-    "Hoje ninguém passa!",
-    "Grrr…",
-    "Cansei dessa neve!",
-  ],
   natan: ["Foco no baú.", "Mantém o calor."],
   jorge: ["Bolado e pronto.", "Sem papo, só ação."],
   caio: ["Primeiro tester vibes.", "Calma que dá."],
@@ -42,7 +30,6 @@ const SKIN_LINES = {
 
 /** Falas de NPCs / inimigos (quando não são skin). */
 const ENEMY_LINES = {
-  robertson: SKIN_LINES.robertson,
   default: [
     "Grr…",
     "…",
@@ -283,14 +270,14 @@ export class SpeechBalloonSystem {
   }
 
   /**
-   * Balões nos NPCs-personagem (Robertson / skinId / talks).
+   * Balões nos NPCs-personagem (skinId / talks).
    * Fauna fica quieta — evita spam de balões “no relógio”.
    */
   syncEnemies(enemies, { allCharacters = false, playerPos = null, maxDist = 42 } = {}) {
     const alive = new Set();
     for (const e of enemies || []) {
       if (!e?.alive || !e.mesh) continue;
-      const isChar = e.type === "robertson" || e.cfg?.talks || e.cfg?.skinId;
+      const isChar = !!(e.cfg?.talks || e.cfg?.skinId);
       if (!isChar && !allCharacters) continue;
       if (playerPos && maxDist > 0) {
         const d = e.mesh.position.distanceTo(playerPos);
@@ -381,16 +368,6 @@ export class SpeechBalloonSystem {
       }
     }
   }
-}
-
-/** Linhas iniciais do Robertson ao spawnar. */
-export function robertsonSpawnLine() {
-  return pick([
-    "Oh, this is not good.",
-    "Isso não tá bom.",
-    "Robertson chegou. Todo mundo vai apanhar.",
-    "Eu brigo com todo mundo!",
-  ]);
 }
 
 export function characterDisplayName(skinId) {
