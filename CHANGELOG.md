@@ -28,17 +28,17 @@ Primeira versão **oficial** (`release/v1.0`, tag `v1.0.0`).
 
 ## [Unreleased]
 
-Trabalho na branch `develop` após `v1.0.0` (cache **`gh97`**).  
+Trabalho na branch `develop` após `v1.0.0` (cache **`gh98`**).  
 Resumo narrativo: [`docs/DEVELOP-ATE-GH63.md`](docs/DEVELOP-ATE-GH63.md) · [`DEVELOP-GH64-ATE-GH73.md`](docs/DEVELOP-GH64-ATE-GH73.md).
 
 ### Changed
+- **Roster (gh98)**: personagem de teste **Robertson** removido (skin + NPC); ficam Natan, Jorge Bolado, Caio, Lorenzo e ZÉ
 - **Balões de fala (gh97)**: intervalos aleatórios médios/longos (espaçados); no máximo um balão por vez; fauna para de spammar
 - **Sussurros (gh97)**: também mais espaçados (vies longo)
 - **Sussurros (gh96)**: texto/áudio corrigidos para **“Bebe, bebe”** (português do Brasil)
 
 ### Added
 - **Sussurros Bebe bebe (gh95/gh96)**: 4 clips místicos filtrados em `music/whispers/` tocam 100% ao acaso durante a partida
-- **Robertson (gh94)**: personagem jogável velho/bravo + NPC no mundo que briga com todo mundo
 - **Balões de fala (gh94)**: conversa aleatória em balões que seguem personagens e NPCs próximos
 
 ### Fixed
@@ -53,7 +53,7 @@ Resumo narrativo: [`docs/DEVELOP-ATE-GH63.md`](docs/DEVELOP-ATE-GH63.md) · [`DE
 - **Tutorial/ajuda: montarias (gh86)**: passo 6/7 ensina a domar; FAQ e controles mencionam mula, cavalo, pônei, dromedário e panda
 
 ### Changed
-- **Roster (gh89/gh94)**: Neymar/MEGA BRAIN saíram; agora **Robertson** entra (6 personagens)
+- **Roster (gh89)**: Neymar/MEGA BRAIN saíram do seletor
 - **Domar montarias mais fácil (gh85)**: basta ~28% de dano (HP ≤ 72%); ao enfraquecer o animal para de atacar; alcance de interação maior; mula/cavalo/dromedário/pônei/panda um pouco mais fracos
 
 ### Fixed

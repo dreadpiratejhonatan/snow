@@ -40,7 +40,7 @@ import { dailySeed, dailyLabel, isDailyMode, setDailyMode } from "./daily.js";
 import { unlockAchievement, listAchievements } from "./achievements.js";
 import { playChefCutscene, updateCinematic, isCinematicActive } from "./cutscene.js";
 import { GameChat } from "./chat.js";
-import { SpeechBalloonSystem, robertsonSpawnLine } from "./speechBalloons.js";
+import { SpeechBalloonSystem } from "./speechBalloons.js";
 import {
   DemoBot,
   wantsDemoFromUrl,
@@ -3101,9 +3101,6 @@ class Game {
 
   handleEnemySpawned(enemy) {
     playChefCutscene(this, enemy);
-    if (enemy?.type === "robertson" && this.state === "playing") {
-      this.hud.showMsg(`${enemy.label}: “${robertsonSpawnLine()}”`, 3600);
-    }
   }
 
   /** Balões de fala seguem o jogador, o parceiro co-op e os NPCs (conversa aleatória). */
@@ -3128,7 +3125,7 @@ class Game {
       if (id.startsWith("remote") && !aliveRemote.has(id)) this.speech.untrack(id);
     }
     this.speech.syncEnemies(this.world?.enemies, {
-      // só personagens (Robertson etc.) — fauna quieta, balões espaçados
+      // só NPCs com talks/skinId — fauna quieta, balões espaçados
       allCharacters: false,
       playerPos: this.player.position,
       maxDist: 40,
