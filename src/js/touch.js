@@ -240,10 +240,32 @@ export class TouchControls {
       // remove no próximo frame via flag
       this.input._tapE = true;
     });
-    tap("btn-attack", () => {
-      this.input.leftClicked = true;
-      this.input.mouseDown = true;
-    });
+    // ataque: segurar = charge (arco); toque curto também dispara
+    {
+      const el = document.getElementById("btn-attack");
+      if (el) {
+        el.addEventListener(
+          "touchstart",
+          (e) => {
+            e.preventDefault();
+            el.classList.add("is-down");
+            this.setMoreOpen(false);
+            this.input.leftClicked = true;
+            this.input.leftHeld = true;
+            this.input.mouseDown = true;
+          },
+          { passive: false }
+        );
+        const up = (e) => {
+          e.preventDefault();
+          el.classList.remove("is-down");
+          this.input.leftHeld = false;
+          this.input.mouseDown = false;
+        };
+        el.addEventListener("touchend", up, { passive: false });
+        el.addEventListener("touchcancel", up, { passive: false });
+      }
+    }
     // 👁: toque curto = 1ª/3ª; segurar + arrastar look = orbitar (ver o rosto)
     {
       const el = document.getElementById("btn-camera");

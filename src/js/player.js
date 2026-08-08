@@ -284,6 +284,17 @@ export class Player {
       this.syncFpWeaponVisibility();
     }
 
+    // 3ª pessoa: arma aponta com a câmera/órbita (não só com o corpo)
+    if (this.weaponMount && ranged && this.cameraMode === "third") {
+      const aimPull = this.aiming ? 1 : 0.85;
+      this.weaponMount.rotation.order = "YXZ";
+      this.weaponMount.rotation.y = this.orbitYaw * aimPull;
+      this.weaponMount.rotation.x = this.cameraPitch * 0.65 * aimPull;
+    } else if (this.weaponMount) {
+      this.weaponMount.rotation.x = 0;
+      this.weaponMount.rotation.y = 0;
+    }
+
     const sway = Math.sin(this.walkPhase * 0.5) * 0.18;
     for (let i = 0; i < this.tentacles.length; i++) {
       const dir = i % 2 === 0 ? 1 : -1;
@@ -595,8 +606,8 @@ export class Player {
   }
 
   /**
-   * Origem no olho + direção para o ponto sob a crosshair.
-   * Corrige parallax 3P e Alt-órbita.
+   * Origem + direção alinhadas à crosshair (câmera).
+   * Em 3ª pessoa dispara perto do raio da câmera para não “sair torto” do ombro.
    */
   getAimFire(world, range = 80) {
     const eye = this.eyePosition;
@@ -608,11 +619,24 @@ export class Player {
     const aimPoint = world?.rayAimPoint
       ? world.rayAimPoint(camPos, camDir, maxDist)
       : camPos.clone().addScaledVector(camDir, Math.min(maxDist, 40));
-    const dir = aimPoint.clone().sub(eye);
+
+    let origin = eye.clone();
+    if (this.cameraMode === "third") {
+      // ponto no raio da câmera, à frente do personagem (mesmo lado da mira)
+      const along = camPos.clone().addScaledVector(camDir, 2.4);
+      origin.lerp(along, 0.72);
+      origin.y = eye.y * 0.35 + along.y * 0.65;
+    }
+
+    const dir = aimPoint.clone().sub(origin);
     if (dir.lengthSq() < 1e-6) {
-      return { origin: eye, dir: camDir.clone() };
+      return { origin, dir: camDir.clone() };
+    }
+    // se o alvo ficou atrás da origem (raro), segue a câmera
+    if (dir.dot(camDir) < 0.2) {
+      return { origin, dir: camDir.clone() };
     }
     dir.normalize();
-    return { origin: eye, dir };
+    return { origin, dir };
   }
 }

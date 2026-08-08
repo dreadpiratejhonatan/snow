@@ -911,7 +911,7 @@ export const CONFIG = {
     distance: 4.8,
     minDistance: 1.2,
     pivotHeight: 1.5,
-    shoulderOffset: 0.85,
+    shoulderOffset: 0.42,
   },
   colors: {
     snowLow: 0xe6eef5,
