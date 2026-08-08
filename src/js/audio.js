@@ -65,8 +65,8 @@ export class Ambience {
     this.gust = 0;
     this.gustTarget = 0;
     this.gustTimer = 0;
-    /** Sussurros "Bebe, bebe" (pt-BR) — intervalo 100% aleatório. */
-    this.whisperTimer = 20 + Math.random() * 70;
+    /** Sussurros "Bebe, bebe" (pt-BR) — intervalo aleatório, mais longo que curto. */
+    this.whisperTimer = 50 + Math.random() * 100;
     this.musicOn = true;
     this.music = null;
     this.onTrackChange = null; // (nome) => void — preenchido pelo Game
@@ -860,16 +860,16 @@ export class Ambience {
       }
     }
 
-    // sussurros "Bebe, bebe": 100% aleatório (intervalo + chance + clip)
+    // sussurros "Bebe, bebe": aleatório, espaçado (mais longo que curto)
     this.whisperTimer -= dt;
     if (this.whisperTimer <= 0) {
-      // próxima janela: ~25s–4min (distribuição uniforme)
-      this.whisperTimer = 25 + Math.random() * 215;
+      // ~70% longo (2–5 min), ~30% médio (1–2 min)
+      this.whisperTimer =
+        Math.random() < 0.7 ? 120 + Math.random() * 180 : 60 + Math.random() * 60;
       const inCombat = !!(s.bearChasing && s.bearDist < 18);
-      // combate quase silencia; noite / neve aberta favorece o místico
-      let chance = 0.35 + Math.random() * 0.55;
-      if (s.night > 0.45) chance = Math.min(1, chance + 0.2);
-      if (inCombat) chance *= 0.12;
+      let chance = 0.45 + Math.random() * 0.4;
+      if (s.night > 0.45) chance = Math.min(1, chance + 0.15);
+      if (inCombat) chance *= 0.1;
       if (Math.random() < chance) this.whisper();
     }
 

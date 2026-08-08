@@ -57,6 +57,20 @@ function pick(arr) {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
+/**
+ * Espera até o próximo balão — aleatória, média/longa (mais longa que curta).
+ * ~70% em 70–180s, ~30% em 40–70s.
+ */
+function nextBalloonWait() {
+  if (Math.random() < 0.7) return 70 + Math.random() * 110;
+  return 40 + Math.random() * 30;
+}
+
+/** Primeira fala: espalha os falantes para não começarem juntos. */
+function initialBalloonWait() {
+  return 25 + Math.random() * 95;
+}
+
 function linesForSkin(skinId) {
   const extra = SKIN_LINES[skinId] || [];
   return COMMON_LINES.concat(extra);
@@ -168,6 +182,8 @@ export class SpeechBalloonSystem {
     /** @type {Map<string, Speaker>} */
     this.speakers = new Map();
     this.enabled = true;
+    /** Cooldown global — só um balão no mundo de cada vez, com folga. */
+    this._globalCd = 8 + Math.random() * 20;
   }
 
   /**
@@ -206,7 +222,7 @@ export class SpeechBalloonSystem {
         lines: [],
         offsetY: opts.offsetY ?? 2.35,
         showT: 0,
-        waitT: 1.2 + Math.random() * 2.5,
+        waitT: initialBalloonWait(),
         bob: Math.random() * Math.PI * 2,
       };
       this.speakers.set(id, sp);
@@ -267,10 +283,10 @@ export class SpeechBalloonSystem {
   }
 
   /**
-   * Balões nos NPCs. Personagens (Robertson / skinId / talks) sempre;
-   * com allCharacters, qualquer inimigo perto do jogador também conversa.
+   * Balões nos NPCs-personagem (Robertson / skinId / talks).
+   * Fauna fica quieta — evita spam de balões “no relógio”.
    */
-  syncEnemies(enemies, { allCharacters = true, playerPos = null, maxDist = 42 } = {}) {
+  syncEnemies(enemies, { allCharacters = false, playerPos = null, maxDist = 42 } = {}) {
     const alive = new Set();
     for (const e of enemies || []) {
       if (!e?.alive || !e.mesh) continue;
@@ -278,7 +294,6 @@ export class SpeechBalloonSystem {
       if (!isChar && !allCharacters) continue;
       if (playerPos && maxDist > 0) {
         const d = e.mesh.position.distanceTo(playerPos);
-        // personagens (Robertson) falam de mais longe; fauna só perto
         const limit = isChar ? maxDist * 1.35 : maxDist;
         if (d > limit) continue;
       }
@@ -307,8 +322,10 @@ export class SpeechBalloonSystem {
     sp.mat.opacity = 0;
     sp.mat.needsUpdate = true;
     sp.sprite.visible = true;
-    sp.showT = 2.4 + Math.random() * 1.1;
+    sp.showT = 2.6 + Math.random() * 1.2;
     sp.waitT = 0;
+    // folga global até o próximo balão de qualquer um
+    this._globalCd = 25 + Math.random() * 35;
   }
 
   update(dt) {
@@ -319,11 +336,17 @@ export class SpeechBalloonSystem {
       return;
     }
 
+    if (this._globalCd > 0) this._globalCd -= dt;
+
+    // candidatos prontos para falar (espera acabou, visível, sem balão ativo)
+    const ready = [];
+
     for (const sp of this.speakers.values()) {
       const pos = sp.getPosition?.();
       const vis = sp.getVisible?.() !== false;
       if (!pos || !vis) {
         sp.sprite.visible = false;
+        if (sp.showT <= 0 && sp.waitT > 0) sp.waitT -= dt;
         continue;
       }
 
@@ -331,7 +354,6 @@ export class SpeechBalloonSystem {
       const bobY = Math.sin(sp.bob) * 0.06;
       sp.sprite.position.set(pos.x, pos.y + sp.offsetY + bobY, pos.z);
 
-      // billboard: Sprite já olha a câmera
       if (sp.showT > 0) {
         sp.showT -= dt;
         const fadeIn = Math.min(1, (2.8 - sp.showT) * 4);
@@ -341,13 +363,21 @@ export class SpeechBalloonSystem {
         if (sp.showT <= 0) {
           sp.sprite.visible = false;
           sp.mat.opacity = 0;
-          sp.waitT = 2.5 + Math.random() * 5.5;
+          sp.waitT = nextBalloonWait();
         }
       } else {
         sp.waitT -= dt;
-        if (sp.waitT <= 0) {
-          this._say(sp, pick(sp.lines));
-        }
+        if (sp.waitT <= 0) ready.push(sp);
+      }
+    }
+
+    // no máximo um novo balão quando o cooldown global permitir
+    if (this._globalCd <= 0 && ready.length) {
+      const sp = ready[(Math.random() * ready.length) | 0];
+      this._say(sp, pick(sp.lines));
+      // quem perdeu a vez espera de novo (aleatório longo)
+      for (const other of ready) {
+        if (other !== sp) other.waitT = nextBalloonWait() * (0.5 + Math.random() * 0.5);
       }
     }
   }

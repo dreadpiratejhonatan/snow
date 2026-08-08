@@ -6,6 +6,9 @@ Documentação completa: [`docs/V1-OFICIAL.md`](docs/V1-OFICIAL.md) · Tag Git: 
 
 ## Atualizações recentes (pós-v1.0)
 
+### [gh97] — Balões espaçados (8 ago 2026)
+- Balões de fala e sussurros com intervalos **aleatórios médios/longos** (sem spam no relógio)
+
 ### [gh96] — Sussurros Bebe bebe (8 ago 2026)
 - Sussurros místicos corrigidos para **“Bebe, bebe”** (português do Brasil)
 
