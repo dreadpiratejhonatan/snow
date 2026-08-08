@@ -40,6 +40,7 @@ const PROC_TRACKS = [
   {
     id: "white-field",
     name: "Campo Branco",
+    seasons: ["winter", "autumn"],
     scale: [196.0, 220.0, 261.63, 293.66, 329.63],
     pad: [65.41, 98.0, 130.81, 164.81],
     beat: 2.1,
@@ -50,6 +51,7 @@ const PROC_TRACKS = [
   {
     id: "frost-breath",
     name: "Bafo de Gelo",
+    seasons: ["winter"],
     scale: [174.61, 196.0, 233.08, 261.63, 311.13],
     pad: [58.27, 87.31, 116.54, 146.83],
     beat: 2.35,
@@ -60,6 +62,7 @@ const PROC_TRACKS = [
   {
     id: "cabin-dusk",
     name: "Cabana ao Entardecer",
+    seasons: ["autumn", "winter", "spring"],
     scale: [146.83, 174.61, 196.0, 220.0, 261.63],
     pad: [73.42, 98.0, 123.47, 174.61],
     beat: 2.0,
@@ -70,6 +73,7 @@ const PROC_TRACKS = [
   {
     id: "aurora-drift",
     name: "Deriva da Aurora",
+    seasons: ["winter", "spring"],
     scale: [220.0, 246.94, 277.18, 329.63, 369.99],
     pad: [82.41, 110.0, 138.59, 185.0],
     beat: 2.2,
@@ -80,6 +84,7 @@ const PROC_TRACKS = [
   {
     id: "deep-snow",
     name: "Neve Funda",
+    seasons: ["winter"],
     scale: [130.81, 155.56, 174.61, 196.0, 233.08],
     pad: [55.0, 82.41, 110.0, 146.83],
     beat: 2.5,
@@ -90,12 +95,57 @@ const PROC_TRACKS = [
   {
     id: "quiet-trail",
     name: "Trilha Quiet",
+    seasons: ["autumn", "spring"],
     scale: [185.0, 207.65, 246.94, 277.18, 311.13],
     pad: [61.74, 92.5, 123.47, 155.56],
     beat: 2.15,
     density: 0.37,
     bright: 0.03,
     length: 20,
+  },
+  {
+    id: "petal-thaw",
+    name: "Degelo em Flor",
+    seasons: ["spring"],
+    scale: [246.94, 277.18, 329.63, 369.99, 415.3],
+    pad: [82.41, 123.47, 164.81, 196.0],
+    beat: 1.85,
+    density: 0.44,
+    bright: 0.05,
+    length: 20,
+  },
+  {
+    id: "green-meadow",
+    name: "Prado Verde",
+    seasons: ["spring", "summer"],
+    scale: [220.0, 261.63, 293.66, 349.23, 392.0],
+    pad: [87.31, 130.81, 174.61, 220.0],
+    beat: 1.95,
+    density: 0.42,
+    bright: 0.045,
+    length: 22,
+  },
+  {
+    id: "sun-haze",
+    name: "Névoa de Sol",
+    seasons: ["summer"],
+    scale: [196.0, 233.08, 261.63, 311.13, 349.23],
+    pad: [73.42, 110.0, 146.83, 185.0],
+    beat: 2.05,
+    density: 0.36,
+    bright: 0.035,
+    length: 24,
+  },
+  {
+    id: "dry-leaves",
+    name: "Folhas Secas",
+    seasons: ["autumn"],
+    scale: [164.81, 196.0, 220.0, 246.94, 293.66],
+    pad: [55.0, 82.41, 110.0, 146.83],
+    beat: 2.25,
+    density: 0.35,
+    bright: 0.025,
+    length: 21,
   },
 ];
 
@@ -190,6 +240,23 @@ export class MusicPlayer {
     this.beat = 2;
     this.notesLeftInTrack = 0;
     this._combatPulse = 0;
+    this._seasonId = null;
+  }
+
+  /**
+   * Troca a playlist procedural para trilhas da estação (sem cortar arquivos OST).
+   * Só reaplica quando o id muda.
+   */
+  setSeason(seasonId) {
+    if (!seasonId || this._seasonId === seasonId) return;
+    this._seasonId = seasonId;
+    if (!this.ready || this.mode !== "proc") return;
+    const pool = PROC_TRACKS.filter((t) => !t.seasons || t.seasons.includes(seasonId));
+    if (!pool.length) return;
+    const proc = freshPlaylist(pool, "id");
+    this.playlist = proc.list;
+    this.index = proc.start;
+    this.beginProcTrack(this.playlist[this.index]);
   }
 
   async start() {

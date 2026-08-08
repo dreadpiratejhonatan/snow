@@ -114,10 +114,13 @@ export class World {
       this.scatterTrees();
       this.scatterRocks();
       this.buildGrass();
+      this.buildFlowers();
       this.buildClouds();
       this.buildFireflies();
       this.buildBirds();
       this.buildSnowfall();
+      this.buildRainfall();
+      this.buildSandstorm();
       this.buildShootingStar();
       this.buildAurora();
       this.buildCampfire();
@@ -428,6 +431,12 @@ export class World {
       tile.position.x = ox + ix * s;
       tile.position.z = oz + iz * s;
     }
+    for (const tile of this.flowerTiles || []) {
+      const ix = tile.userData.torusIx || 0;
+      const iz = tile.userData.torusIz || 0;
+      tile.position.x = ox + ix * s;
+      tile.position.z = oz + iz * s;
+    }
   }
 
   /** Imagem do ponto lógico (lx,lz) mais próxima de (px,pz) no toro. */
@@ -717,12 +726,13 @@ export class World {
     const mat = new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide, color: 0xffffff });
     mat.onBeforeCompile = (shader) => {
       shader.uniforms.uTime = { value: 0 };
-      shader.vertexShader = "uniform float uTime;\n" + shader.vertexShader;
+      shader.uniforms.uWind = { value: 1 };
+      shader.vertexShader = "uniform float uTime;\nuniform float uWind;\n" + shader.vertexShader;
       shader.vertexShader = shader.vertexShader.replace(
         "#include <begin_vertex>",
         `
         #include <begin_vertex>
-        float wind = sin(uTime * 1.9 + transformed.x * 0.35 + transformed.z * 0.28) * 0.14;
+        float wind = sin(uTime * 1.9 + transformed.x * 0.35 + transformed.z * 0.28) * 0.14 * uWind;
         transformed.x += wind * (position.y * 1.8);
         `
       );
@@ -773,6 +783,146 @@ export class World {
         this.grassTiles.push(tile);
       }
     }
+  }
+
+  /** Flores da primavera (e um pouco no verão) — InstancedMesh leve, sem colisão. */
+  buildFlowers() {
+    const count = this.lowFx
+      ? CONFIG.mobileGfx?.flowerCount ?? Math.min(180, CONFIG.world.flowerCount ?? 420)
+      : CONFIG.world.flowerCount ?? 420;
+    const petal = new THREE.BufferGeometry();
+    const verts = new Float32Array([
+      -0.12, 0.02, 0, 0.12, 0.02, 0, 0, 0.28, 0,
+      0, 0.02, -0.12, 0, 0.02, 0.12, 0, 0.28, 0,
+    ]);
+    petal.setAttribute("position", new THREE.BufferAttribute(verts, 3));
+    petal.computeVertexNormals();
+    const mat = new THREE.MeshLambertMaterial({
+      color: 0xffffff,
+      side: THREE.DoubleSide,
+      transparent: true,
+      opacity: 0.95,
+    });
+    this.flowerMat = mat;
+    const mesh = new THREE.InstancedMesh(petal, mat, count);
+    const dummy = new THREE.Object3D();
+    const col = new THREE.Color();
+    const palette = [0xff6b8a, 0xffc857, 0xc77dff, 0xff8c42, 0x7ec8ff, 0xffffff];
+    const lim = this.half - 0.75;
+    let i = 0;
+    let tries = 0;
+    while (i < count && tries < count * 10) {
+      tries++;
+      const x = (Math.random() * 2 - 1) * lim;
+      const z = (Math.random() * 2 - 1) * lim;
+      const y = this.getHeight(x, z);
+      if (y < this.waterLevel + 0.85 || y > 8.5) continue;
+      if (this.wrapDistXZ({ x, z }, { x: this.home?.x ?? 0, z: this.home?.z ?? 0 }) < 6) continue;
+      dummy.position.set(x, y, z);
+      dummy.rotation.set(0, Math.random() * Math.PI, (Math.random() - 0.5) * 0.25);
+      const s = 0.65 + Math.random() * 0.9;
+      dummy.scale.set(s, s, s);
+      dummy.updateMatrix();
+      mesh.setMatrixAt(i, dummy.matrix);
+      col.setHex(palette[(Math.random() * palette.length) | 0]);
+      mesh.setColorAt(i, col);
+      i++;
+    }
+    mesh.count = i;
+    mesh.instanceMatrix.needsUpdate = true;
+    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+    mesh.visible = false;
+    this.flowers = mesh;
+    this.scene.add(mesh);
+    this.flowerTiles = [mesh];
+    mesh.userData.torusIx = 0;
+    mesh.userData.torusIz = 0;
+    for (let iz = -1; iz <= 1; iz++) {
+      for (let ix = -1; ix <= 1; ix++) {
+        if (ix === 0 && iz === 0) continue;
+        const tile = mesh.clone();
+        tile.position.set(ix * this.size, 0, iz * this.size);
+        tile.userData.torusIx = ix;
+        tile.userData.torusIz = iz;
+        tile.visible = false;
+        this.scene.add(tile);
+        this.flowerTiles.push(tile);
+      }
+    }
+  }
+
+  /** Chuva: pontos rápidos ao redor do jogador. */
+  buildRainfall() {
+    const count = this.lowFx
+      ? CONFIG.mobileGfx?.rainCount ?? 220
+      : CONFIG.world.rainCount ?? 520;
+    const positions = new Float32Array(count * 3);
+    this.rainData = [];
+    for (let i = 0; i < count; i++) {
+      positions.set(
+        [(Math.random() * 2 - 1) * 36, 4 + Math.random() * 18, (Math.random() * 2 - 1) * 36],
+        i * 3
+      );
+      this.rainData.push({ speed: 14 + Math.random() * 10, phase: Math.random() * Math.PI * 2 });
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+    this.rain = new THREE.Points(
+      geo,
+      new THREE.PointsMaterial({
+        color: 0xa8c4e0,
+        size: this.lowFx ? 0.12 : 0.09,
+        transparent: true,
+        opacity: 0,
+        depthWrite: false,
+      })
+    );
+    this.rain.visible = false;
+    this.scene.add(this.rain);
+    this._rainAmt = 0;
+  }
+
+  /** Areia / poeira de tempestade (verão). */
+  buildSandstorm() {
+    const count = this.lowFx
+      ? CONFIG.mobileGfx?.sandCount ?? 200
+      : CONFIG.world.sandCount ?? 480;
+    const positions = new Float32Array(count * 3);
+    this.sandData = [];
+    for (let i = 0; i < count; i++) {
+      positions.set(
+        [(Math.random() * 2 - 1) * 42, 1 + Math.random() * 12, (Math.random() * 2 - 1) * 42],
+        i * 3
+      );
+      this.sandData.push({
+        speed: 6 + Math.random() * 8,
+        phase: Math.random() * Math.PI * 2,
+        lift: 0.4 + Math.random() * 0.8,
+      });
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+    this.sand = new THREE.Points(
+      geo,
+      new THREE.PointsMaterial({
+        color: 0xd2a86a,
+        size: this.lowFx ? 0.22 : 0.16,
+        transparent: true,
+        opacity: 0,
+        depthWrite: false,
+      })
+    );
+    this.sand.visible = false;
+    this.scene.add(this.sand);
+    this._sandAmt = 0;
+  }
+
+  /** Intensidades de clima vindas do Game (estação + eventos). */
+  setWeather(wx) {
+    this._weather = wx || { rain: 0, sand: 0, wind: 1, snowBoost: 0 };
+    this._rainAmt = this._weather.rain || 0;
+    this._sandAmt = this._weather.sand || 0;
+    this._windAmt = this._weather.wind || 1;
   }
 
   // ------------------------------------------------------------------
@@ -913,6 +1063,15 @@ export class World {
       this.snow.visible = snowMul > 0.04;
       this.snow.material.opacity = Math.max(0.08, 0.9 * snowMul);
     }
+    // flores: primavera forte, verão suave, inverno some
+    const flowerMul = season.flowerMul ?? 0;
+    if (this.flowerTiles) {
+      const show = flowerMul > 0.12;
+      for (const t of this.flowerTiles) {
+        t.visible = show;
+        if (t.material) t.material.opacity = Math.min(1, 0.35 + flowerMul * 0.7);
+      }
+    }
     // caps de neve (árvores + telhado) surgem/somem gradualmente com a neve
     const showCaps = snowMul > 0.45;
     if (showCaps !== this._capsShown) {
@@ -1006,7 +1165,8 @@ export class World {
 
   updateSnowfall(dt, elapsed, playerPos) {
     const p = playerPos || { x: 0, y: 4, z: 0 };
-    const snowMul = this.season?.snowMul ?? 1;
+    let snowMul = this.season?.snowMul ?? 1;
+    if (this._weather?.snowBoost) snowMul = Math.max(snowMul, 0.95);
     if (snowMul < 0.04 || !this.snow) return;
     // Nunca chamar groundHeight por floco — 1400×/frame travava o desktop (~segundos)
     const skip = this.lowFx
@@ -1017,20 +1177,92 @@ export class World {
     dt *= skip;
     const sp = this.snow.geometry.attributes.position;
     const blizzard = this.season?.blizzardMul ?? 1;
+    const wind = this._windAmt ?? 1;
     const speedMul = (0.35 + snowMul * 0.9) * blizzard;
     const floorY = (p.y || 4) - 1.5;
     const n = Math.min(this.snowData.length, this._snowPerfCap || this.snowData.length);
     for (let i = 0; i < n; i++) {
       const d = this.snowData[i];
-      let x = sp.getX(i) + Math.sin(elapsed * 1.1 + d.phase) * dt * 0.8 * snowMul;
+      let x = sp.getX(i) + Math.sin(elapsed * 1.1 + d.phase) * dt * 0.8 * snowMul * wind;
       let y = sp.getY(i) - d.speed * dt * speedMul;
-      let z = sp.getZ(i) + Math.cos(elapsed * 0.9 + d.phase) * dt * 0.5 * snowMul;
+      let z = sp.getZ(i) + Math.cos(elapsed * 0.9 + d.phase) * dt * 0.5 * snowMul * wind;
       const dx = x - p.x;
       const dz = z - p.z;
       if (y < floorY || dx * dx + dz * dz > 45 * 45) {
         x = p.x + (Math.random() * 2 - 1) * 40;
         z = p.z + (Math.random() * 2 - 1) * 40;
         y = p.y + 10 + Math.random() * 14;
+      }
+      sp.setXYZ(i, x, y, z);
+    }
+    sp.needsUpdate = true;
+  }
+
+  updateRainfall(dt, elapsed, playerPos) {
+    const amt = this._rainAmt || 0;
+    if (!this.rain) return;
+    if (amt < 0.06) {
+      this.rain.visible = false;
+      if (this.rain.material) this.rain.material.opacity = 0;
+      return;
+    }
+    this.rain.visible = true;
+    this.rain.material.opacity = Math.min(0.95, 0.25 + amt * 0.7);
+    const skip = this.lowFx ? 2 : 1;
+    this._rainFrame = ((this._rainFrame || 0) + 1) % skip;
+    if (this._rainFrame !== 0) return;
+    dt *= skip;
+    const p = playerPos || { x: 0, y: 4, z: 0 };
+    const sp = this.rain.geometry.attributes.position;
+    const wind = this._windAmt ?? 1;
+    const n = this.rainData.length;
+    const floorY = (p.y || 4) - 1.2;
+    for (let i = 0; i < n; i++) {
+      const d = this.rainData[i];
+      let x = sp.getX(i) + wind * dt * 2.2;
+      let y = sp.getY(i) - d.speed * dt * (0.7 + amt);
+      let z = sp.getZ(i) + Math.sin(elapsed + d.phase) * dt * 0.4 * wind;
+      const dx = x - p.x;
+      const dz = z - p.z;
+      if (y < floorY || dx * dx + dz * dz > 40 * 40) {
+        x = p.x + (Math.random() * 2 - 1) * 34;
+        z = p.z + (Math.random() * 2 - 1) * 34;
+        y = p.y + 8 + Math.random() * 14;
+      }
+      sp.setXYZ(i, x, y, z);
+    }
+    sp.needsUpdate = true;
+  }
+
+  updateSandstorm(dt, elapsed, playerPos) {
+    const amt = this._sandAmt || 0;
+    if (!this.sand) return;
+    if (amt < 0.05) {
+      this.sand.visible = false;
+      if (this.sand.material) this.sand.material.opacity = 0;
+      return;
+    }
+    this.sand.visible = true;
+    this.sand.material.opacity = Math.min(0.9, 0.2 + amt * 0.65);
+    const skip = this.lowFx ? 2 : 1;
+    this._sandFrame = ((this._sandFrame || 0) + 1) % skip;
+    if (this._sandFrame !== 0) return;
+    dt *= skip;
+    const p = playerPos || { x: 0, y: 4, z: 0 };
+    const sp = this.sand.geometry.attributes.position;
+    const wind = this._windAmt ?? 1;
+    const n = this.sandData.length;
+    for (let i = 0; i < n; i++) {
+      const d = this.sandData[i];
+      let x = sp.getX(i) + d.speed * dt * wind * (0.8 + amt);
+      let y = sp.getY(i) + Math.sin(elapsed * 2 + d.phase) * dt * d.lift;
+      let z = sp.getZ(i) + Math.cos(elapsed * 1.4 + d.phase) * dt * 1.6 * wind;
+      const dx = x - p.x;
+      const dz = z - p.z;
+      if (y < (p.y || 4) - 2 || y > (p.y || 4) + 14 || dx * dx + dz * dz > 48 * 48) {
+        x = p.x + (Math.random() * 2 - 1) * 40;
+        z = p.z + (Math.random() * 2 - 1) * 40;
+        y = p.y + Math.random() * 10;
       }
       sp.setXYZ(i, x, y, z);
     }
@@ -3278,11 +3510,15 @@ export class World {
     this.nightF = night; // usado pela IA (lobisomem/slender)
     // IA em coords lógicas; depois apresentamos o toro ao redor do jogador
     this.prepareTorusLogic();
+    const wind = this._windAmt ?? this.season?.windMul ?? 1;
     if (this.grassMat?.userData.shader) {
       this.grassMat.userData.shader.uniforms.uTime.value = elapsed;
+      if (this.grassMat.userData.shader.uniforms.uWind) {
+        this.grassMat.userData.shader.uniforms.uWind.value = wind;
+      }
     }
     for (const tree of this.trees) {
-      tree.rotation.z = Math.sin(elapsed * 0.9 + tree.userData.phase) * 0.03;
+      tree.rotation.z = Math.sin(elapsed * (0.9 + wind * 0.35) + tree.userData.phase) * 0.03 * wind;
     }
 
     const wrap = this.half * 1.5;
@@ -3321,6 +3557,8 @@ export class World {
     }
 
     this.updateSnowfall(dt, elapsed, playerPos);
+    this.updateRainfall(dt, elapsed, playerPos);
+    this.updateSandstorm(dt, elapsed, playerPos);
     this.updateShootingStar(dt, night);
     this.updateAurora(dt, elapsed, night, playerPos);
 

@@ -65,6 +65,13 @@ export class Ambience {
     this.gust = 0;
     this.gustTarget = 0;
     this.gustTimer = 0;
+    this.rainGain = null;
+    this.sandGain = null;
+    this.cicadaGain = null;
+    this.thunderTimer = 12;
+    this.cicadaTimer = 2;
+    this.leafTimer = 3;
+    this._seasonId = null;
     /** Sussurros "Bebe, bebe" (pt-BR) — intervalo aleatório, mais longo que curto. */
     this.whisperTimer = 50 + Math.random() * 100;
     this.musicOn = true;
@@ -198,6 +205,49 @@ export class Ambience {
     lfo.connect(lfoGain).connect(this.whistleFilter.frequency);
     lfo.start();
 
+    // chuva contínua (ruído passa-alta) — ganho sobe quando rain > 0
+    const rainSrc = ctx.createBufferSource();
+    rainSrc.buffer = noiseBuf;
+    rainSrc.loop = true;
+    const rainHp = ctx.createBiquadFilter();
+    rainHp.type = "highpass";
+    rainHp.frequency.value = 900;
+    const rainBp = ctx.createBiquadFilter();
+    rainBp.type = "bandpass";
+    rainBp.frequency.value = 1800;
+    rainBp.Q.value = 0.7;
+    this.rainGain = ctx.createGain();
+    this.rainGain.gain.value = 0.0001;
+    rainSrc.connect(rainHp).connect(rainBp).connect(this.rainGain).connect(master);
+    rainSrc.start();
+
+    // areia / vento seco (banda média)
+    const sandSrc = ctx.createBufferSource();
+    sandSrc.buffer = noiseBuf;
+    sandSrc.loop = true;
+    const sandBp = ctx.createBiquadFilter();
+    sandBp.type = "bandpass";
+    sandBp.frequency.value = 480;
+    sandBp.Q.value = 1.1;
+    this.sandGain = ctx.createGain();
+    this.sandGain.gain.value = 0.0001;
+    sandSrc.connect(sandBp).connect(this.sandGain).connect(master);
+    sandSrc.start();
+
+    // cigarras do verão (pulso agudo)
+    const cicSrc = ctx.createBufferSource();
+    cicSrc.buffer = noiseBuf;
+    cicSrc.loop = true;
+    const cicBp = ctx.createBiquadFilter();
+    cicBp.type = "bandpass";
+    cicBp.frequency.value = 4200;
+    cicBp.Q.value = 9;
+    this.cicadaGain = ctx.createGain();
+    this.cicadaGain.gain.value = 0.0001;
+    cicSrc.connect(cicBp).connect(this.cicadaGain).connect(master);
+    cicSrc.start();
+    this._cicadaFilter = cicBp;
+
     this.startMusic();
     void this.loadWhisperSamples();
     return true;
@@ -292,6 +342,10 @@ export class Ambience {
 
   updateMusic(dt, s) {
     if (!this.music) return;
+    if (s.seasonId && s.seasonId !== this._seasonId) {
+      this._seasonId = s.seasonId;
+      this.music.setSeason?.(s.seasonId);
+    }
     const inCombat = !!(s.bearChasing && s.bearDist < 22);
     this.music.setMood?.(inCombat ? "combat" : "explore");
     // combate: volume um pouco mais presente; exploração: calmo
@@ -358,6 +412,20 @@ export class Ambience {
       // estalo do gelo sob o peso
       this.blip(900 + Math.random() * 500, 0.35, 0.03, "sine", 180, 0.5);
     }
+  }
+
+  stepSoft(sprint) {
+    // grama / terra úmida — mais abafado que neve
+    const v = sprint ? 0.055 : 0.038;
+    this.noiseBurst(0.045, v, 700 + Math.random() * 400, 0.9, "lowpass");
+    this.noiseBurst(0.06, v * 0.55, 180 + Math.random() * 40, 0.7, "lowpass");
+  }
+
+  stepSand(sprint) {
+    // areia: fricção seca
+    const v = sprint ? 0.065 : 0.045;
+    this.noiseBurst(0.07, v, 1100 + Math.random() * 600, 1.1, "bandpass");
+    this.noiseBurst(0.05, v * 0.5, 420 + Math.random() * 120, 0.8, "bandpass");
   }
 
   // ----- efeitos do survival -----
@@ -787,17 +855,73 @@ export class Ambience {
 
     this.updateMusic(dt, s);
 
+    const rain = Math.max(0, s.rain || 0);
+    const sand = Math.max(0, s.sand || 0);
+    const windMul = Math.max(0.35, s.wind || 1);
+    const seasonId = s.seasonId || "winter";
+
     // rajadas de vento: alvo sorteado de tempos em tempos, transição suave;
-    // à noite a nevasca aperta e o vento sobe
+    // vento da estação / tempestade escala o volume
     this.gustTimer -= dt;
     if (this.gustTimer <= 0) {
-      this.gustTimer = 3 + Math.random() * 6;
+      this.gustTimer = 2.5 + Math.random() * 5;
       this.gustTarget = Math.random();
     }
     this.gust += (this.gustTarget - this.gust) * Math.min(1, dt * 0.6);
-    const base = 0.018 + s.night * 0.012 + (s.sprint && s.moving ? 0.008 : 0);
-    this.windLow.gain.value = base + this.gust * 0.016;
-    this.windHigh.gain.value = 0.0025 + this.gust * 0.008 + s.night * 0.003;
+    const storm = rain > 0.55 || sand > 0.55 || s.weather === "blizzard" ? 1 : 0;
+    const base =
+      (0.014 + s.night * 0.01 + (s.sprint && s.moving ? 0.008 : 0) + storm * 0.01) * windMul;
+    if (this.windLow) this.windLow.gain.value = base + this.gust * 0.018 * windMul;
+    if (this.windHigh) this.windHigh.gain.value = (0.002 + this.gust * 0.01 + s.night * 0.003) * windMul;
+
+    // chuva / areia — loops contínuos
+    if (this.rainGain) {
+      const want = rain < 0.05 ? 0.0001 : 0.012 + rain * 0.055;
+      const cur = this.rainGain.gain.value;
+      this.rainGain.gain.value = cur + (want - cur) * Math.min(1, dt * 2.2);
+    }
+    if (this.sandGain) {
+      const want = sand < 0.05 ? 0.0001 : 0.01 + sand * 0.05;
+      const cur = this.sandGain.gain.value;
+      this.sandGain.gain.value = cur + (want - cur) * Math.min(1, dt * 2);
+    }
+
+    // trovões ocasionais na chuva forte
+    if (rain > 0.65) {
+      this.thunderTimer -= dt;
+      if (this.thunderTimer <= 0) {
+        this.thunderTimer = 8 + Math.random() * 16;
+        this.noiseBurst(0.55, 0.22 + Math.random() * 0.12, 90 + Math.random() * 80, 1.4, "lowpass", 0.35);
+        setTimeout(() => {
+          if (ctx) this.noiseBurst(0.35, 0.1, 140, 1.1, "lowpass", 0.2);
+        }, 180 + Math.random() * 220);
+      }
+    }
+
+    // cigarras no verão de dia
+    if (this.cicadaGain) {
+      const dayWarm = seasonId === "summer" && s.night < 0.35 && sand < 0.7;
+      this.cicadaTimer -= dt;
+      let wantCic = 0.0001;
+      if (dayWarm) {
+        const pulse = 0.5 + 0.5 * Math.sin(performance.now() * 0.012);
+        wantCic = 0.006 + pulse * 0.01;
+        if (this._cicadaFilter) {
+          this._cicadaFilter.frequency.value = 3800 + pulse * 900;
+        }
+      }
+      const cur = this.cicadaGain.gain.value;
+      this.cicadaGain.gain.value = cur + (wantCic - cur) * Math.min(1, dt * 1.5);
+    }
+
+    // folhas secas no outono com vento
+    if (seasonId === "autumn" && windMul > 0.7 && s.night < 0.6) {
+      this.leafTimer -= dt;
+      if (this.leafTimer <= 0) {
+        this.leafTimer = 1.2 + Math.random() * 2.8;
+        this.noiseBurst(0.08 + Math.random() * 0.06, 0.03 + this.gust * 0.04, 1400 + Math.random() * 900, 0.9, "bandpass", 0.15);
+      }
+    }
 
     // coruja distante à noite
     if (s.night > 0.5) {
@@ -807,29 +931,35 @@ export class Ambience {
         this.blip(340, 0.28, 0.028, "sine", 300, 0.5);
         setTimeout(() => ctx && this.blip(300, 0.4, 0.028, "sine", 260, 0.5), 350);
       }
-      // lobos uivando longe
+      // lobos uivando longe (inverno/outono mais)
       this.wolfTimer -= dt;
       if (this.wolfTimer <= 0) {
-        this.wolfTimer = 22 + Math.random() * 30;
+        this.wolfTimer = (seasonId === "winter" ? 16 : 24) + Math.random() * 28;
         this.wolfHowl();
       }
     }
 
-    // pássaros de dia
-    if (s.night < 0.3) {
+    // pássaros de dia — primavera mais cantora
+    if (s.night < 0.3 && rain < 0.7 && sand < 0.5) {
       this.birdTimer -= dt;
       if (this.birdTimer <= 0) {
-        this.birdTimer = 4 + Math.random() * 8;
+        const springy = seasonId === "spring" ? 0.55 : 1;
+        this.birdTimer = (3 + Math.random() * 7) * springy;
         this.chirp();
+        if (seasonId === "spring" && Math.random() < 0.45) {
+          setTimeout(() => ctx && this.chirp(), 220 + Math.random() * 400);
+        }
       }
     }
 
-    // passos: neve crocante ou gelo duro
+    // passos: neve / gelo / grama molhada / areia
     if (s.moving && s.onGround) {
       this.stepTimer -= dt;
       if (this.stepTimer <= 0) {
         this.stepTimer = s.sprint ? 0.3 : 0.46;
         if (s.onIce) this.stepIce(s.sprint);
+        else if (sand > 0.45) this.stepSand(s.sprint);
+        else if (rain > 0.35 || (seasonId !== "winter" && (s.snowMul || 0) < 0.25)) this.stepSoft(s.sprint);
         else this.stepSnow(s.sprint);
       }
     } else {
