@@ -1611,27 +1611,12 @@ export class World {
       }
       g.userData.pulse = shells;
     } else if (kind === "trap") {
-      const body = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.24, 0.1, 12), mat);
-      body.position.y = 0.08;
-      const top = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.16, 0.06, 10), dark);
-      top.position.y = 0.15;
-      const light = new THREE.Mesh(
-        new THREE.SphereGeometry(0.05, 8, 6),
-        new THREE.MeshStandardMaterial({
-          color: 0xff4040,
-          emissive: 0xff2020,
-          emissiveIntensity: 1.2,
-          roughness: 0.3,
-        })
-      );
-      light.position.y = 0.22;
-      // antena/sensor no topo
-      const antenna = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.14, 5), dark);
-      antenna.position.y = 0.29;
-      const sensor = new THREE.Mesh(new THREE.SphereGeometry(0.018, 6, 5), accent);
-      sensor.position.y = 0.37;
-      g.add(body, top, light, antenna, sensor);
-      g.userData.pulse = [light];
+      // fallback raro — preferir createTrapPickupMesh(trapId)
+      const body = this.createTrapMesh("mine");
+      g.add(body);
+      g.userData.pulse = body.userData.pulse;
+      g.userData.lootAnim = "pulse";
+      g.userData.trapType = "mine";
     } else if (kind === "potion" || kind === "medkit") {
       // jarro mágico com líquido vermelho (poção)
       const glass = new THREE.MeshStandardMaterial({
@@ -1837,7 +1822,9 @@ export class World {
     const kind = this._lootKind({ ...def, countsForWin, saveId });
     const mesh = def.weaponId
       ? this.createWeaponPickupMesh(def.weaponId, def.color)
-      : this.createItemMesh(def.color, kind);
+      : def.trapId
+        ? this.createTrapPickupMesh(def.trapId, def.color)
+        : this.createItemMesh(def.color, kind);
     const y = this.groundHeight(x, z) + 0.12;
     mesh.position.set(x, y, z);
     mesh.userData.baseScale = 1;
@@ -2009,7 +1996,25 @@ export class World {
         continue;
       }
       const bob = Math.sin(elapsed * 2.2 + it.phase) * 0.1;
-      it.mesh.rotation.y = elapsed * 1.1 + it.phase;
+      const anim = it.mesh.userData.lootAnim || "spin";
+      // animação coerente com o tipo (cerca não gira como gema; mina pisca LED)
+      if (anim === "sway") {
+        it.mesh.rotation.y = it.phase * 0.2;
+        it.mesh.rotation.z = Math.sin(elapsed * 1.5 + it.phase) * 0.06;
+        it.mesh.rotation.x = 0;
+      } else if (anim === "wobble") {
+        it.mesh.rotation.y = elapsed * 0.55 + it.phase;
+        it.mesh.rotation.x = Math.sin(elapsed * 2.4 + it.phase) * 0.14;
+        it.mesh.rotation.z = Math.cos(elapsed * 1.8 + it.phase) * 0.08;
+      } else if (anim === "pulse") {
+        it.mesh.rotation.y = elapsed * 0.45 + it.phase;
+        it.mesh.rotation.x = 0;
+        it.mesh.rotation.z = 0;
+      } else {
+        it.mesh.rotation.y = elapsed * 1.1 + it.phase;
+        it.mesh.rotation.x = 0;
+        it.mesh.rotation.z = 0;
+      }
       it.mesh.position.y = it.pos.y + bob;
       // highlight perto do jogador
       let near = 0;
@@ -2890,7 +2895,9 @@ export class World {
     });
     const mesh = weaponId
       ? this.createWeaponPickupMesh(weaponId, color)
-      : this.createItemMesh(color, kind);
+      : trapId
+        ? this.createTrapPickupMesh(trapId, color)
+        : this.createItemMesh(color, kind);
     mesh.position.copy(pos);
     mesh.userData.baseScale = 1;
     this.scene.add(mesh);
@@ -3270,52 +3277,164 @@ export class World {
   // ------------------------------------------------------------------
   createTrapMesh(type) {
     const g = new THREE.Group();
+    const T = this.tex || {};
+    const metal = new THREE.MeshStandardMaterial({
+      color: 0x5a5e66,
+      roughness: 0.4,
+      metalness: 0.7,
+      map: T.metal || null,
+      bumpMap: T.metalBump || null,
+      bumpScale: 0.05,
+    });
+    const dark = new THREE.MeshStandardMaterial({
+      color: 0x2e3036,
+      roughness: 0.55,
+      metalness: 0.5,
+      map: T.metal || null,
+    });
+    const wood = new THREE.MeshStandardMaterial({
+      color: 0x6b4423,
+      roughness: 0.92,
+      metalness: 0.05,
+      map: T.plank || T.crate || null,
+      bumpMap: T.plankBump || T.crateBump || null,
+      bumpScale: 0.1,
+    });
+    const woodDark = new THREE.MeshStandardMaterial({
+      color: 0x4a3018,
+      roughness: 0.95,
+      map: T.plank || null,
+    });
+
     if (type === "mine") {
-      const disc = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.45, 0.5, 0.12, 10),
-        new THREE.MeshStandardMaterial({ color: 0x4a4a4a, roughness: 0.7, metalness: 0.4 })
-      );
-      disc.position.y = 0.06;
+      // disco de pressão + LED vermelho piscante
+      const disc = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.48, 0.1, 14), metal);
+      disc.position.y = 0.05;
+      const rim = new THREE.Mesh(new THREE.TorusGeometry(0.4, 0.035, 6, 18), dark);
+      rim.rotation.x = Math.PI / 2;
+      rim.position.y = 0.1;
+      const plate = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.26, 0.05, 12), dark);
+      plate.position.y = 0.12;
       const led = new THREE.Mesh(
-        new THREE.SphereGeometry(0.08, 8, 6),
-        new THREE.MeshBasicMaterial({ color: 0xff3030 })
+        new THREE.SphereGeometry(0.07, 10, 8),
+        new THREE.MeshStandardMaterial({
+          color: 0xff3030,
+          emissive: 0xff1010,
+          emissiveIntensity: 1.1,
+          roughness: 0.25,
+        })
       );
-      led.position.y = 0.16;
-      g.add(disc, led);
+      led.position.y = 0.2;
+      const hazard = new THREE.Mesh(
+        new THREE.RingGeometry(0.28, 0.34, 16),
+        new THREE.MeshBasicMaterial({
+          color: 0xffc040,
+          transparent: true,
+          opacity: 0.55,
+          side: THREE.DoubleSide,
+          depthWrite: false,
+        })
+      );
+      hazard.rotation.x = -Math.PI / 2;
+      hazard.position.y = 0.11;
+      g.add(disc, rim, plate, led, hazard);
       g.userData.led = led;
+      g.userData.pulse = [led];
+      g.userData.lootAnim = "pulse";
     } else if (type === "bait") {
-      const meat = new THREE.Mesh(
-        new THREE.BoxGeometry(0.45, 0.2, 0.3),
-        new THREE.MeshStandardMaterial({ color: 0xb05030, roughness: 0.9 })
+      // pedaço de carne + osso — isca, não mina
+      const meatMat = new THREE.MeshStandardMaterial({
+        color: 0xb04828,
+        roughness: 0.85,
+        emissive: 0x401008,
+        emissiveIntensity: 0.2,
+      });
+      const fatMat = new THREE.MeshStandardMaterial({ color: 0xe8c090, roughness: 0.7 });
+      const boneMat = new THREE.MeshStandardMaterial({ color: 0xf0e8d8, roughness: 0.55 });
+      const meat = new THREE.Mesh(new THREE.SphereGeometry(0.2, 10, 8), meatMat);
+      meat.scale.set(1.35, 0.7, 1.0);
+      meat.position.y = 0.14;
+      const slab = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.12, 0.22), meatMat);
+      slab.position.set(0.05, 0.12, 0.02);
+      slab.rotation.z = 0.2;
+      const fat = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 6), fatMat);
+      fat.position.set(-0.12, 0.18, 0.06);
+      const bone = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.58, 7), boneMat);
+      bone.rotation.z = Math.PI / 2 + 0.15;
+      bone.position.set(0, 0.16, -0.02);
+      const knub1 = new THREE.Mesh(new THREE.SphereGeometry(0.055, 8, 6), boneMat);
+      knub1.position.set(-0.28, 0.16, -0.02);
+      const knub2 = new THREE.Mesh(new THREE.SphereGeometry(0.055, 8, 6), boneMat);
+      knub2.position.set(0.28, 0.16, -0.02);
+      // moscas/brilho de atrativo
+      const lure = new THREE.Mesh(
+        new THREE.SphereGeometry(0.04, 6, 5),
+        new THREE.MeshStandardMaterial({
+          color: 0xff8040,
+          emissive: 0xff6020,
+          emissiveIntensity: 0.7,
+          transparent: true,
+          opacity: 0.85,
+        })
       );
-      meat.position.y = 0.12;
-      const bone = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.04, 0.04, 0.55, 6),
-        new THREE.MeshStandardMaterial({ color: 0xe8e0d0, roughness: 0.8 })
-      );
-      bone.rotation.z = Math.PI / 2;
-      bone.position.y = 0.14;
-      g.add(meat, bone);
+      lure.position.set(0.08, 0.28, 0.08);
+      g.add(meat, slab, fat, bone, knub1, knub2, lure);
+      g.userData.pulse = [lure];
+      g.userData.lootAnim = "wobble";
     } else {
-      // fence: postes + ripas
-      const wood = new THREE.MeshStandardMaterial({ color: 0x6a4a28, roughness: 1 });
-      for (const dx of [-0.7, 0.7]) {
-        const post = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 1.4, 6), wood);
-        post.position.set(dx, 0.7, 0);
-        g.add(post);
+      // cerca de madeira improvisada (postes + ripas + arame)
+      for (const dx of [-0.65, 0.65]) {
+        const post = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, 1.35, 7), wood);
+        post.position.set(dx, 0.68, 0);
+        const tip = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.12, 5), woodDark);
+        tip.position.set(dx, 1.4, 0);
+        g.add(post, tip);
       }
-      for (const y of [0.4, 0.85]) {
-        const rail = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.12, 0.1), wood);
+      for (const y of [0.35, 0.7, 1.05]) {
+        const rail = new THREE.Mesh(new THREE.BoxGeometry(1.45, 0.1, 0.08), wood);
         rail.position.set(0, y, 0);
         g.add(rail);
       }
+      // diagonal / ripa cruzada
+      const cross = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.07, 0.06), woodDark);
+      cross.position.set(0, 0.7, 0.04);
+      cross.rotation.z = 0.45;
+      const wire = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.012, 0.012, 1.4, 4),
+        new THREE.MeshStandardMaterial({ color: 0x9aa0a8, metalness: 0.8, roughness: 0.35 })
+      );
+      wire.rotation.z = Math.PI / 2;
+      wire.position.set(0, 1.2, 0.02);
+      g.add(cross, wire);
+      g.userData.lootAnim = "sway";
     }
+    g.userData.trapType = type;
     g.traverse((m) => {
       if (m.isMesh) {
         m.castShadow = true;
         m.receiveShadow = true;
       }
     });
+    return g;
+  }
+
+  /** Pickup no chão: mesma silhueta da armadilha + brilho (mina ≠ isca ≠ cerca). */
+  createTrapPickupMesh(trapId, color) {
+    const type = CONFIG.traps[trapId] ? trapId : "mine";
+    const g = this.createTrapMesh(type);
+    // pickups um pouco maiores e legíveis
+    const scale = type === "fence" ? 0.85 : type === "bait" ? 1.25 : 1.15;
+    g.scale.setScalar(scale);
+    const glowColor =
+      color ??
+      (type === "mine" ? 0xff4040 : type === "bait" ? 0xc87840 : 0x8a6a40);
+    this._addLootGlow(g, glowColor, type === "fence" ? 0.55 : 0.42);
+    this._addRarityRing(g, "rare");
+    this._addLootParticles(g, glowColor, this.lowFx ? 0 : type === "bait" ? 4 : 3);
+    g.userData.trapType = type;
+    if (!g.userData.lootAnim) {
+      g.userData.lootAnim = type === "fence" ? "sway" : type === "bait" ? "wobble" : "pulse";
+    }
     return g;
   }
 
@@ -3403,7 +3522,11 @@ export class World {
 
       if (t.type === "mine") {
         const led = t.mesh.userData.led;
-        if (led) led.material.opacity = 0.5 + Math.sin(performance.now() * 0.01) * 0.5;
+        if (led?.material) {
+          const blink = 0.55 + Math.sin(performance.now() * 0.01) * 0.55;
+          if (led.material.emissiveIntensity != null) led.material.emissiveIntensity = blink;
+          else led.material.opacity = blink;
+        }
         for (const e of this.enemies) {
           if (!e.alive || e.tamed) continue;
           if (this.wrapDistXZ(e.mesh.position, t.pos) < (t.cfg.triggerRadius || 2.8)) {

@@ -584,7 +584,7 @@ export const CONFIG = {
     mine: {
       id: "mine",
       name: "Mina",
-      icon: "☢",
+      icon: "💣",
       triggerRadius: 2.8,
       damage: 70,
       explodeRadius: 5,
@@ -601,7 +601,7 @@ export const CONFIG = {
     fence: {
       id: "fence",
       name: "Cerca",
-      icon: "🧱",
+      icon: "🪵",
       duration: 45,
       radius: 1.1,
       desc: "Bloqueia inimigos por ~45s",

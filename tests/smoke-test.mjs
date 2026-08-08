@@ -399,6 +399,38 @@ try {
   }
   console.log("Co-op invite OK");
 
+  // Armadilhas no chão: mina / isca / cerca com mesh e anim distintos (não tudo “cara de mina”)
+  const trapMeshes = {
+    mine: world.createTrapPickupMesh("mine"),
+    bait: world.createTrapPickupMesh("bait"),
+    fence: world.createTrapPickupMesh("fence"),
+  };
+  for (const [id, mesh] of Object.entries(trapMeshes)) {
+    if (mesh.userData.trapType !== id) {
+      throw new Error(`trap pickup ${id}: trapType=${mesh.userData.trapType}`);
+    }
+  }
+  if (trapMeshes.mine.userData.lootAnim !== "pulse") {
+    throw new Error("mina deveria pulsar (LED), não girar como caixa");
+  }
+  if (trapMeshes.bait.userData.lootAnim !== "wobble") {
+    throw new Error("isca deveria ter anim wobble (carne)");
+  }
+  if (trapMeshes.fence.userData.lootAnim !== "sway") {
+    throw new Error("cerca deveria sway (em pé), não spin de loot genérico");
+  }
+  if (CONFIG.traps.mine.icon === CONFIG.traps.fence.icon) {
+    throw new Error("ícones de mina e cerca não podem ser iguais");
+  }
+  if (CONFIG.traps.bait.icon !== "🥩") throw new Error("isca deveria usar ícone 🥩");
+  const groundTraps = world.items.filter((it) => it.trapId && !it.collected);
+  for (const it of groundTraps) {
+    if (it.mesh?.userData?.trapType !== it.trapId) {
+      throw new Error(`item ${it.name}: mesh trapType=${it.mesh?.userData?.trapType} ≠ ${it.trapId}`);
+    }
+  }
+  console.log("Trap visuals OK —", groundTraps.map((t) => t.trapId).join(", "));
+
   for (let i = 0; i < 60; i++) {
     world.update(0.016, i * 0.016, 0.5, 0.1, player.position);
   }
