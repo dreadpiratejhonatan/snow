@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Gera 4 clips sussurrados 'Baby, baby', adiciona ruído e filtra (ffmpeg)."""
+"""Gera 4 clips sussurrados 'Bebe, bebe' (pt-BR), adiciona ruído e filtra (ffmpeg)."""
 from __future__ import annotations
 
 import json
@@ -12,7 +12,7 @@ import wave
 
 SR = 44100
 OUT_DIR = "music/whispers"
-RAW_DIR = "/tmp/whisper_raw"
+RAW_DIR = "/tmp/whisper_raw_bebe"
 
 
 def write_wav(path: str, samples: list[float], sr: int = SR) -> None:
@@ -70,41 +70,48 @@ def syllable(rng: random.Random, dur: float, formants, gain: float = 0.55) -> li
         bn = band_noise(n, rng, f0, f1)
         for i in range(n):
             layers[i] += bn[i] * amp
-    e = env(n, 0.04, 0.12)
-    asp = band_noise(n, rng, 2000, 6000)
+    e = env(n, 0.035, 0.1)
+    # oclusiva /b/ — sopro curto no ataque
+    asp = band_noise(n, rng, 900, 2800)
     for i in range(n):
-        a = 0.35 * max(0.0, 1 - i / (0.08 * SR))
-        layers[i] = (layers[i] * 0.85 + asp[i] * a) * e[i] * gain
+        a = 0.45 * max(0.0, 1 - i / (0.055 * SR))
+        layers[i] = (layers[i] * 0.88 + asp[i] * a) * e[i] * gain
     return layers
 
 
-def make_phrase(seed: int, pitch: float = 1.0, pause: float = 0.35) -> list[float]:
+def make_phrase(seed: int, pitch: float = 1.0, pause: float = 0.32) -> list[float]:
+    """
+    'Bebe, bebe' em pt-BR: /be.be be.be/
+    Vogal /e/ (não o ditongo inglês de 'baby').
+    """
     rng = random.Random(seed)
-    ba = [
-        (500 * pitch, 900 * pitch, 0.9),
-        (1100 * pitch, 1600 * pitch, 0.7),
-        (2200 * pitch, 3200 * pitch, 0.35),
-    ]
-    by_ = [
-        (300 * pitch, 500 * pitch, 0.85),
-        (1800 * pitch, 2600 * pitch, 0.75),
-        (2800 * pitch, 4000 * pitch, 0.4),
+    # Formantes aproximados do /e/ brasileiro (whisper = ruído filtrado)
+    be = [
+        (380 * pitch, 620 * pitch, 0.95),   # F1
+        (1700 * pitch, 2200 * pitch, 0.8),  # F2
+        (2500 * pitch, 3400 * pitch, 0.35), # F3
     ]
     parts: list[list[float]] = []
     silence = lambda t: [0.0] * int(t * SR)
-    wind = band_noise(int(0.45 * SR), rng, 200, 900)
-    we = env(len(wind), 0.2, 0.2)
-    parts.append([w * we[i] * 0.12 for i, w in enumerate(wind)])
-    parts.append(syllable(rng, 0.22, ba, 0.62))
-    parts.append(silence(0.04))
-    parts.append(syllable(rng, 0.28, by_, 0.58))
-    parts.append(silence(pause + rng.uniform(-0.05, 0.08)))
-    parts.append(syllable(rng, 0.2, ba, 0.55))
-    parts.append(silence(0.035))
-    parts.append(syllable(rng, 0.32, by_, 0.52))
-    tail = band_noise(int(0.9 * SR), rng, 180, 700)
-    te = env(len(tail), 0.15, 0.55)
-    parts.append([t * te[i] * 0.1 for i, t in enumerate(tail)])
+
+    wind = band_noise(int(0.4 * SR), rng, 200, 900)
+    we = env(len(wind), 0.18, 0.18)
+    parts.append([w * we[i] * 0.11 for i, w in enumerate(wind)])
+
+    # Be-be
+    parts.append(syllable(rng, 0.18, be, 0.64))
+    parts.append(silence(0.03 + rng.uniform(0, 0.02)))
+    parts.append(syllable(rng, 0.2, be, 0.6))
+    parts.append(silence(pause + rng.uniform(-0.04, 0.08)))
+    # be-be
+    parts.append(syllable(rng, 0.17, be, 0.58))
+    parts.append(silence(0.028))
+    parts.append(syllable(rng, 0.24, be, 0.55))
+
+    tail = band_noise(int(0.85 * SR), rng, 180, 700)
+    te = env(len(tail), 0.14, 0.5)
+    parts.append([t * te[i] * 0.09 for i, t in enumerate(tail)])
+
     out: list[float] = []
     for p in parts:
         out.extend(p)
@@ -113,6 +120,7 @@ def make_phrase(seed: int, pitch: float = 1.0, pause: float = 0.35) -> list[floa
     fade = int(0.25 * SR)
     for i in range(fade):
         out[len(out) - 1 - i] *= i / fade
+    # ruído de gravação (depois filtrado)
     for i in range(len(out)):
         out[i] = out[i] * 0.85 + rng.uniform(-1, 1) * 0.045
         out[i] += 0.01 * math.sin(2 * math.pi * 60 * i / SR)
@@ -123,18 +131,24 @@ def make_phrase(seed: int, pitch: float = 1.0, pause: float = 0.35) -> list[floa
 def main() -> None:
     os.makedirs(OUT_DIR, exist_ok=True)
     os.makedirs(RAW_DIR, exist_ok=True)
+    # remove clips antigos em inglês
+    for name in os.listdir(OUT_DIR):
+        if name.startswith("baby-whisper-") and name.endswith(".wav"):
+            os.remove(os.path.join(OUT_DIR, name))
+
     variants = [
-        ("baby-whisper-01.wav", 11, 0.92, 0.38),
-        ("baby-whisper-02.wav", 29, 1.05, 0.22),
-        ("baby-whisper-03.wav", 47, 0.85, 0.55),
-        ("baby-whisper-04.wav", 73, 1.12, 0.30),
+        ("bebe-whisper-01.wav", 11, 0.92, 0.36),
+        ("bebe-whisper-02.wav", 29, 1.04, 0.22),
+        ("bebe-whisper-03.wav", 47, 0.86, 0.5),
+        ("bebe-whisper-04.wav", 73, 1.1, 0.28),
     ]
     filt = (
         "highpass=f=180,"
         "lowpass=f=4200,"
         "afftdn=nf=-22,"
-        "equalizer=f=800:t=q:w=0.8:g=2,"
-        "equalizer=f=2400:t=q:w=1.0:g=-3,"
+        "equalizer=f=550:t=q:w=0.9:g=2.5,"
+        "equalizer=f=1900:t=q:w=1.0:g=1.5,"
+        "equalizer=f=2800:t=q:w=1.0:g=-2,"
         "aecho=0.7:0.55:60|140|280:0.35|0.25|0.15,"
         "volume=1.4,"
         "loudnorm=I=-22:TP=-2:LRA=8"

@@ -65,7 +65,7 @@ export class Ambience {
     this.gust = 0;
     this.gustTarget = 0;
     this.gustTimer = 0;
-    /** Sussurros "Baby, baby" — intervalo 100% aleatório. */
+    /** Sussurros "Bebe, bebe" (pt-BR) — intervalo 100% aleatório. */
     this.whisperTimer = 20 + Math.random() * 70;
     this.musicOn = true;
     this.music = null;
@@ -204,7 +204,7 @@ export class Ambience {
   }
 
   /**
-   * Carrega music/whispers/*.wav (manifest.json) — clips filtrados "Baby, baby".
+   * Carrega music/whispers/*.wav (manifest.json) — clips filtrados "Bebe, bebe".
    * Falha silenciosa → cai no sussurro sintético.
    */
   async loadWhisperSamples() {
@@ -737,7 +737,7 @@ export class Ambience {
   }
 
   /**
-   * Sussurro místico — prioriza clips "Baby, baby" (filtrados);
+   * Sussurro místico — prioriza clips "Bebe, bebe" (filtrados);
    * senão formantes sintéticos. Sempre aleatório.
    */
   whisper() {
@@ -860,7 +860,7 @@ export class Ambience {
       }
     }
 
-    // sussurros "Baby, baby": 100% aleatório (intervalo + chance + clip)
+    // sussurros "Bebe, bebe": 100% aleatório (intervalo + chance + clip)
     this.whisperTimer -= dt;
     if (this.whisperTimer <= 0) {
       // próxima janela: ~25s–4min (distribuição uniforme)
