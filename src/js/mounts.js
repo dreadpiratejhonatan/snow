@@ -36,7 +36,7 @@ export class MountManager {
     const frac = tameHpFrac();
     for (const e of this.world.enemies) {
       if (!e.alive || !e.cfg.mount) continue;
-      const d = e.mesh.position.distanceTo(p);
+      const d = this.world.wrapDistXZ(e.mesh.position, p);
       if (d >= bestD) continue;
       let kind = null;
       if (e.tamed) {
@@ -122,7 +122,7 @@ export class MountManager {
       wish.normalize();
       pos.x += wish.x * speed * dt;
       pos.z += wish.z * speed * dt;
-      if (!this.world.dungeonActive) this.world.clampToBounds(pos);
+      if (!this.world.dungeonActive) this.world.wrapToBounds(pos);
       this.world.collide(pos, mcfg.radius, 0.5);
       // corpo do animal vira na direção do movimento
       e.mesh.rotation.y = Math.atan2(wish.x, wish.z);

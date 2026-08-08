@@ -436,8 +436,8 @@ export class Player {
     // 1) movimento horizontal
     this.position.x += this.velocity.x * dt;
     this.position.z += this.velocity.z * dt;
-    // dentro da dungeon secreta a arena fica fora de ±bounds — as paredes seguram
-    if (!this.world.dungeonActive) this.world.clampToBounds(this.position);
+    // globo: sai por um lado → entra pelo outro (dungeon usa paredes próprias)
+    if (!this.world.dungeonActive) this.world.wrapToBounds(this.position);
 
     // 2) step-up / paredes (antes da gravidade, senão “desce” no mesmo frame)
     const stepped = this.world.collide(this.position, cfg.radius, cfg.stepHeight);

@@ -13,6 +13,17 @@ try {
   const world = new World(scene);
   console.log("World OK — colliders:", world.colliders.length, "trees:", world.trees.length);
 
+  // Globo: atravessar a borda envolve para o lado oposto
+  const edge = { x: world.half + 3, y: 0, z: 10 };
+  world.wrapToBounds(edge);
+  if (!(edge.x < 0)) throw new Error("wrapToBounds deveria passar +X para -X");
+  const seam = world.wrapDistXZ(
+    { x: world.half - 1, z: 0 },
+    { x: -world.half + 1, z: 0 }
+  );
+  if (!(seam < 3.5)) throw new Error(`wrapDistXZ na costura deveria ser ~2, veio ${seam}`);
+  console.log("World wrap (globe) OK — seam dist:", seam.toFixed(2));
+
   const camera = new THREE.PerspectiveCamera(75, 1.6, 0.1, 500);
   const player = new Player(camera, scene, world, world.getSpawn());
   player.applySkin("classic"); // alias antigo → natan

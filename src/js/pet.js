@@ -76,9 +76,8 @@ export class HuskyPet {
 
   update(dt, playerPos) {
     if (!this.mesh || !playerPos) return;
-    // fica ~2.2m atrás/ao lado
-    const dx = this.pos.x - playerPos.x;
-    const dz = this.pos.z - playerPos.z;
+    // fica ~2.2m atrás/ao lado (distância wrap-aware no globo)
+    const { dx, dz } = this.world.wrapDelta(playerPos.x, playerPos.z, this.pos.x, this.pos.z);
     const dist = Math.hypot(dx, dz);
     const follow = 2.2;
     if (dist > follow + 0.3) {
@@ -87,12 +86,14 @@ export class HuskyPet {
       const nz = playerPos.z + (dz / (dist || 1)) * follow;
       this.pos.x += (nx - this.pos.x) * Math.min(1, dt * speed);
       this.pos.z += (nz - this.pos.z) * Math.min(1, dt * speed);
+      this.world.wrapToBounds(this.pos);
     }
     const gy = this.world.groundHeight(this.pos.x, this.pos.z);
     this.pos.y = gy;
     this.mesh.position.copy(this.pos);
     if (dist > 0.4) {
-      this.mesh.rotation.y = Math.atan2(playerPos.x - this.pos.x, playerPos.z - this.pos.z);
+      const toP = this.world.wrapDelta(this.pos.x, this.pos.z, playerPos.x, playerPos.z);
+      this.mesh.rotation.y = Math.atan2(toP.dx, toP.dz);
     }
     this.walkPhase += dt * (dist > follow ? 10 : 3);
     if (this.tail) this.tail.rotation.y = Math.sin(this.walkPhase) * 0.4;

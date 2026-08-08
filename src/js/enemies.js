@@ -739,6 +739,16 @@ export class Enemy {
     return this.cfg.faction || this.type;
   }
 
+  /** Direção horizontal wrap-aware (globo) de `from` → `to`. */
+  dirToward(from, to) {
+    const { dx, dz } = this.dungeon
+      ? { dx: to.x - from.x, dz: to.z - from.z }
+      : this.world.wrapDelta(from.x, from.z, to.x, to.z);
+    const v = new THREE.Vector3(dx, 0, dz);
+    if (v.lengthSq() < 1e-8) return v.set(0, 0, 1);
+    return v.normalize();
+  }
+
   /** Inimigo vivo mais próximo (todos se odeiam — facções rivais ou qualquer outro). */
   findRival(maxDist = 16) {
     let best = null;
@@ -749,7 +759,7 @@ export class Enemy {
       // mesma facção ainda briga se estiver muito perto (caos);
       // brawler: ignora lealdade e briga com qualquer um no alcance
       const same = e.faction === this.faction;
-      const d = this.mesh.position.distanceTo(e.mesh.position);
+      const d = this.world.wrapDistXZ(this.mesh.position, e.mesh.position);
       const limit = fightAll || !same ? maxDist : maxDist * 0.55;
       if (d < limit && d < bestD) {
         bestD = d;
@@ -762,7 +772,7 @@ export class Enemy {
   /** Combate NPC vs NPC. */
   fightRival(dt, elapsed, rival, speedMul, hooks) {
     const cfg = this.cfg;
-    const dist = this.mesh.position.distanceTo(rival.mesh.position);
+    const dist = this.world.wrapDistXZ(this.mesh.position, rival.mesh.position);
     this.state = "chase";
     if (dist > cfg.attackRange * 0.9) {
       this.moveToward(rival.mesh.position, cfg.chaseSpeed * speedMul * 0.95, dt, elapsed);
@@ -770,11 +780,14 @@ export class Enemy {
     if (dist < cfg.attackRange && this.attackCd <= 0) {
       this.attackCd = cfg.attackCooldown * 0.9;
       this.world.damageEnemyDirect(rival, Math.max(6, Math.round(this.damageNow * 0.85)));
-      // bounce visual
-      this.mesh.rotation.y = Math.atan2(
-        rival.mesh.position.x - this.mesh.position.x,
-        rival.mesh.position.z - this.mesh.position.z
+      // bounce visual — direção wrap-aware
+      const { dx, dz } = this.world.wrapDelta(
+        this.mesh.position.x,
+        this.mesh.position.z,
+        rival.mesh.position.x,
+        rival.mesh.position.z
       );
+      this.mesh.rotation.y = Math.atan2(dx, dz);
       hooks.onEvent?.("npc_fight", this);
     }
   }
@@ -839,11 +852,7 @@ export class Enemy {
     this.flashT = 0.18;
     this._setFlash(true);
     if (opts.from) {
-      const away = new THREE.Vector3()
-        .subVectors(this.mesh.position, opts.from)
-        .setY(0);
-      if (away.lengthSq() < 0.01) away.set(1, 0, 0);
-      away.normalize();
+      const away = this.dirToward(opts.from, this.mesh.position);
       this.knockVel.copy(away).multiplyScalar(4.2);
     }
     if (!this.tamed && this.state !== "chase" && this.state !== "flee") this.state = "chase";
@@ -930,18 +939,16 @@ export class Enemy {
     }
     // knockback
     if (this.knockVel.lengthSq() > 0.01) {
-      const nx = m.position.x + this.knockVel.x * dt;
-      const nz = m.position.z + this.knockVel.z * dt;
-      // inimigos da dungeon vivem no bolso fora do mapa (paredes da arena seguram)
-      const bounds = this.dungeon ? 1e9 : this.world.bounds;
-      m.position.x = THREE.MathUtils.clamp(nx, -bounds, bounds);
-      m.position.z = THREE.MathUtils.clamp(nz, -bounds, bounds);
+      m.position.x += this.knockVel.x * dt;
+      m.position.z += this.knockVel.z * dt;
+      // dungeon: bolso fora do mapa; mundo aberto: envolve como globo
+      if (!this.dungeon) this.world.wrapToBounds(m.position);
       m.position.y = this.world.groundHeight(m.position.x, m.position.z);
       this.knockVel.multiplyScalar(Math.max(0, 1 - dt * 8));
     }
 
     if (!playerPos) return;
-    const dist = m.position.distanceTo(playerPos);
+    const dist = this.world.wrapDistXZ(m.position, playerPos);
 
     this.attackCd -= dt;
     if (this.slowTimer > 0) this.slowTimer -= dt;
@@ -953,7 +960,7 @@ export class Enemy {
     // isca: prioriza o ponto de atração
     if (this.lureTimer > 0 && this.lurePos) {
       this.lureTimer -= dt;
-      const ld = m.position.distanceTo(this.lurePos);
+      const ld = this.world.wrapDistXZ(m.position, this.lurePos);
       if (ld > 1.2) {
         this.moveToward(this.lurePos, (cfg.chaseSpeed || 5) * 0.9, dt, elapsed);
         return;
@@ -973,7 +980,7 @@ export class Enemy {
     // NPCs se agridem: rival perto e jogador não colado → briga entre eles
     const rival = this.findRival(15);
     if (rival && !(ai === "slender" && this.night < 0.35)) {
-      const rd = m.position.distanceTo(rival.mesh.position);
+      const rd = this.world.wrapDistXZ(m.position, rival.mesh.position);
       if (rd < dist * 0.9 || dist > (cfg.aggroRange || 12) * 0.75) {
         this.fightRival(dt, elapsed, rival, speedMul, hooks);
         return;
@@ -1042,7 +1049,7 @@ export class Enemy {
       }
       if (dist < cfg.attackRange && this.attackCd <= 0) {
         this.attackCd = cfg.attackCooldown;
-        const dir = new THREE.Vector3().subVectors(playerPos, m.position).setY(0).normalize();
+        const dir = this.dirToward(m.position, playerPos);
         hooks.onAttack?.(this.damageNow, dir, this);
       }
     }
@@ -1089,7 +1096,7 @@ export class Enemy {
       }
       if (dist < cfg.attackRange && this.attackCd <= 0) {
         this.attackCd = cfg.attackCooldown;
-        const dir = new THREE.Vector3().subVectors(playerPos, m.position).setY(0).normalize();
+        const dir = this.dirToward(m.position, playerPos);
         hooks.onAttack?.(this.damageNow, dir, this);
       }
     }
@@ -1144,7 +1151,7 @@ export class Enemy {
       if (this.chargeTimer <= 0 && dist > cfg.attackRange && dist < cfg.aggroRange) {
         this.chargeTimer = cfg.chargeInterval || 3.2;
         this.charging = cfg.chargeDuration || 1.0;
-        this.dashDir.subVectors(playerPos, m.position).setY(0).normalize();
+        this.dashDir.copy(this.dirToward(m.position, playerPos));
         hooks.onEvent?.("growl", this);
       } else {
         this.moveToward(playerPos, cfg.chaseSpeed * speedMul, dt, elapsed);
@@ -1153,7 +1160,7 @@ export class Enemy {
 
     if (dist < cfg.attackRange && this.attackCd <= 0) {
       this.attackCd = cfg.attackCooldown;
-      const dir = new THREE.Vector3().subVectors(playerPos, m.position).setY(0).normalize();
+      const dir = this.dirToward(m.position, playerPos);
       hooks.onAttack?.(this.damageNow, dir, this);
     }
   }
@@ -1209,7 +1216,7 @@ export class Enemy {
 
     if (dist < cfg.attackRange && this.attackCd <= 0) {
       this.attackCd = cfg.attackCooldown;
-      const dir = new THREE.Vector3().subVectors(playerPos, m.position).setY(0).normalize();
+      const dir = this.dirToward(m.position, playerPos);
       hooks.onAttack?.(this.damageNow, dir, this);
     }
   }
@@ -1252,7 +1259,7 @@ export class Enemy {
     if (dist > prefer) {
       this.moveToward(playerPos, cfg.chaseSpeed * speedMul, dt, elapsed);
     } else if (dist < cfg.attackRange * 1.2) {
-      const away = new THREE.Vector3().subVectors(m.position, playerPos).setY(0).normalize();
+      const away = this.dirToward(playerPos, m.position);
       this.moveToward(m.position.clone().addScaledVector(away, 4), cfg.chaseSpeed * 0.7 * speedMul, dt, elapsed);
     } else {
       m.rotation.y = Math.atan2(playerPos.x - m.position.x, playerPos.z - m.position.z);
@@ -1323,7 +1330,7 @@ export class Enemy {
         this.moveToward(playerPos, cfg.chaseSpeed * speedMul, dt, elapsed);
         if (dist < cfg.attackRange && this.attackCd <= 0) {
           this.attackCd = cfg.attackCooldown;
-          const dir = new THREE.Vector3().subVectors(playerPos, m.position).setY(0).normalize();
+          const dir = this.dirToward(m.position, playerPos);
           hooks.onAttack?.(this.damageNow, dir, this);
         }
       }
@@ -1383,7 +1390,7 @@ export class Enemy {
     }
     if (dist < cfg.attackRange && this.attackCd <= 0) {
       this.attackCd = cfg.attackCooldown;
-      const dir = new THREE.Vector3().subVectors(playerPos, m.position).setY(0).normalize();
+      const dir = this.dirToward(m.position, playerPos);
       hooks.onAttack?.(this.damageNow, dir, this);
     }
   }
@@ -1434,7 +1441,7 @@ export class Enemy {
       // drena vida quando perto (ticks rápidos e fracos)
       if (dist < cfg.attackRange && this.attackCd <= 0) {
         this.attackCd = cfg.attackCooldown;
-        const dir = new THREE.Vector3().subVectors(playerPos, m.position).setY(0).normalize();
+        const dir = this.dirToward(m.position, playerPos);
         hooks.onAttack?.(this.damageNow, dir, this);
       }
     } else {
@@ -1467,10 +1474,9 @@ export class Enemy {
     }
 
     if (this.state === "flee") {
-      const away = new THREE.Vector3().subVectors(m.position, playerPos).setY(0);
-      if (away.lengthSq() < 0.01) away.set(1, 0, 0);
-      away.normalize();
+      const away = this.dirToward(playerPos, m.position);
       const fleeT = m.position.clone().addScaledVector(away, 12);
+      if (!this.dungeon) this.world.wrapToBounds(fleeT);
       this.moveToward(fleeT, cfg.chaseSpeed * 1.15 * speedMul, dt, elapsed);
       if (dist > cfg.aggroRange * 1.8 || this.hp / this.maxHp > 0.45) {
         this.state = "chase";
@@ -1488,7 +1494,7 @@ export class Enemy {
     this.dashTimer -= dt;
     if (this.dashTimer <= 0 && dist < cfg.aggroRange * 0.9 && dist > cfg.attackRange) {
       this.dashTimer = 1.8 + Math.random() * 1.2;
-      this.dashDir.subVectors(playerPos, m.position).setY(0).normalize();
+      this.dashDir.copy(this.dirToward(m.position, playerPos));
       // investida curta
       this.moveToward(
         m.position.clone().addScaledVector(this.dashDir, 6),
@@ -1506,22 +1512,25 @@ export class Enemy {
 
     if (dist < cfg.attackRange && this.attackCd <= 0) {
       this.attackCd = cfg.attackCooldown;
-      const dir = new THREE.Vector3().subVectors(playerPos, m.position).setY(0).normalize();
+      const dir = this.dirToward(m.position, playerPos);
       hooks.onAttack?.(this.damageNow, dir, this);
     }
   }
 
   moveToward(target, speed, dt, elapsed) {
     const m = this.mesh;
-    const bounds = this.dungeon ? 1e9 : this.world.bounds;
-    const dx = target.x - m.position.x;
-    const dz = target.z - m.position.z;
+    // globo: caminha pelo atalho (pode atravessar a costura do mapa)
+    const { dx, dz } = this.dungeon
+      ? { dx: target.x - m.position.x, dz: target.z - m.position.z }
+      : this.world.wrapDelta(m.position.x, m.position.z, target.x, target.z);
     const d = Math.hypot(dx, dz);
     if (d < 0.25) return;
     let nx = m.position.x + (dx / d) * speed * dt;
     let nz = m.position.z + (dz / d) * speed * dt;
-    nx = THREE.MathUtils.clamp(nx, -bounds, bounds);
-    nz = THREE.MathUtils.clamp(nz, -bounds, bounds);
+    if (!this.dungeon) {
+      nx = this.world.wrapCoord(nx);
+      nz = this.world.wrapCoord(nz);
+    }
     // cercas temporárias bloqueiam inimigos
     for (const c of this.world.colliders) {
       if (!c.temporary) continue;
@@ -1538,7 +1547,10 @@ export class Enemy {
     }
     m.position.x = nx;
     m.position.z = nz;
-    m.position.y = this.world.groundHeight(nx, nz) + Math.abs(Math.sin(elapsed * speed * 1.8)) * 0.05;
+    if (!this.dungeon) this.world.wrapToBounds(m.position);
+    m.position.y =
+      this.world.groundHeight(m.position.x, m.position.z) +
+      Math.abs(Math.sin(elapsed * speed * 1.8)) * 0.05;
     m.rotation.y = Math.atan2(dx, dz);
     const legs = m.userData.legs || [];
     for (let i = 0; i < legs.length; i++) {
