@@ -3397,20 +3397,23 @@ class Game {
     ctx.rect(0, 0, S, S);
     ctx.clip();
 
-    // terreno pré-renderizado em grade 3×3 (costura do globo)
-    const srcS = world.minimapCanvas.width || S;
+    // Terreno via pattern repeat — sem grade 3×3 (aquela linha da “borda do mapa”)
+    const src = world.minimapCanvas;
+    const srcS = src.width || S;
     const mapPx = srcS / world.size; // px do canvas-fonte por unidade mundo
     const imgScale = scale / mapPx;
-    const ppx = ((p.x + world.half) / world.size) * srcS;
-    const ppy = ((p.z + world.half) / world.size) * srcS;
-    ctx.translate(S / 2, S / 2);
-    ctx.rotate(yaw);
-    ctx.scale(imgScale, imgScale);
-    ctx.translate(-ppx, -ppy);
-    for (let oz = -1; oz <= 1; oz++) {
-      for (let ox = -1; ox <= 1; ox++) {
-        ctx.drawImage(world.minimapCanvas, ox * srcS, oz * srcS);
-      }
+    // posição contínua no espaço da textura (o pattern dá a volta sozinho)
+    const ppx = (p.x / world.size) * srcS;
+    const ppy = (p.z / world.size) * srcS;
+    const pattern = ctx.createPattern(src, "repeat");
+    if (pattern) {
+      ctx.translate(S / 2, S / 2);
+      ctx.rotate(yaw);
+      ctx.scale(imgScale, imgScale);
+      ctx.translate(-ppx, -ppy);
+      ctx.fillStyle = pattern;
+      const pad = srcS * 2;
+      ctx.fillRect(ppx - pad, ppy - pad, pad * 2, pad * 2);
     }
     ctx.restore();
 

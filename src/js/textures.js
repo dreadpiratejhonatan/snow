@@ -27,6 +27,28 @@ function speckle(g, count, colors, aMin, aMax, rMin, rMax) {
   g.globalAlpha = 1;
 }
 
+/** Speckle que também desenha cópias na borda oposta — textura tileable no toro. */
+function speckleSeamless(g, count, colors, aMin, aMax, rMin, rMax) {
+  for (let i = 0; i < count; i++) {
+    g.fillStyle = colors[(Math.random() * colors.length) | 0];
+    g.globalAlpha = aMin + Math.random() * (aMax - aMin);
+    const r = rMin + Math.random() * (rMax - rMin);
+    const x = Math.random() * SIZE;
+    const y = Math.random() * SIZE;
+    for (let oy = -SIZE; oy <= SIZE; oy += SIZE) {
+      for (let ox = -SIZE; ox <= SIZE; ox += SIZE) {
+        const px = x + ox;
+        const py = y + oy;
+        if (px < -r || py < -r || px > SIZE + r || py > SIZE + r) continue;
+        g.beginPath();
+        g.arc(px, py, r, 0, Math.PI * 2);
+        g.fill();
+      }
+    }
+  }
+  g.globalAlpha = 1;
+}
+
 function toTexture(canvas, repeat = 1, srgb = true) {
   const t = new THREE.CanvasTexture(canvas);
   t.wrapS = t.wrapT = THREE.RepeatWrapping;
@@ -39,42 +61,57 @@ function toTexture(canvas, repeat = 1, srgb = true) {
 function snowGroundCanvas() {
   const [c, g] = blank("#f1f5fa");
   // manchas suaves de sombra azulada (neve acumulada de forma irregular)
-  speckle(g, 60, ["#ccd9e8", "#d8e2ee"], 0.05, 0.12, 12, 34);
+  speckleSeamless(g, 60, ["#ccd9e8", "#d8e2ee"], 0.05, 0.12, 12, 34);
   // grãos finos
-  speckle(g, 2600, ["#dfe8f2", "#cfdcea", "#ffffff", "#c2d2e2"], 0.1, 0.3, 0.4, 1.4);
+  speckleSeamless(g, 2600, ["#dfe8f2", "#cfdcea", "#ffffff", "#c2d2e2"], 0.1, 0.3, 0.4, 1.4);
   // cristais que cintilam
-  speckle(g, 140, ["#ffffff"], 0.75, 1, 0.4, 0.9);
+  speckleSeamless(g, 140, ["#ffffff"], 0.75, 1, 0.4, 0.9);
   return c;
 }
 
 function snowSoftCanvas() {
   const [c, g] = blank("#f4f8fc");
-  speckle(g, 1200, ["#e2eaf2", "#d4e0ec", "#ffffff"], 0.12, 0.3, 0.5, 1.6);
-  speckle(g, 60, ["#ffffff"], 0.8, 1, 0.4, 0.8);
+  speckleSeamless(g, 1200, ["#e2eaf2", "#d4e0ec", "#ffffff"], 0.12, 0.3, 0.5, 1.6);
+  speckleSeamless(g, 60, ["#ffffff"], 0.8, 1, 0.4, 0.8);
   return c;
 }
 
 function iceCanvas() {
   const [c, g] = blank("#c2dcee");
-  const grad = g.createRadialGradient(SIZE / 2, SIZE / 2, 20, SIZE / 2, SIZE / 2, SIZE * 0.7);
-  grad.addColorStop(0, "rgba(255,255,255,0.25)");
-  grad.addColorStop(1, "rgba(90,130,170,0.2)");
-  g.fillStyle = grad;
+  // gradiente suave periódico (sem “mancha” radial que quebra no tile)
+  const img = g.getImageData(0, 0, SIZE, SIZE);
+  const d = img.data;
+  for (let y = 0; y < SIZE; y++) {
+    for (let x = 0; x < SIZE; x++) {
+      const u = (x / SIZE) * Math.PI * 2;
+      const v = (y / SIZE) * Math.PI * 2;
+      const w = 0.5 + 0.5 * Math.sin(u * 2 + v) * Math.cos(v * 2 - u);
+      const a = 0.06 + w * 0.14;
+      const i = (y * SIZE + x) * 4;
+      // base #c2dcee misturado com branco
+      d[i] = Math.min(255, 194 + 61 * a);
+      d[i + 1] = Math.min(255, 220 + 35 * a);
+      d[i + 2] = Math.min(255, 238 + 17 * a);
+      d[i + 3] = 255;
+    }
+  }
+  g.putImageData(img, 0, 0);
+  g.fillStyle = "rgba(90,130,170,0.12)";
   g.fillRect(0, 0, SIZE, SIZE);
-  speckle(g, 500, ["#dcecf8", "#a8c8e0", "#ffffff"], 0.08, 0.2, 0.6, 2.2);
-  // rachaduras: linhas quebradas finas
-  for (let i = 0; i < 22; i++) {
+  speckleSeamless(g, 500, ["#dcecf8", "#a8c8e0", "#ffffff"], 0.08, 0.2, 0.6, 2.2);
+  // rachaduras curtas (evita cruzar a borda do tile)
+  for (let i = 0; i < 18; i++) {
     g.strokeStyle = Math.random() < 0.5 ? "rgba(255,255,255,0.5)" : "rgba(70,105,140,0.4)";
     g.lineWidth = 0.6 + Math.random() * 0.9;
     g.beginPath();
-    let x = Math.random() * SIZE;
-    let y = Math.random() * SIZE;
+    let x = 20 + Math.random() * (SIZE - 40);
+    let y = 20 + Math.random() * (SIZE - 40);
     g.moveTo(x, y);
-    const segs = 4 + ((Math.random() * 5) | 0);
+    const segs = 3 + ((Math.random() * 4) | 0);
     let ang = Math.random() * Math.PI * 2;
     for (let s = 0; s < segs; s++) {
       ang += (Math.random() - 0.5) * 1.2;
-      const len = 12 + Math.random() * 30;
+      const len = 8 + Math.random() * 18;
       x += Math.cos(ang) * len;
       y += Math.sin(ang) * len;
       g.lineTo(x, y);
