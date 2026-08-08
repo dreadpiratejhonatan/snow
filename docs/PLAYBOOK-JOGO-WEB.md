@@ -265,10 +265,11 @@ Se usar bots que abrem PR e auto-merge:
 
 ## 15. Como reutilizar este playbook
 
-1. Copie este arquivo para `docs/` do novo projeto (ou para um gist/repo de templates).
-2. Troque só os exemplos de paths se quiser — a estrutura mental permanece.
-3. Na primeira semana do projeto novo, marque no checklist o que já aplica (CI, FTP, cache, data/).
-4. Depois de cada incidente de produção, acrescente uma linha na seção **Armadilhas**.
+1. Para **pedir a um agente** que monte um jogo novo do zero (personagens, cenário, HostGator), use o brief copiável: [`AGENT-GAME-RECIPE.md`](./AGENT-GAME-RECIPE.md).
+2. Copie este playbook para `docs/` do novo projeto (ou para um gist/repo de templates).
+3. Troque só os exemplos de paths se quiser — a estrutura mental permanece.
+4. Na primeira semana do projeto novo, marque no checklist o que já aplica (CI, FTP, cache, data/).
+5. Depois de cada incidente de produção, acrescente uma linha na seção **Armadilhas**.
 
 ---
 
