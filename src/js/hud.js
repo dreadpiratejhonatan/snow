@@ -7,7 +7,26 @@ export class HUD {
     this.timeEl = document.getElementById("time-of-day");
     this.healthFill = document.getElementById("health-fill");
     this.warmthFill = document.getElementById("warmth-fill");
+    this.warmthCue = document.getElementById("warmth-cue");
+    this.ammoHud = document.getElementById("ammo-hud");
+    this.ammoHudIcon = document.getElementById("ammo-hud-icon");
+    this.ammoHudText = document.getElementById("ammo-hud-text");
+    this.ammoHudBtn = document.getElementById("btn-reload-hud");
+    this.onReload = null; // () => void
     this.itemsEl = document.getElementById("items-info");
+    this.ammoHudBtn?.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this.onReload?.();
+    });
+    this.ammoHudBtn?.addEventListener(
+      "touchend",
+      (e) => {
+        e.preventDefault();
+        this.onReload?.();
+      },
+      { passive: false }
+    );
     this.bearBox = document.getElementById("bear-info");
     this.bearFill = document.getElementById("bear-fill");
     this.bearLabel = document.getElementById("enemy-label");
@@ -85,6 +104,32 @@ export class HUD {
     if (!this.warmthFill) return;
     const p = Math.max(0, Math.min(1, v / max));
     this.warmthFill.style.width = `${p * 100}%`;
+    const freezing = v <= 0;
+    const low = !freezing && v < 35;
+    this.warmthFill.classList.toggle("is-low", low);
+    this.warmthFill.classList.toggle("is-freezing", freezing);
+    if (this.warmthCue) {
+      this.warmthCue.hidden = !(low || freezing);
+      this.warmthCue.textContent = freezing ? "→ CORRA p/ fogueira" : "→ fogueira";
+    }
+  }
+
+  /**
+   * Chip de munição sempre visível (mag/reserva + Recarregar).
+   * @param {{ icon?: string, text?: string, canReload?: boolean, low?: boolean, empty?: boolean, hidden?: boolean } | null} info
+   */
+  setAmmoHud(info) {
+    if (!this.ammoHud) return;
+    if (!info || info.hidden) {
+      this.ammoHud.hidden = true;
+      return;
+    }
+    this.ammoHud.hidden = false;
+    if (this.ammoHudIcon) this.ammoHudIcon.textContent = info.icon || "⚔";
+    if (this.ammoHudText) this.ammoHudText.textContent = info.text || "—";
+    this.ammoHud.classList.toggle("is-low", !!info.low);
+    this.ammoHud.classList.toggle("is-empty", !!info.empty);
+    if (this.ammoHudBtn) this.ammoHudBtn.hidden = !info.canReload;
   }
 
   /**

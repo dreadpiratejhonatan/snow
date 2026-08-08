@@ -965,6 +965,73 @@ html.demo-boot #splash {
   z-index: 20;
 }
 
+/* Morte / vitória: só o essencial (sem dump do menu de pause) */
+.overlay[data-mode="dead"] .overlay-pause-only,
+.overlay[data-mode="won"] .overlay-pause-only {
+  display: none !important;
+}
+
+.overlay[data-mode="won"] #btn-resume {
+  display: none !important;
+}
+
+.quick-ticket {
+  margin: 0.65rem 0 0.35rem;
+  padding: 0.75rem 0.7rem;
+  border-radius: 10px;
+  border: 1px solid rgba(170, 200, 220, 0.18);
+  background: rgba(0, 0, 0, 0.28);
+  text-align: left;
+}
+
+.quick-ticket[hidden] {
+  display: none !important;
+}
+
+.quick-ticket__title {
+  margin: 0 0 0.45rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #dce8f2;
+}
+
+.quick-ticket__input {
+  display: block;
+  width: 100%;
+  margin: 0 0 0.4rem;
+  padding: 0.45rem 0.55rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.35);
+  color: #eef4f8;
+  font: inherit;
+  font-size: 0.88rem;
+  box-sizing: border-box;
+}
+
+.quick-ticket__body {
+  resize: vertical;
+  min-height: 4rem;
+}
+
+.quick-ticket__status {
+  min-height: 1.2em;
+  margin: 0.35rem 0 0.25rem;
+  font-size: 0.8rem;
+  color: #9ec9b0;
+}
+
+.quick-ticket__status.is-error {
+  color: #ff9a9a;
+}
+
+.quick-ticket__board {
+  display: inline-block;
+  margin-top: 0.25rem;
+  font-size: 0.78rem;
+  color: #8ec8d8;
+}
+
 .menu__panel,
 .overlay__panel {
   width: min(92vw, 480px);
@@ -1814,6 +1881,157 @@ body.is-touch .inv-slot__key {
   background: linear-gradient(90deg, #ff9a3c, #ffd75a);
 }
 
+.hud__bar--warmth {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.hud__bar--warmth .hud__bar-track {
+  flex: 1 1 7rem;
+  min-width: 5.5rem;
+}
+
+.hud__warmth-cue {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #ffd0a0;
+  white-space: nowrap;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
+}
+
+.hud__bar-fill--warmth.is-low {
+  background: linear-gradient(90deg, #ff7a2e, #ffc14a);
+  animation: warmth-pulse 1.1s ease-in-out infinite;
+}
+
+.hud__bar-fill--warmth.is-freezing {
+  background: linear-gradient(90deg, #5a9fff, #c8e4ff);
+  animation: warmth-pulse 0.55s ease-in-out infinite;
+}
+
+@keyframes warmth-pulse {
+  0%,
+  100% {
+    filter: brightness(1);
+    opacity: 1;
+  }
+  50% {
+    filter: brightness(1.35);
+    opacity: 0.82;
+  }
+}
+
+.hud__minimap-wrap {
+  position: absolute;
+  top: 1.2rem;
+  left: 1.5rem;
+  width: 180px;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.hud__minimap-wrap .hud__minimap {
+  position: relative;
+  top: auto;
+  left: auto;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+  display: block;
+}
+
+.hud__minimap-legend {
+  margin: 0.2rem 0 0;
+  padding: 0.15rem 0.35rem;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.45);
+  color: rgba(230, 240, 248, 0.88);
+  font-size: 0.62rem;
+  letter-spacing: 0.02em;
+  text-align: center;
+}
+
+body.is-touch .hud__minimap-wrap {
+  width: 72px;
+  top: max(0.5rem, env(safe-area-inset-top));
+  left: max(0.5rem, env(safe-area-inset-left));
+}
+
+body.is-touch .hud__minimap-legend {
+  font-size: 0.5rem;
+  padding: 0.1rem 0.2rem;
+  letter-spacing: 0;
+}
+
+.ammo-hud {
+  position: absolute;
+  left: 50%;
+  bottom: 7.6rem;
+  transform: translateX(-50%);
+  z-index: 8;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.35rem 0.55rem;
+  border-radius: 999px;
+  background: rgba(6, 12, 20, 0.72);
+  border: 1px solid rgba(170, 200, 220, 0.22);
+  color: #eef4f8;
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+  pointer-events: auto;
+}
+
+.ammo-hud[hidden] {
+  display: none !important;
+}
+
+.ammo-hud__icon {
+  font-size: 1rem;
+}
+
+.ammo-hud__text {
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.ammo-hud__btn {
+  margin: 0;
+  padding: 0.25rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid rgba(110, 196, 212, 0.45);
+  background: rgba(40, 100, 120, 0.45);
+  color: #dff6ff;
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.ammo-hud__btn:active {
+  transform: scale(0.96);
+}
+
+.ammo-hud.is-low .ammo-hud__text {
+  color: #ffb070;
+}
+
+.ammo-hud.is-empty .ammo-hud__text {
+  color: #ff7a7a;
+}
+
+body.is-touch .ammo-hud {
+  bottom: calc(8.8rem + env(safe-area-inset-bottom, 0px));
+}
+
+body:not(.is-touch) .ammo-hud {
+  bottom: 5.2rem;
+}
+
 .hud__bar-fill--bear {
   background: #a05c2c;
 }
@@ -2335,14 +2553,14 @@ textarea,
   display: none !important;
 }
 
-/* 4 ações primárias: sprint / interagir / pular / atacar */
+/* Ações primárias: sprint / interagir / recarregar / pular / atacar */
 .touch__actions {
   position: absolute;
   right: max(0.65rem, env(safe-area-inset-right));
   bottom: max(1rem, env(safe-area-inset-bottom));
   display: grid;
-  grid-template-columns: repeat(2, 56px);
-  gap: 0.45rem;
+  grid-template-columns: repeat(3, 52px);
+  gap: 0.4rem;
   pointer-events: auto;
   justify-items: center;
   align-items: end;
@@ -2556,8 +2774,8 @@ body.touch-more-open .touch__look {
   }
 
   body.is-touch .touch__actions {
-    grid-template-columns: repeat(2, 50px);
-    gap: 0.35rem;
+    grid-template-columns: repeat(3, 48px);
+    gap: 0.3rem;
   }
 
   body.is-touch .touch-btn {

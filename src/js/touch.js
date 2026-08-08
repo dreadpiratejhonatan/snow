@@ -286,6 +286,9 @@ export class TouchControls {
     tap("btn-trap-place", () => {
       this.input._tapTrapPlace = true;
     }, { closeMore: true });
+    tap("btn-reload", () => {
+      this.input._tapReload = true;
+    });
 
     // Ajuda / novidades / chat são ligados no main/chat — só fecha o painel ⋯
     for (const id of ["btn-help", "btn-release-touch", "btn-chat-touch"]) {

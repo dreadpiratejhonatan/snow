@@ -15,6 +15,13 @@ Documentação completa: [`docs/V1-OFICIAL.md`](docs/V1-OFICIAL.md) · Tag Git: 
 ### [gh95] — Sussurros no vento (8 ago 2026)
 - Quatro áudios místicos filtrados sussurram ao acaso enquanto você joga
 
+### [gh101] — Usabilidade no celular (8 ago 2026)
+- Barra de frio pulsa e aponta **→ fogueira** quando esfria
+- Morte / vitória mostram só o essencial (Renascer / ranking)
+- Munição sempre na tela + botão **R** / Recarregar no touch
+- Minimapa com legenda; base pisca quando você está com frio
+- **Reportar problema** direto do pause/morte (com contexto)
+
 ### [gh100] — Mapa como globo (8 ago 2026)
 - O mapa **não tem parede no fim**: atravessar a borda leva ao lado oposto (topologia de esfera/globo)
 - Névoa aperta perto da costura (some o abismo preto); inimigos, loot e minimapa acompanham
