@@ -4,7 +4,8 @@ Sobrevivência 3D na neve no navegador (Three.js). Explore, colete suprimentos, 
 
 **Documentação completa da v1:** [`docs/V1-OFICIAL.md`](docs/V1-OFICIAL.md)  
 **Ciclo pós-v1 (até gh63):** [`docs/DEVELOP-ATE-GH63.md`](docs/DEVELOP-ATE-GH63.md)  
-**Changelog:** [`CHANGELOG.md`](CHANGELOG.md) · **Novidades in-game:** [`docs/RELEASE-NOTES.md`](docs/RELEASE-NOTES.md)
+**Changelog:** [`CHANGELOG.md`](CHANGELOG.md) · **Novidades in-game:** [`docs/RELEASE-NOTES.md`](docs/RELEASE-NOTES.md)  
+**Receita para outro jogo / agente:** [`docs/AGENT-GAME-RECIPE.md`](docs/AGENT-GAME-RECIPE.md)
 
 | Jogar | URL |
 | --- | --- |
