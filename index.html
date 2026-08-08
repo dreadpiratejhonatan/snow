@@ -13,10 +13,10 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
-  <link rel="stylesheet" href="src/styles/styles.css?v=gh106" />
+  <link rel="stylesheet" href="src/styles/styles.css?v=gh107" />
   <script>
-    // Build id — no console deve aparecer gh106 (se for antigo, limpe o cache)
-    window.SNOW_BUILD = "gh106";
+    // Build id — no console deve aparecer gh107 (se for antigo, limpe o cache)
+    window.SNOW_BUILD = "gh107";
     console.info("[Neve] build", window.SNOW_BUILD);
     // Evita flash do splash quando ?demo=1 (antes do bundle carregar)
     try {
@@ -87,28 +87,32 @@
             hidden
           />
         </div>
+        <!-- overlay na arte: honras + dots + continuar (sem faixa preta feia embaixo) -->
+        <div class="splash__veil" aria-hidden="true"></div>
+        <div class="splash__chrome">
+          <aside class="dedication dedication--splash" aria-label="Dedicatórias">
+            <ul class="dedication__honors">
+              <li class="dedication__honor">
+                <span class="dedication__flag" aria-hidden="true">⚑</span>
+                <span class="dedication__who">
+                  <span class="dedication__name">Caio</span>
+                  <span class="dedication__role">primeiro a testar</span>
+                </span>
+              </li>
+              <li class="dedication__dot" aria-hidden="true">·</li>
+              <li class="dedication__honor dedication__honor--clear">
+                <span class="dedication__flag" aria-hidden="true">⚑</span>
+                <span class="dedication__who">
+                  <span class="dedication__name">Jorge</span>
+                  <span class="dedication__role">primeiro a zerar</span>
+                </span>
+              </li>
+            </ul>
+          </aside>
+          <div id="splash-dots" class="splash__dots" aria-hidden="true"></div>
+          <p class="splash__skip">Toque para continuar</p>
+        </div>
       </div>
-      <div id="splash-dots" class="splash__dots" aria-hidden="true"></div>
-      <aside class="dedication dedication--splash" aria-label="Dedicatórias">
-        <ul class="dedication__honors">
-          <li class="dedication__honor">
-            <span class="dedication__flag" aria-hidden="true">⚑</span>
-            <span class="dedication__who">
-              <span class="dedication__name">Caio</span>
-              <span class="dedication__role">primeiro a testar</span>
-            </span>
-          </li>
-          <li class="dedication__dot" aria-hidden="true">·</li>
-          <li class="dedication__honor dedication__honor--clear">
-            <span class="dedication__flag" aria-hidden="true">⚑</span>
-            <span class="dedication__who">
-              <span class="dedication__name">Jorge</span>
-              <span class="dedication__role">primeiro a zerar</span>
-            </span>
-          </li>
-        </ul>
-      </aside>
-      <p class="splash__skip">Clique ou toque para continuar</p>
     </div>
 
     <canvas id="game-canvas" tabindex="0"></canvas>
@@ -583,6 +587,6 @@
     </div>
   </div>
 
-  <script type="module" src="src/js/main.js?v=gh106"></script>
+  <script type="module" src="src/js/main.js?v=gh107"></script>
 </body>
 </html>

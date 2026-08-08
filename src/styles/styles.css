@@ -247,6 +247,37 @@ html.demo-boot #splash {
   place-items: center;
 }
 
+/* véu só na base da arte — UI fica sobre a imagem, não num bloco preto */
+.splash__veil {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: min(38%, 220px);
+  z-index: 2;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(4, 8, 14, 0.28) 45%,
+    rgba(4, 8, 14, 0.72) 100%
+  );
+}
+
+.splash__chrome {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0 1rem max(1.1rem, env(safe-area-inset-bottom));
+  pointer-events: none;
+}
+
 .splash__slide,
 .splash__img {
   /* base 1920×1080 — nunca estica; letterbox no fundo escuro */
