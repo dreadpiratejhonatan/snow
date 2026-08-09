@@ -1416,7 +1416,13 @@ class Game {
     const w = this.weapons.current;
     this.player.setHeldWeapon(w.id);
     this.refreshInventoryUI();
-    this.hud.showMsg(`Equipado: ${w.name}`, 1600);
+    if (w.id === "torch") {
+      const sec = Math.ceil(this.weapons.torchFuel || 0);
+      this.hud.showMsg(`Tocha: aquece na mão (~${sec}s)`, 2200);
+      this.syncTorchFlameVisual();
+    } else {
+      this.hud.showMsg(`Equipado: ${w.name}`, 1600);
+    }
     return true;
   }
 
@@ -1450,6 +1456,22 @@ class Game {
       return;
     }
     if (!w.ammoType) {
+      if (w.id === "torch") {
+        const fuel = Math.max(0, this.weapons.torchFuel || 0);
+        const sec = Math.ceil(fuel);
+        const mm = String(Math.floor(sec / 60)).padStart(1, "0");
+        const ss = String(sec % 60).padStart(2, "0");
+        const low = fuel > 0 && fuel < 14;
+        this.hud.setAmmoHud({
+          icon: "🔥",
+          text: `Tocha ${mm}:${ss}`,
+          canReload: false,
+          low,
+          empty: fuel <= 0,
+          hidden: false,
+        });
+        return;
+      }
       this.hud.setAmmoHud({
         icon: w.icon || "✊",
         text: w.name || "Punhos",
@@ -2930,6 +2952,7 @@ class Game {
 
     this.updateInteractions(dt);
     this.updateSurvival(dt, night);
+    this.updateTorchPuffs(dt);
     this.updateEnemyHud();
     // Minimapa Canvas2D todo frame + WebGL = hitch no Android
     const mapHz = this.lowFx ? CONFIG.mobileGfx?.minimapHz ?? 8 : 60;
@@ -3317,10 +3340,18 @@ class Game {
     if (this.ended) return;
     const s = CONFIG.survival;
     const fireDist = this.world.wrapDistXZ(this.player.position, this.world.campfirePos);
+    const torchHeld = !!this.weapons?.isTorchHeld?.();
+    const nearFire = fireDist < s.fireRadius;
 
-    if (fireDist < s.fireRadius) {
-      this.warmth = Math.min(s.maxWarmth, this.warmth + s.warmthRegen * dt);
-      if (this.warmth > 50) this.health = Math.min(s.maxHealth, this.health + s.fireHeal * dt);
+    if (nearFire || torchHeld) {
+      const regen = nearFire
+        ? s.warmthRegen
+        : CONFIG.weapons.torch?.warmthRegen ?? 14;
+      this.warmth = Math.min(s.maxWarmth, this.warmth + regen * dt);
+      // cura só na fogueira de verdade
+      if (nearFire && this.warmth > 50) {
+        this.health = Math.min(s.maxHealth, this.health + s.fireHeal * dt);
+      }
       this._coldWarned = false;
       this._freezingWarned = false;
     } else {
@@ -3333,7 +3364,7 @@ class Game {
       // avisos claros — o frio não mata “do nada”
       if (this.warmth < 35 && !this._coldWarned) {
         this._coldWarned = true;
-        this.hud.showMsg("Está esfriando... volte para a fogueira.");
+        this.hud.showMsg("Está esfriando... tocha ou fogueira!", 3200);
       }
 
       if (this.warmth <= 0) {
@@ -3342,13 +3373,173 @@ class Game {
         this.health = Math.max(floor, this.health - s.coldDamage * coldMul * dt);
         if (!this._freezingWarned) {
           this._freezingWarned = true;
-          this.hud.showMsg("Você está congelando! Corra para a base.");
+          this.hud.showMsg("Você está congelando! Corra para a base.", 3200);
         }
       }
     }
 
+    this.updateTorchFuel(dt);
+
     this.hud.setHealth(this.health, s.maxHealth);
-    this.hud.setWarmth(this.warmth, s.maxWarmth);
+    this.hud.setWarmth(this.warmth, s.maxWarmth, { torchHeating: torchHeld && !nearFire });
+  }
+
+  /** Queima a tocha só na mão; ao zerar → puff + some do inventário. */
+  updateTorchFuel(dt) {
+    if (!this.weapons || this.ended) return;
+    if (this.weapons.equippedId !== "torch") {
+      this._torchLowWarned = false;
+      return;
+    }
+    const fuel = this.weapons.torchFuel || 0;
+    if (fuel > 0 && fuel < 14 && !this._torchLowWarned) {
+      this._torchLowWarned = true;
+      this.hud.showMsg("A tocha está fraca…", 2200);
+    }
+    this.syncTorchFlameVisual();
+    if (this.weapons.burnTorchFuel(dt)) {
+      this.onTorchBurnOut();
+    } else if (this.weapons.equippedId === "torch") {
+      // HUD de combustível enquanto segura
+      this.refreshAmmoHud();
+    }
+  }
+
+  /** Luz da tocha enfraquece conforme o combustível. */
+  syncTorchFlameVisual() {
+    const frac = this.weapons?.torchFuelFrac?.() ?? 0;
+    const intensity = 0.25 + frac * 0.75;
+    const scale = 0.75 + frac * 0.35;
+    const apply = (root) => {
+      if (!root) return;
+      root.traverse((m) => {
+        if (m.isPointLight) m.intensity = 0.35 + intensity * 0.7;
+        if (m.isMesh && m.geometry?.type === "ConeGeometry") {
+          m.scale.setScalar(scale);
+        }
+      });
+    };
+    apply(this.player?.heldWeapon);
+    apply(this.player?.fpWeapon);
+  }
+
+  onTorchBurnOut() {
+    const tip = this._torchTipWorld();
+    this.spawnTorchPuff(tip);
+    this.ambience?.torchExtinguish?.();
+    this.weapons.remove("torch");
+    this.cancelWeaponCharge();
+    this.player.setHeldWeapon("fists");
+    this.refreshInventoryUI();
+    this._torchLowWarned = false;
+
+    const lines = [
+      "Nossa, a tocha apagou!",
+      "Ih, acabou a tocha…",
+      "A tocha foi embora!",
+      "Puff… sem tocha.",
+    ];
+    const line = lines[(Math.random() * lines.length) | 0];
+    this.speech?.say?.("player", line, { duration: 3.6 });
+    this.hud.showMsg(line, 3200);
+  }
+
+  _torchTipWorld() {
+    const out = new THREE.Vector3();
+    const mesh = this.player?.heldWeapon || this.player?.fpWeapon;
+    if (mesh) {
+      mesh.getWorldPosition(out);
+      out.y += 0.55;
+      return out;
+    }
+    out.copy(this.player.position);
+    out.y += 1.35;
+    const yaw = this.player.yaw || 0;
+    out.x += Math.sin(yaw) * 0.45;
+    out.z += Math.cos(yaw) * 0.45;
+    return out;
+  }
+
+  /** Animação curta: fagulhas + fumaça quando a tocha some. */
+  spawnTorchPuff(origin) {
+    if (!this.scene || !origin) return;
+    const count = this.lowFx ? 18 : 32;
+    const positions = new Float32Array(count * 3);
+    const vel = [];
+    for (let i = 0; i < count; i++) {
+      positions.set([origin.x, origin.y, origin.z], i * 3);
+      vel.push({
+        vx: (Math.random() - 0.5) * 2.8,
+        vy: 1.1 + Math.random() * 2.4,
+        vz: (Math.random() - 0.5) * 2.8,
+      });
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+    const mat = new THREE.PointsMaterial({
+      color: 0xffb060,
+      size: this.lowFx ? 0.28 : 0.2,
+      transparent: true,
+      opacity: 0.95,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    });
+    const pts = new THREE.Points(geo, mat);
+    pts.renderOrder = 5;
+    this.scene.add(pts);
+
+    // nuvem de fumaça cinza (segundo burst)
+    const smokeN = this.lowFx ? 10 : 16;
+    const smokePos = new Float32Array(smokeN * 3);
+    const smokeVel = [];
+    for (let i = 0; i < smokeN; i++) {
+      smokePos.set([origin.x, origin.y, origin.z], i * 3);
+      smokeVel.push({
+        vx: (Math.random() - 0.5) * 1.2,
+        vy: 0.6 + Math.random() * 1.4,
+        vz: (Math.random() - 0.5) * 1.2,
+      });
+    }
+    const smokeGeo = new THREE.BufferGeometry();
+    smokeGeo.setAttribute("position", new THREE.BufferAttribute(smokePos, 3));
+    const smokeMat = new THREE.PointsMaterial({
+      color: 0x6a6a6a,
+      size: this.lowFx ? 0.4 : 0.32,
+      transparent: true,
+      opacity: 0.7,
+      depthWrite: false,
+    });
+    const smoke = new THREE.Points(smokeGeo, smokeMat);
+    this.scene.add(smoke);
+
+    if (!this._torchPuffs) this._torchPuffs = [];
+    this._torchPuffs.push({ pts, vel, t: 0, dur: 0.65 });
+    this._torchPuffs.push({ pts: smoke, vel: smokeVel, t: 0, dur: 0.9, smoke: true });
+  }
+
+  updateTorchPuffs(dt) {
+    if (!this._torchPuffs?.length) return;
+    for (let i = this._torchPuffs.length - 1; i >= 0; i--) {
+      const p = this._torchPuffs[i];
+      p.t += dt;
+      const sp = p.pts.geometry.attributes.position;
+      for (let k = 0; k < p.vel.length; k++) {
+        const v = p.vel[k];
+        sp.setXYZ(k, sp.getX(k) + v.vx * dt, sp.getY(k) + v.vy * dt, sp.getZ(k) + v.vz * dt);
+        v.vy += (p.smoke ? 0.4 : -0.8) * dt;
+        v.vx *= 1 - dt * 1.2;
+        v.vz *= 1 - dt * 1.2;
+      }
+      sp.needsUpdate = true;
+      const life = 1 - p.t / p.dur;
+      p.pts.material.opacity = Math.max(0, life * (p.smoke ? 0.65 : 0.95));
+      if (p.t >= p.dur) {
+        this.scene.remove(p.pts);
+        p.pts.geometry.dispose();
+        p.pts.material.dispose();
+        this._torchPuffs.splice(i, 1);
+      }
+    }
   }
 
   updateEnemyHud() {

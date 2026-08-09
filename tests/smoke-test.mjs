@@ -158,6 +158,37 @@ try {
 
   console.log("Arsenal + skins + traps + drops + NPC fight OK");
 
+  // Tocha: aquece na mão, combustível finito, some ao zerar
+  {
+    const { WeaponInventory } = await import("../src/js/weapons.js");
+    const inv = new WeaponInventory();
+    inv.unlock("torch");
+    if (!inv.isTorchHeld()) throw new Error("torch: deveria estar equipada com combustível");
+    const max = inv.torchFuelMax();
+    if (!(max >= 30)) throw new Error("torch: fuelDuration curto demais");
+    if (Math.abs(inv.torchFuel - max) > 0.01) throw new Error("torch: fill deveria encher");
+    // queima quase tudo
+    inv.burnTorchFuel(max - 0.5);
+    if (!(inv.torchFuel > 0 && inv.torchFuel < 1)) throw new Error("torch: combustível residual esperado");
+    const burnedOut = inv.burnTorchFuel(1);
+    if (!burnedOut || inv.torchFuel > 0) throw new Error("torch: deveria apagar");
+    inv.remove("torch");
+    if (inv.unlocked.has("torch") || inv.equippedId === "torch") {
+      throw new Error("torch: remove deveria tirar do inventário");
+    }
+    // pegar de novo recarrega
+    inv.unlock("torch");
+    inv.burnTorchFuel(10);
+    inv.onCollectItem({ weaponId: "torch" });
+    if (Math.abs(inv.torchFuel - max) > 0.01) {
+      throw new Error("torch: coletar de novo deveria reencher combustível");
+    }
+    if (!(CONFIG.weapons.torch.warmthRegen > 0)) {
+      throw new Error("torch: warmthRegen deveria aquecer");
+    }
+    console.log("Torch fuel OK — duration", max, "s");
+  }
+
   // minimapa orientado ao player: frente = cima na tela (mesma fórmula de drawMinimap)
   const mapToScreen = (px, pz, x, z, yaw, S = 180, viewRange = 72) => {
     const scale = S / 2 / viewRange;

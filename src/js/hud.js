@@ -102,7 +102,7 @@ export class HUD {
     this.healthFill.style.background = p > 0.4 ? "#e05252" : "#ff2e2e";
   }
 
-  setWarmth(v, max) {
+  setWarmth(v, max, opts = {}) {
     if (!this.warmthFill) return;
     const p = Math.max(0, Math.min(1, v / max));
     this.warmthFill.style.width = `${p * 100}%`;
@@ -111,8 +111,13 @@ export class HUD {
     this.warmthFill.classList.toggle("is-low", low);
     this.warmthFill.classList.toggle("is-freezing", freezing);
     if (this.warmthCue) {
-      this.warmthCue.hidden = !(low || freezing);
-      this.warmthCue.textContent = freezing ? "→ CORRA p/ fogueira" : "→ fogueira";
+      if (opts.torchHeating) {
+        this.warmthCue.hidden = false;
+        this.warmthCue.textContent = "🔥 tocha aquecendo";
+      } else {
+        this.warmthCue.hidden = !(low || freezing);
+        this.warmthCue.textContent = freezing ? "→ CORRA p/ fogueira" : "→ fogueira";
+      }
     }
   }
 

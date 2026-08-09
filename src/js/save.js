@@ -99,6 +99,7 @@ export function captureGameState(game) {
       equippedId: game.weapons.equippedId,
       ammo: { ...game.weapons.ammo },
       mag: { ...game.weapons.mag },
+      torchFuel: game.weapons.torchFuel ?? 0,
     },
     traps: {
       counts: { ...game.traps.counts },
@@ -157,6 +158,15 @@ export function applyGameState(game, data) {
     game.weapons.equippedId = data.weapons.equippedId || "fists";
     Object.assign(game.weapons.ammo, data.weapons.ammo || {});
     game.weapons.mag = { ...(data.weapons.mag || {}) };
+    if (data.weapons.torchFuel != null) {
+      game.weapons.torchFuel = data.weapons.torchFuel;
+    } else if (game.weapons.unlocked.has("torch")) {
+      game.weapons.fillTorchFuel();
+    }
+    // tocha sem combustível não volta do save
+    if (game.weapons.equippedId === "torch" && (game.weapons.torchFuel || 0) <= 0) {
+      game.weapons.remove("torch");
+    }
     game.player.setHeldWeapon(game.weapons.equippedId);
   }
 
