@@ -756,10 +756,10 @@ export const CONFIG = {
       cooldown: 0.5,
       slowElite: 2.2,
       skinColor: 0xff9a3c,
-      /** Segurar na mão aquece; o combustível acaba (não é infinita). */
-      fuelDuration: 80,
+      /** Segurar na mão aquece; combustível finito (~40s) → puff e some. */
+      fuelDuration: 40,
       warmthRegen: 14,
-      desc: "Aquece na mão · acaba com o tempo · atrasa o alfa",
+      desc: "Aquece na mão · ~40s · puff e some",
     },
     claymore: {
       id: "claymore",

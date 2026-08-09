@@ -240,7 +240,7 @@ try {
     inv.unlock("torch");
     if (!inv.isTorchHeld()) throw new Error("torch: deveria estar equipada com combustível");
     const max = inv.torchFuelMax();
-    if (!(max >= 30)) throw new Error("torch: fuelDuration curto demais");
+    if (!(max >= 25 && max <= 60)) throw new Error("torch: fuelDuration fora do esperado (~40s)");
     if (Math.abs(inv.torchFuel - max) > 0.01) throw new Error("torch: fill deveria encher");
     // queima quase tudo
     inv.burnTorchFuel(max - 0.5);
@@ -274,6 +274,36 @@ try {
       throw new Error("grenade: deveria sumir e voltar aos punhos");
     }
     console.log("Grenade consumable OK");
+  }
+
+  // Spirit face-move: andar “para trás” vira o corpo (rosto/skin visível)
+  {
+    const scene = new THREE.Scene();
+    const cam = new THREE.PerspectiveCamera(70, 1, 0.1, 100);
+    const world = new World(scene);
+    const player = new Player(cam, scene, world, new THREE.Vector3(0, 0, 0));
+    player.cameraMode = "third";
+    player.yaw = 0;
+    player._bodyYaw = Math.PI;
+    const back = {
+      moveForward: false,
+      moveBack: true,
+      moveLeft: false,
+      moveRight: false,
+      sprint: false,
+      jump: false,
+      analog: null,
+      rightDown: false,
+      orbitModifier: false,
+      mobile: false,
+      blockAim: false,
+    };
+    for (let i = 0; i < 45; i++) player.update(1 / 30, back);
+    // wish = -forward = (0,0,+1) → atan2(0,1)=0 → corpo de frente pra câmera
+    let err = Math.abs(((player._bodyYaw % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2));
+    if (err > Math.PI) err = Math.PI * 2 - err;
+    if (err > 0.45) throw new Error("face-move: corpo deveria virar ao andar para trás, got " + player._bodyYaw);
+    console.log("Face-move OK — bodyYaw", player._bodyYaw.toFixed(2));
   }
 
   // minimapa orientado ao player: frente = cima na tela (mesma fórmula de drawMinimap)
