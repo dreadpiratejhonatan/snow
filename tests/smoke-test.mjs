@@ -36,7 +36,31 @@ try {
   if (player.skinId !== "natan") throw new Error("applySkin falhou");
   player.applySkin("ze");
   if (player.skinId !== "ze") throw new Error("skin ZÉ falhou");
+  if (!player.headRoot) throw new Error("player: headRoot (look sync) ausente");
+  player.pitch = 0.6;
+  player.syncHeadLook(1);
+  if (player.headRoot.rotation.x >= -0.2) {
+    throw new Error("player: olhar pra cima deveria inclinar a cabeça (sign Spirit)");
+  }
+  player.setCameraMode("third");
+  player.pitch = -1.1;
+  player.orbitPitch = 0;
+  player.syncThirdPersonCamera(0);
+  if (player.camera.position.y < player.position.y + 0.35) {
+    throw new Error("player: câmera 3ª não deve enterrar ao olhar pros pés");
+  }
   console.log("Player OK — spawn:", player.position.toArray().map((n) => n.toFixed(2)).join(", "), "skin:", player.skinId);
+
+  // HUD Spirit: crônica (API no protótipo — Node sem document)
+  {
+    const { HUD } = await import("../src/js/hud.js");
+    if (typeof HUD.prototype.showChronicle !== "function") {
+      throw new Error("HUD.showChronicle ausente");
+    }
+    if (typeof HUD.prototype.hideChronicle !== "function") {
+      throw new Error("HUD.hideChronicle ausente");
+    }
+  }
 
   const input = {
     sprint: false,

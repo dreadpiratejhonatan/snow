@@ -1742,6 +1742,17 @@ class Game {
 
   toastAchievement(def) {
     if (!def) return;
+    // Crônica legível (Spirit) em vez de toast curto empilhado
+    if (this.hud?.showChronicle) {
+      this.hud.showChronicle({
+        name: "Conquista",
+        line: def.title,
+        fact: def.desc || "",
+        lineMs: 5000,
+        factMs: 10000,
+      });
+      return;
+    }
     this.hud?.showMsg(`Conquista: ${def.title} — ${def.desc}`, 4000);
   }
 
@@ -3555,6 +3566,13 @@ class Game {
   /** Balões de fala seguem o jogador, o parceiro co-op e os NPCs (conversa aleatória). */
   updateSpeechBalloons(dt) {
     if (!this.speech || this.state !== "playing") return;
+    // Crônica aberta: sem balões novos (contrato Spirit — um painel só)
+    if (this.hud?.storyBusy) {
+      for (const sp of this.speech.speakers.values()) {
+        if (sp.showT <= 0) sp.sprite.visible = false;
+      }
+      return;
+    }
     this.speech.syncPlayer(this.player);
     const remotes = this.coop?.remotes;
     const aliveRemote = new Set();

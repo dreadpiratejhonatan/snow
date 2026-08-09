@@ -89,18 +89,26 @@ export class Player {
     tieStrip.rotation.x = Math.PI;
     tieStrip.position.set(0, 1.36, 0.16);
 
+    // headRoot: pescoço + cabeça + rosto giram com o olhar (contrato Spirit / celular)
+    this.headRoot = new THREE.Group();
+    this.headRoot.position.y = 1.68;
+    this.headRoot.rotation.order = "YXZ";
+    this._headYaw = 0;
+    this._headPitch = 0;
+
     const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.055, 0.14, 8), skin);
-    neck.position.y = 1.68;
+    neck.position.y = 0;
 
     // Cabeça só pele; rosto = plano na frente (+Z, mesmo lado da camisa).
     // mesh.rotation.y = yaw+π → +Z aponta no olhar; 3ª pessoa (atrás) vê nuca, não o plano.
     const head = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.3, 0.28), skin);
-    head.position.y = 1.88;
+    head.position.y = 0.2;
     this.headMesh = head;
 
     const facePlane = new THREE.Mesh(new THREE.PlaneGeometry(0.26, 0.28), face);
-    facePlane.position.set(0, 1.88, 0.152);
+    facePlane.position.set(0, 0.2, 0.152);
     this.facePlane = facePlane;
+    this.headRoot.add(neck, head, facePlane);
 
     this.leftLeg = this.makeLimb(0.07, 0.95, suit, 0.05);
     this.leftLeg.position.set(-0.09, 0.95, 0);
@@ -141,9 +149,7 @@ export class Player {
       rightShoulder,
       shirtStrip,
       tieStrip,
-      neck,
-      head,
-      facePlane,
+      this.headRoot,
       this.leftLeg,
       this.rightLeg,
       this.leftArm,
@@ -564,7 +570,26 @@ export class Player {
     this.mesh.rotation.y = this.yaw + Math.PI;
   }
 
+  /** Cabeça acompanha o olhar da câmera (pitch>0 = olhar pra cima). */
+  syncHeadLook(dt = 0) {
+    if (!this.headRoot) return;
+    const lookYaw = this.cameraYaw;
+    const bodyYaw = this.yaw;
+    let dy = lookYaw - bodyYaw;
+    while (dy > Math.PI) dy -= Math.PI * 2;
+    while (dy < -Math.PI) dy += Math.PI * 2;
+    const targetYaw = THREE.MathUtils.clamp(dy, -0.85, 0.85);
+    // cameraPitch>0 = cima; headRoot.rotation.x positivo no Three olha pra baixo → invertido
+    const targetPitch = THREE.MathUtils.clamp(-this.cameraPitch, -1.15, 1.15);
+    const k = Math.min(1, (dt || 1 / 60) * 14);
+    this._headYaw += (targetYaw - this._headYaw) * k;
+    this._headPitch += (targetPitch - this._headPitch) * k;
+    this.headRoot.rotation.y = this._headYaw;
+    this.headRoot.rotation.x = this._headPitch;
+  }
+
   syncCamera(dt = 0) {
+    this.syncHeadLook(dt);
     if (this.cameraMode === "third") {
       this.syncThirdPersonCamera(dt);
       return;
@@ -576,59 +601,72 @@ export class Player {
       this.position.y + CONFIG.player.eyeHeight + bob,
       this.position.z
     );
-    const euler = new THREE.Euler(this.pitch, this.yaw, 0, "YXZ");
-    this.camera.quaternion.setFromEuler(euler);
+    // pitch>0 = olhar pra cima (mesmo sentido da 3ª pessoa); Three +X olha pra baixo
+    this.camera.rotation.order = "YXZ";
+    this.camera.rotation.y = this.yaw;
+    this.camera.rotation.x = -this.pitch;
   }
 
+  /**
+   * Órbita estilo Spirit: olhar pra baixo sobe a câmera por cima da cabeça
+   * para ver os pés, sem enterrar no terreno.
+   */
   syncThirdPersonCamera(dt = 0) {
     const cfg = CONFIG.thirdPerson;
     const camCfg = CONFIG.camera || {};
     const camYaw = this.cameraYaw;
     const camPitch = this.cameraPitch;
-    const pivot = new THREE.Vector3(
-      this.position.x,
-      this.position.y + cfg.pivotHeight,
-      this.position.z
-    );
-    // ombro direito relativo à visão da câmera (órbita incluída)
-    const right = new THREE.Vector3(Math.cos(camYaw), 0, -Math.sin(camYaw));
-    pivot.addScaledVector(right, cfg.shoulderOffset);
-
-    const cosP = Math.cos(camPitch);
-    const look = new THREE.Vector3(
-      -Math.sin(camYaw) * cosP,
-      Math.sin(camPitch),
-      -Math.cos(camYaw) * cosP
-    ).normalize();
-    const back = look.clone().negate();
+    const feetY = this.position.y;
+    const pivotY = feetY + (cfg.pivotHeight ?? 1.5);
     const wantDist =
       cfg.distance * (this.aiming ? camCfg.aimDistanceMul ?? 0.68 : 1);
     this._aimCamDist ??= cfg.distance;
     this._aimCamDist += (wantDist - this._aimCamDist) * Math.min(1, dt * 8);
-    const distance = this.clipCameraDistance(pivot, back, this._aimCamDist);
-    const target = pivot.clone().addScaledVector(back, distance);
+    const dist = this._aimCamDist;
 
-    // suaviza só a POSIÇÃO; orientação acompanha a órbita (360° sem flip)
+    // pitch>0 olhar pra cima → câmera desce; pitch<0 olhar pra baixo → sobe (overhead)
+    let horiz = Math.cos(camPitch) * dist;
+    if (horiz < 0.55) horiz = 0.55;
+    let camY = pivotY - Math.sin(camPitch) * dist;
+    const minCamY = feetY + 0.42;
+    if (camY < minCamY) {
+      camY = minCamY;
+      const rise = pivotY - camY;
+      const maxHoriz = Math.sqrt(Math.max(0.3, dist * dist - rise * rise));
+      horiz = Math.min(horiz, Math.max(0.55, maxHoriz));
+    }
+
+    // ombro leve + posição atrás do corpo na direção da câmera
+    const right = new THREE.Vector3(Math.cos(camYaw), 0, -Math.sin(camYaw));
+    const target = new THREE.Vector3(
+      this.position.x + Math.sin(camYaw) * horiz,
+      camY,
+      this.position.z + Math.cos(camYaw) * horiz
+    );
+    target.addScaledVector(right, cfg.shoulderOffset ?? 0.42);
+
+    // não atravessar o chão sob a câmera
+    const gh = this.world.groundHeight(target.x, target.z);
+    if (target.y < gh + 0.4) target.y = gh + 0.4;
+
     if (dt > 0 && this._camSmooth) {
       this._camSmooth.lerp(target, 1 - Math.exp(-dt * 16));
     } else {
       this._camSmooth = target.clone();
     }
     this.camera.position.copy(this._camSmooth);
-    const euler = new THREE.Euler(camPitch, camYaw, 0, "YXZ");
-    this.camera.quaternion.setFromEuler(euler);
-  }
 
-  // impede a câmera de terceira pessoa de atravessar o chão
-  clipCameraDistance(pivot, dir, maxDistance) {
-    const step = 0.2;
-    for (let d = maxDistance; d > CONFIG.thirdPerson.minDistance; d -= step) {
-      const px = pivot.x + dir.x * d;
-      const py = pivot.y + dir.y * d;
-      const pz = pivot.z + dir.z * d;
-      if (py > this.world.groundHeight(px, pz) + 0.4) return d;
-    }
-    return CONFIG.thirdPerson.minDistance;
+    // mira: ao olhar pra baixo, aponta mais pros pés
+    const lookDown = Math.max(0, -camPitch);
+    const aimAhead = 2.2 * (1 - lookDown * 0.55);
+    const aimY = THREE.MathUtils.lerp(pivotY, feetY + 0.08, Math.min(1, lookDown / 1.2));
+    this._lookTarget ??= new THREE.Vector3();
+    this._lookTarget.set(
+      this.position.x - Math.sin(camYaw) * aimAhead,
+      aimY,
+      this.position.z - Math.cos(camYaw) * aimAhead
+    );
+    this.camera.lookAt(this._lookTarget);
   }
 
   get eyePosition() {
