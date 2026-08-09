@@ -749,46 +749,44 @@ export class Enemy {
     return v.normalize();
   }
 
-  /** Inimigo vivo mais próximo (todos se odeiam — facções rivais ou qualquer outro). */
-  findRival(maxDist = 16) {
-    let best = null;
-    let bestD = maxDist;
-    const fightAll = !!(this.cfg?.fightEveryone || this.cfg?.ai === "brawler");
+  /**
+   * Inimigos são independentes: não se atacam.
+   * Se colarem demais, só se afastam um do outro.
+   */
+  softSeparatePeers(dt) {
+    const m = this.mesh;
+    if (!m || this.ridden || this.tamed) return;
+    const myR = this.cfg?.contactRadius ?? 0.48 * (this.cfg?.scale || 1);
     for (const e of this.world.enemies) {
-      if (e === this || !e.alive || e.tamed) continue;
-      // mesma facção ainda briga se estiver muito perto (caos);
-      // brawler: ignora lealdade e briga com qualquer um no alcance
-      const same = e.faction === this.faction;
-      const d = this.world.wrapDistXZ(this.mesh.position, e.mesh.position);
-      const limit = fightAll || !same ? maxDist : maxDist * 0.55;
-      if (d < limit && d < bestD) {
-        bestD = d;
-        best = e;
+      if (e === this || !e.alive || e.tamed || e.ridden) continue;
+      const { dx, dz } = this.dungeon
+        ? { dx: e.mesh.position.x - m.position.x, dz: e.mesh.position.z - m.position.z }
+        : this.world.wrapDelta(m.position.x, m.position.z, e.mesh.position.x, e.mesh.position.z);
+      let d = Math.hypot(dx, dz);
+      const otherR = e.cfg?.contactRadius ?? 0.48 * (e.cfg?.scale || 1);
+      const min = myR + otherR + 0.4;
+      if (d >= min) continue;
+      // exatamente no mesmo ponto: escolhe um lado qualquer
+      let ndx = dx;
+      let ndz = dz;
+      if (d < 1e-4) {
+        const ang = (this.netId || 1) * 2.399 + (e.netId || 2);
+        ndx = Math.cos(ang);
+        ndz = Math.sin(ang);
+        d = 0;
       }
-    }
-    return best;
-  }
-
-  /** Combate NPC vs NPC. */
-  fightRival(dt, elapsed, rival, speedMul, hooks) {
-    const cfg = this.cfg;
-    const dist = this.world.wrapDistXZ(this.mesh.position, rival.mesh.position);
-    this.state = "chase";
-    if (dist > cfg.attackRange * 0.9) {
-      this.moveToward(rival.mesh.position, cfg.chaseSpeed * speedMul * 0.95, dt, elapsed);
-    }
-    if (dist < cfg.attackRange && this.attackCd <= 0) {
-      this.attackCd = cfg.attackCooldown * 0.9;
-      this.world.damageEnemyDirect(rival, Math.max(6, Math.round(this.damageNow * 0.85)));
-      // bounce visual — direção wrap-aware
-      const { dx, dz } = this.world.wrapDelta(
-        this.mesh.position.x,
-        this.mesh.position.z,
-        rival.mesh.position.x,
-        rival.mesh.position.z
-      );
-      this.mesh.rotation.y = Math.atan2(dx, dz);
-      hooks.onEvent?.("npc_fight", this);
+      const overlap = min - d;
+      const push = Math.max(overlap * 0.55 * Math.min(1, dt * 6), d < 1e-4 ? min * 0.5 : 0);
+      if (push <= 0) continue;
+      const len = Math.hypot(ndx, ndz) || 1;
+      m.position.x -= (ndx / len) * push;
+      m.position.z -= (ndz / len) * push;
+      if (!this.dungeon) {
+        m.position.x = this.world.wrapCoord(m.position.x);
+        m.position.z = this.world.wrapCoord(m.position.z);
+        this.world.wrapToBounds(m.position);
+      }
+      m.position.y = this.world.groundHeight(m.position.x, m.position.z);
     }
   }
 
@@ -971,20 +969,10 @@ export class Enemy {
     let speedMul = this.slowTimer > 0 ? 0.45 : 1;
     const ai = cfg.ai || (this.type === "wolf" ? "wolf" : "bear");
 
-    // brawler: prioriza qualquer rival, depois o jogador
+    // legado "brawler": agora só persegue o jogador (sem briga entre NPCs)
     if (ai === "brawler" || cfg.fightEveryone) {
       this.updateBrawler(dt, elapsed, playerPos, dist, speedMul, hooks);
       return;
-    }
-
-    // NPCs se agridem: rival perto e jogador não colado → briga entre eles
-    const rival = this.findRival(15);
-    if (rival && !(ai === "slender" && this.night < 0.35)) {
-      const rd = this.world.wrapDistXZ(m.position, rival.mesh.position);
-      if (rd < dist * 0.9 || dist > (cfg.aggroRange || 12) * 0.75) {
-        this.fightRival(dt, elapsed, rival, speedMul, hooks);
-        return;
-      }
     }
 
     if (ai === "wolf") {
@@ -1056,17 +1044,11 @@ export class Enemy {
   }
 
   /**
-   * Briga com todo mundo: rival mais próximo (qualquer facção) tem prioridade;
-   * se não houver, persegue o jogador com aggro alto.
+   * IA agressiva só contra o jogador (não ataca outros inimigos).
    */
   updateBrawler(dt, elapsed, playerPos, dist, speedMul, hooks) {
     const cfg = this.cfg;
     const m = this.mesh;
-    const rival = this.findRival(cfg.aggroRange || 22);
-    if (rival) {
-      this.fightRival(dt, elapsed, rival, speedMul * 1.05, hooks);
-      return;
-    }
 
     if (this.state === "wander") {
       if (dist < (cfg.aggroRange || 22)) {
@@ -1524,7 +1506,25 @@ export class Enemy {
       ? { dx: target.x - m.position.x, dz: target.z - m.position.z }
       : this.world.wrapDelta(m.position.x, m.position.z, target.x, target.z);
     const d = Math.hypot(dx, dz);
-    if (d < 0.25) return;
+    // corpo grande (urso alfa etc.) não empilha em cima do alvo
+    const bodyR = this.cfg?.contactRadius ?? 0.48 * (this.cfg?.scale || 1);
+    const stopAt = Math.max(0.25, bodyR + 0.55);
+    if (d < stopAt) {
+      // já colado: empurra para fora em vez de ficar em cima do jogador
+      if (d > 1e-4 && d < stopAt * 0.92) {
+        const push = (stopAt - d) * Math.min(1, dt * 6);
+        m.position.x -= (dx / d) * push;
+        m.position.z -= (dz / d) * push;
+        if (!this.dungeon) {
+          m.position.x = this.world.wrapCoord(m.position.x);
+          m.position.z = this.world.wrapCoord(m.position.z);
+          this.world.wrapToBounds(m.position);
+        }
+        m.position.y = this.world.groundHeight(m.position.x, m.position.z);
+        m.rotation.y = Math.atan2(dx, dz);
+      }
+      return;
+    }
     let nx = m.position.x + (dx / d) * speed * dt;
     let nz = m.position.z + (dz / d) * speed * dt;
     if (!this.dungeon) {

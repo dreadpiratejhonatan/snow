@@ -214,7 +214,7 @@ try {
   const wdrop = world.items.find((i) => i.weaponId && !i.collected);
   if (!wdrop) throw new Error("nenhum weaponId no loot");
 
-  // NPC vs NPC — spawna dois vivos se os outros já morreram nos testes acima
+  // NPCs independentes — colados só se afastam, sem dano entre si
   let a = world.enemies.find((e) => e.alive);
   let b = world.enemies.find((e) => e.alive && e !== a);
   if (!a || !b) {
@@ -222,12 +222,16 @@ try {
     b = world.spawnEnemyNow("chuck");
   }
   const hpBefore = b.hp;
-  a.attackCd = 0;
   a.mesh.position.copy(b.mesh.position);
-  a.fightRival(0.016, 1, b, 1, {});
-  if (b.hp >= hpBefore) throw new Error("NPC deveria ferir outro NPC");
+  a.softSeparatePeers(0.05);
+  const sep = Math.hypot(
+    a.mesh.position.x - b.mesh.position.x,
+    a.mesh.position.z - b.mesh.position.z
+  );
+  if (sep < 0.08) throw new Error("NPCs colados deveriam se afastar");
+  if (b.hp !== hpBefore) throw new Error("NPC não deve ferir outro NPC");
 
-  console.log("Arsenal + skins + traps + drops + NPC fight OK");
+  console.log("Arsenal + animais + traps + drops + NPC separate OK");
 
   // Tocha: aquece na mão, combustível finito, some ao zerar
   {
@@ -258,6 +262,18 @@ try {
       throw new Error("torch: warmthRegen deveria aquecer");
     }
     console.log("Torch fuel OK — duration", max, "s");
+
+    // Granada consumível: última some → punhos
+    const g = new WeaponInventory();
+    g.unlock("grenade");
+    g.ammo.grenade = 1;
+    if (!g.canFire()) throw new Error("grenade: deveria poder arremessar");
+    g.consumeAmmo();
+    if (!g.stripIfEmpty("grenade")) throw new Error("grenade: stripIfEmpty após gastar");
+    if (g.unlocked.has("grenade") || g.equippedId !== "fists") {
+      throw new Error("grenade: deveria sumir e voltar aos punhos");
+    }
+    console.log("Grenade consumable OK");
   }
 
   // minimapa orientado ao player: frente = cima na tela (mesma fórmula de drawMinimap)

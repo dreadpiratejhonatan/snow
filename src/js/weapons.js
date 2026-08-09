@@ -65,6 +65,31 @@ export class WeaponInventory {
     return true;
   }
 
+  /** Granada e outros arremessáveis: some do inventário quando a reserva zera. */
+  isThrownConsumable(weaponId = this.equippedId) {
+    const w = CONFIG.weapons[weaponId];
+    return !!(w && (w.consumable || w.fire === "thrown") && w.ammoType);
+  }
+
+  /**
+   * Se a arma arremessável ficou sem munição, remove e volta aos punhos.
+   * @returns {boolean} true se removeu
+   */
+  stripIfEmpty(weaponId = this.equippedId) {
+    if (!this.isThrownConsumable(weaponId)) return false;
+    if (this.totalAmmoFor(weaponId) > 0) return false;
+    return this.remove(weaponId);
+  }
+
+  /** Limpa granadas/arremessáveis órfãs (save antigo, dry-fire, etc.). */
+  stripEmptyThrown() {
+    let changed = false;
+    for (const id of [...this.unlocked]) {
+      if (this.stripIfEmpty(id)) changed = true;
+    }
+    return changed;
+  }
+
   magSize(weaponId) {
     return CONFIG.weapons[weaponId]?.magSize || 0;
   }
