@@ -3,6 +3,14 @@ import { CONFIG } from "./config.js";
 import { getSkin, loadFaceTexture, resolveSkinId } from "./skins.js";
 import { buildHeldWeaponMesh } from "./weaponVisuals.js";
 
+/** Menor giro de `from` → `to` em radianos (−π..π). */
+function shortestAngleDelta(from, to) {
+  let d = to - from;
+  while (d > Math.PI) d -= Math.PI * 2;
+  while (d < -Math.PI) d += Math.PI * 2;
+  return d;
+}
+
 export class Player {
   constructor(camera, scene, world, spawn) {
     this.camera = camera;
@@ -17,6 +25,8 @@ export class Player {
     /** Órbita só da câmera em 3ª pessoa (0 = atrás do corpo). */
     this.orbitYaw = 0;
     this.orbitPitch = 0;
+    /** Corpo em 3ª pessoa: vira na direção do passo (estilo Spirit) — dá pra ver o rosto. */
+    this._bodyYaw = Math.PI;
     this.onGround = false;
     this.cameraMode = "first";
     this.skinId = "natan";
@@ -384,6 +394,7 @@ export class Player {
     this.kb.set(0, 0, 0);
     this.yaw = 0;
     this.pitch = 0;
+    this._bodyYaw = Math.PI;
     this.resetOrbit();
     this.onGround = false;
     this.riding = false;
@@ -462,6 +473,9 @@ export class Player {
       this.kb.set(0, 0, 0);
       this.onGround = true;
       this.aiming = false;
+      // cavaleiro acompanha o yaw da montaria / câmera
+      const rideFacing = this.yaw + Math.PI;
+      this._bodyYaw += shortestAngleDelta(this._bodyYaw, rideFacing) * Math.min(1, dt * 10);
       this.animateLimbs(dt, !!this.mountMoving);
       this.syncMesh();
       this.syncCamera(dt);
@@ -488,6 +502,16 @@ export class Player {
       if (input.moveRight) wish.add(right);
       if (wish.lengthSq() > 0) wish.normalize().multiplyScalar(speed);
     }
+
+    // Spirit: corpo olha para onde anda — ao “voltar”, gira e mostra o rosto/skin
+    const lookFacing = this.cameraYaw + Math.PI;
+    let targetBody = lookFacing;
+    const wishMoving = wish.lengthSq() > 0.0001;
+    if (wishMoving) {
+      targetBody = Math.atan2(wish.x, wish.z);
+    }
+    const turnSpeed = wishMoving ? 12 : 7;
+    this._bodyYaw += shortestAngleDelta(this._bodyYaw, targetBody) * Math.min(1, dt * turnSpeed);
 
     // no gelo a aceleração é baixa: derrapa ao mudar de direção
     const accel = onIce ? 2.4 : 25;
@@ -565,20 +589,17 @@ export class Player {
   syncMesh() {
     this.mesh.visible = this.cameraMode === "third";
     this.mesh.position.set(this.position.x, this.position.y, this.position.z);
-    // o modelo é construído com a frente para +Z, mas o "para frente" do jogo
-    // é -Z quando yaw=0 — soma 180° para o corpo acompanhar a câmera
-    this.mesh.rotation.y = this.yaw + Math.PI;
+    // _bodyYaw no espaço do mesh (frente = +Z = direção do passo / olhar)
+    this.mesh.rotation.y = this._bodyYaw ?? this.yaw + Math.PI;
   }
 
   /** Cabeça acompanha o olhar da câmera (pitch>0 = olhar pra cima). */
   syncHeadLook(dt = 0) {
     if (!this.headRoot) return;
-    const lookYaw = this.cameraYaw;
-    const bodyYaw = this.yaw;
-    let dy = lookYaw - bodyYaw;
-    while (dy > Math.PI) dy -= Math.PI * 2;
-    while (dy < -Math.PI) dy += Math.PI * 2;
-    const targetYaw = THREE.MathUtils.clamp(dy, -0.85, 0.85);
+    // olhar da câmera no mesmo espaço do corpo; corpo pode estar virado pro passo
+    const lookFacing = this.cameraYaw + Math.PI;
+    const bodyYaw = this._bodyYaw ?? this.yaw + Math.PI;
+    const targetYaw = THREE.MathUtils.clamp(shortestAngleDelta(bodyYaw, lookFacing), -0.85, 0.85);
     // cameraPitch>0 = cima; headRoot.rotation.x positivo no Three olha pra baixo → invertido
     const targetPitch = THREE.MathUtils.clamp(-this.cameraPitch, -1.15, 1.15);
     const k = Math.min(1, (dt || 1 / 60) * 14);

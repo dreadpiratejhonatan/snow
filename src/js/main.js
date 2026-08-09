@@ -3413,18 +3413,29 @@ class Game {
     if (!this.weapons || this.ended) return;
     if (this.weapons.equippedId !== "torch") {
       this._torchLowWarned = false;
+      this._torchMidWarned = false;
+      return;
+    }
+    // save antigo / glitch: tocha equipada sem combustível → apaga na hora
+    if ((this.weapons.torchFuel || 0) <= 0) {
+      this.onTorchBurnOut();
       return;
     }
     const fuel = this.weapons.torchFuel || 0;
-    if (fuel > 0 && fuel < 14 && !this._torchLowWarned) {
+    const max = this.weapons.torchFuelMax?.() || 40;
+    if (fuel > 0 && fuel <= max * 0.5 && !this._torchMidWarned) {
+      this._torchMidWarned = true;
+      this.hud.showMsg(`Tocha pela metade (~${Math.ceil(fuel)}s)`, 2200);
+    }
+    if (fuel > 0 && fuel < 12 && !this._torchLowWarned) {
       this._torchLowWarned = true;
-      this.hud.showMsg("A tocha está fraca…", 2200);
+      this.hud.showMsg("A tocha está fraca… vai apagar!", 2400);
     }
     this.syncTorchFlameVisual();
     if (this.weapons.burnTorchFuel(dt)) {
       this.onTorchBurnOut();
-    } else if (this.weapons.equippedId === "torch") {
-      // HUD de combustível enquanto segura
+    } else {
+      // HUD de combustível enquanto segura (countdown visível)
       this.refreshAmmoHud();
     }
   }
@@ -3456,6 +3467,7 @@ class Game {
     this.player.setHeldWeapon("fists");
     this.refreshInventoryUI();
     this._torchLowWarned = false;
+    this._torchMidWarned = false;
 
     const lines = [
       "Nossa, a tocha apagou!",
