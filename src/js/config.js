@@ -403,7 +403,8 @@ export const CONFIG = {
       spawnMin: 42,
       spawnDelay: 70,
       faction: "wildlife",
-      mount: { seatHeight: 1.25, speed: 7.8, sprint: 10.8, radius: 0.7 },
+      // escala 0.78 → lombada ~1.07; sela um pouco acima p/ pose sentada
+      mount: { seatHeight: 1.12, speed: 7.8, sprint: 10.8, radius: 0.7 },
       drops: [
         { name: "Poção menor", color: 0xe05060, healthHeal: 25, chance: 0.7 },
       ],

@@ -22,6 +22,9 @@ export class Player {
     this.skinId = "natan";
     this.aiming = false;
     this._aimCamDist = CONFIG.thirdPerson?.distance ?? 4.8;
+    /** Montado: MountManager controla posição; pose de sentar nas pernas. */
+    this.riding = false;
+    this.mountMoving = false;
     this.buildMesh();
   }
 
@@ -228,6 +231,41 @@ export class Player {
 
   animateLimbs(dt, moving) {
     if (!this.leftLeg) return;
+
+    // Pose de sela: joelhos dobrados a cavalo, braços nas rédeas.
+    // Evita o corpo em pé atravessando o lombo do animal (pele sobre pele).
+    if (this.riding) {
+      if (moving) this.walkPhase += dt * 7;
+      const bob = moving ? Math.sin(this.walkPhase) * 0.07 : 0;
+      this.walkAmp = moving ? 0.35 : 0;
+      this.leftLeg.rotation.x = -1.2 + bob;
+      this.rightLeg.rotation.x = -1.2 - bob;
+      this.leftLeg.rotation.z = 0.28;
+      this.rightLeg.rotation.z = -0.28;
+      this.leftArm.rotation.x = -0.65;
+      this.rightArm.rotation.x = -0.55;
+      this.leftArm.rotation.z = 0.18;
+      this.rightArm.rotation.z = -0.1;
+      if (this.mesh) {
+        this.mesh.rotation.x = 0.08;
+        this.mesh.rotation.z = 0;
+      }
+      for (const t of this.tentacles) {
+        t.visible = false;
+      }
+      if (this.fpWeaponRoot) this.syncFpWeaponVisibility();
+      if (this.weaponMount) {
+        this.weaponMount.rotation.x = 0;
+        this.weaponMount.rotation.y = 0;
+      }
+      return;
+    }
+
+    // Volta a abrir as pernas / tentáculos após desmontar
+    this.leftLeg.rotation.z *= 0.7;
+    this.rightLeg.rotation.z *= 0.7;
+    for (const t of this.tentacles) t.visible = true;
+
     this.walkPhase += dt * 9;
     const target = moving ? 0.7 : 0;
     this.walkAmp += (target - this.walkAmp) * Math.min(1, dt * 10);
@@ -342,6 +380,8 @@ export class Player {
     this.pitch = 0;
     this.resetOrbit();
     this.onGround = false;
+    this.riding = false;
+    this.mountMoving = false;
     this.syncMesh();
     this.syncCamera();
   }
@@ -407,6 +447,21 @@ export class Player {
 
   update(dt, input) {
     const cfg = CONFIG.player;
+
+    // Montado: a sela (MountManager) manda na posição. Sem gravidade/chão
+    // senão o corpo cai e atravessa o animal (pele sobre pele).
+    if (this.riding) {
+      this.moveVel.set(0, 0, 0);
+      this.velocity.set(0, 0, 0);
+      this.kb.set(0, 0, 0);
+      this.onGround = true;
+      this.aiming = false;
+      this.animateLimbs(dt, !!this.mountMoving);
+      this.syncMesh();
+      this.syncCamera(dt);
+      return;
+    }
+
     const onIce = this.world.isOnIce(this.position.x, this.position.z);
     const speed = input.sprint ? cfg.sprintSpeed : cfg.walkSpeed;
 

@@ -462,6 +462,8 @@ export class World {
     if (this.dungeonActive) return;
     for (const e of this.enemies || []) {
       if (!e?.mesh) continue;
+      // Montaria sob o jogador: coords contínuas (MountManager) — não rebobinar
+      if (e.ridden) continue;
       if (!e._torus) {
         e._torus = { x: this.wrapCoord(e.mesh.position.x), z: this.wrapCoord(e.mesh.position.z) };
       }
@@ -484,6 +486,14 @@ export class World {
 
     for (const e of this.enemies || []) {
       if (!e?.mesh) continue;
+      // Montado: já está ao lado do jogador em coords contínuas
+      if (e.ridden) {
+        e._torus = {
+          x: this.wrapCoord(e.mesh.position.x),
+          z: this.wrapCoord(e.mesh.position.z),
+        };
+        continue;
+      }
       const lx = this.wrapCoord(e.mesh.position.x);
       const lz = this.wrapCoord(e.mesh.position.z);
       e._torus = { x: lx, z: lz };

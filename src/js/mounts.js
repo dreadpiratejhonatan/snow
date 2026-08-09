@@ -23,6 +23,8 @@ export class MountManager {
     this.riding = null;
     this.armorStock = 0;
     this._stub = null;
+    this._gallopT = 0;
+    this._moving = false;
   }
 
   get tames() {
@@ -73,6 +75,11 @@ export class MountManager {
       enemy.mesh.position.y -
       this.world.groundHeight(enemy.mesh.position.x, enemy.mesh.position.z);
     this._gallopT = 0;
+    this._moving = false;
+    if (player) {
+      player.riding = true;
+      player.mountMoving = false;
+    }
     return true;
   }
 
@@ -81,12 +88,23 @@ export class MountManager {
     if (!e) return;
     this.riding = null;
     e.ridden = false;
-    if (player && !opts.keepPos) {
-      const side = new THREE.Vector3(Math.cos(e.mesh.rotation.y), 0, -Math.sin(e.mesh.rotation.y));
-      const p = e.mesh.position.clone().addScaledVector(side, (e.cfg.mount?.radius || 1) + 0.7);
-      p.y = this.world.groundHeight(p.x, p.z);
-      player.position.copy(p);
-      player.velocity.set(0, 0, 0);
+    this._moving = false;
+    // guarda coords lógicas p/ o toro após desmontar
+    e._torus = {
+      x: this.world.wrapCoord(e.mesh.position.x),
+      z: this.world.wrapCoord(e.mesh.position.z),
+    };
+    this._resetMountLegs(e);
+    if (player) {
+      player.riding = false;
+      player.mountMoving = false;
+      if (!opts.keepPos) {
+        const side = new THREE.Vector3(Math.cos(e.mesh.rotation.y), 0, -Math.sin(e.mesh.rotation.y));
+        const p = e.mesh.position.clone().addScaledVector(side, (e.cfg.mount?.radius || 1) + 0.7);
+        p.y = this.world.groundHeight(p.x, p.z);
+        player.position.copy(p);
+        player.velocity.set(0, 0, 0);
+      }
     }
   }
 
@@ -103,11 +121,12 @@ export class MountManager {
     const mcfg = e.cfg.mount;
     const speed = input.sprint ? mcfg.sprint : mcfg.speed;
 
+    // mesma convenção do Player.update (analog.y positivo = frente)
     const forward = new THREE.Vector3(-Math.sin(player.yaw), 0, -Math.cos(player.yaw));
     const right = new THREE.Vector3(Math.cos(player.yaw), 0, -Math.sin(player.yaw));
     const wish = new THREE.Vector3();
     if (input.analog && (Math.abs(input.analog.x) > 0.05 || Math.abs(input.analog.y) > 0.05)) {
-      wish.addScaledVector(forward, -input.analog.y);
+      wish.addScaledVector(forward, input.analog.y);
       wish.addScaledVector(right, input.analog.x);
     } else {
       if (input.moveForward) wish.add(forward);
@@ -118,6 +137,7 @@ export class MountManager {
 
     const pos = e.mesh.position;
     const moving = wish.lengthSq() > 0.001;
+    this._moving = moving;
     if (moving) {
       wish.normalize();
       pos.x += wish.x * speed * dt;
@@ -127,13 +147,53 @@ export class MountManager {
       // corpo do animal vira na direção do movimento
       e.mesh.rotation.y = Math.atan2(wish.x, wish.z);
     }
+    // stash lógico atualizado (desmontar / saves) — mesh fica contínuo enquanto ridden
+    e._torus = {
+      x: this.world.wrapCoord(pos.x),
+      z: this.world.wrapCoord(pos.z),
+    };
+
     this._gallopT = (this._gallopT || 0) + dt * (moving ? speed * 1.6 : 0);
-    const bob = moving ? Math.abs(Math.sin(this._gallopT)) * 0.14 : 0;
+    const bob = moving ? Math.abs(Math.sin(this._gallopT)) * 0.12 : 0;
     pos.y = this.world.groundHeight(pos.x, pos.z) + (e._mountBaseY || 0) + bob;
 
-    player.position.set(pos.x, pos.y + mcfg.seatHeight, pos.z);
+    this._animateMountLegs(e, dt, moving);
+
+    // Sela: raiz do player fica abaixo do assento para o quadril (~0.95)
+    // pousar na lombada. Com pose de sentar, as pernas não atravessam o dorso.
+    const hip = 0.95;
+    const seat = mcfg.seatHeight ?? 1.5;
+    player.position.set(pos.x, pos.y + seat - hip, pos.z);
     player.velocity.set(0, 0, 0);
+    player.moveVel?.set?.(0, 0, 0);
     player.onGround = true;
+    player.riding = true;
+    player.mountMoving = moving;
+    // corpo do cavaleiro acompanha a montaria (não só a câmera)
+    if (moving) {
+      player.yaw = Math.atan2(-wish.x, -wish.z);
+    }
+  }
+
+  _animateMountLegs(e, dt, moving) {
+    const legs = e.mesh?.userData?.legs;
+    if (!legs?.length) return;
+    if (!moving) {
+      for (const leg of legs) leg.rotation.x = 0;
+      return;
+    }
+    const phase = this._gallopT;
+    for (let i = 0; i < legs.length; i++) {
+      // diagonal gait: FL/BR juntos, FR/BL juntos
+      const diag = i === 0 || i === 3 ? 1 : -1;
+      legs[i].rotation.x = Math.sin(phase) * 0.55 * diag;
+    }
+  }
+
+  _resetMountLegs(e) {
+    const legs = e?.mesh?.userData?.legs;
+    if (!legs) return;
+    for (const leg of legs) leg.rotation.x = 0;
   }
 
   /** Input sem movimento/pulo — o player vira passageiro, a câmera continua livre. */
