@@ -13,10 +13,10 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
-  <link rel="stylesheet" href="src/styles/styles.css?v=gh110" />
+  <link rel="stylesheet" href="src/styles/styles.css?v=gh112" />
   <script>
-    // Build id — no console deve aparecer gh110 (se for antigo, limpe o cache)
-    window.SNOW_BUILD = "gh110";
+    // Build id — no console deve aparecer gh112 (se for antigo, limpe o cache)
+    window.SNOW_BUILD = "gh112";
     console.info("[Neve] build", window.SNOW_BUILD);
     // Evita flash do splash quando ?demo=1 (antes do bundle carregar)
     try {
@@ -126,17 +126,27 @@
         </div>
       </div>
 
-      <div class="hud__status">
-        <div class="hud__bar">
-          <span class="hud__bar-label">❤</span>
-          <div class="hud__bar-track"><div id="health-fill" class="hud__bar-fill hud__bar-fill--health"></div></div>
+      <!-- Coluna esquerda: mapa + barras (no touch empilha sem sobrepor) -->
+      <div class="hud__left">
+        <div class="hud__minimap-wrap">
+          <canvas id="minimap" class="hud__minimap" width="180" height="180"></canvas>
+          <p id="minimap-legend" class="hud__minimap-legend" aria-hidden="true">
+            <span class="hud__minimap-legend-full">🏠 base · ◆ loot · ▲ você</span>
+            <span class="hud__minimap-legend-compact" title="base · loot · você">🏠 ◆ ▲</span>
+          </p>
         </div>
-        <div class="hud__bar hud__bar--warmth">
-          <span class="hud__bar-label">🔥</span>
-          <div class="hud__bar-track"><div id="warmth-fill" class="hud__bar-fill hud__bar-fill--warmth"></div></div>
-          <span id="warmth-cue" class="hud__warmth-cue" hidden>→ fogueira</span>
+        <div class="hud__status">
+          <div class="hud__bar">
+            <span class="hud__bar-label">❤</span>
+            <div class="hud__bar-track"><div id="health-fill" class="hud__bar-fill hud__bar-fill--health"></div></div>
+          </div>
+          <div class="hud__bar hud__bar--warmth">
+            <span class="hud__bar-label">🔥</span>
+            <div class="hud__bar-track"><div id="warmth-fill" class="hud__bar-fill hud__bar-fill--warmth"></div></div>
+            <span id="warmth-cue" class="hud__warmth-cue" hidden>→ fogueira</span>
+          </div>
+          <div id="items-info" class="hud__items">🎒 0 · 📦 0/10</div>
         </div>
-        <div id="items-info" class="hud__items">🎒 0 · 📦 0/10</div>
       </div>
 
       <!-- Hotbar estilo Minecraft: B mostra/esconde · ✕ fecha · 1–9/0 equipa -->
@@ -146,11 +156,6 @@
           <button type="button" id="btn-inv-close" class="inv-bar__close" title="Esconder armas (B)" aria-label="Esconder inventário">✕</button>
         </div>
         <div id="inv-detail" class="inv-bar__detail">✊ Punhos — dano 12</div>
-      </div>
-
-      <div class="hud__minimap-wrap">
-        <canvas id="minimap" class="hud__minimap" width="180" height="180"></canvas>
-        <p id="minimap-legend" class="hud__minimap-legend" aria-hidden="true">🏠 base · ◆ loot · ▲ você</p>
       </div>
       <div id="ammo-hud" class="ammo-hud" hidden aria-live="polite">
         <span id="ammo-hud-icon" class="ammo-hud__icon">⚔</span>
@@ -587,6 +592,6 @@
     </div>
   </div>
 
-  <script type="module" src="src/js/main.js?v=gh110"></script>
+  <script type="module" src="src/js/main.js?v=gh112"></script>
 </body>
 </html>

@@ -83,9 +83,9 @@ body.is-touch .hud__traps {
 }
 
 body.is-touch .tutorial-banner {
-  /* À direita das barras (coluna sob o mapa) — sem cobrir ❤/🔥 */
-  top: max(5.15rem, calc(env(safe-area-inset-top) + 4.55rem));
-  left: max(9rem, calc(env(safe-area-inset-left) + 8.5rem));
+  /* À direita da coluna do mapa — sem cobrir ❤/🔥 */
+  top: max(0.45rem, env(safe-area-inset-top));
+  left: max(8.25rem, calc(env(safe-area-inset-left) + 7.6rem));
   right: max(0.55rem, env(safe-area-inset-right));
   transform: none;
   max-width: none;
@@ -1919,6 +1919,12 @@ body.is-touch .inv-slot__key {
 
 /* ---------- HUD de sobrevivência ---------- */
 
+/* Desktop: wrapper dissolves so children keep absolute corners.
+   Touch: becomes a real stacked column (map → legend → bars). */
+.hud__left {
+  display: contents;
+}
+
 .hud__status {
   position: absolute;
   bottom: 1.5rem;
@@ -2037,18 +2043,77 @@ body.is-touch .inv-slot__key {
   font-size: 0.62rem;
   letter-spacing: 0.02em;
   text-align: center;
+  line-height: 1.2;
+}
+
+.hud__minimap-legend-compact {
+  display: none;
+}
+
+.hud__minimap-legend-full {
+  display: inline;
+}
+
+/* Touch: coluna única — mapa, legenda e barras sem overlap */
+body.is-touch .hud__left {
+  position: absolute;
+  top: max(0.45rem, env(safe-area-inset-top));
+  left: max(0.45rem, env(safe-area-inset-left));
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.28rem;
+  width: min(112px, 30vw);
+  z-index: 6;
+  pointer-events: none;
 }
 
 body.is-touch .hud__minimap-wrap {
-  width: 72px;
-  top: max(0.5rem, env(safe-area-inset-top));
-  left: max(0.5rem, env(safe-area-inset-left));
+  position: relative;
+  top: auto;
+  left: auto;
+  width: 100%;
+  z-index: auto;
+}
+
+body.is-touch .hud__minimap-wrap .hud__minimap,
+body.is-touch .hud__minimap {
+  position: relative;
+  top: auto;
+  left: auto;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+  border-width: 1.5px;
+  border-radius: 10px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.4);
 }
 
 body.is-touch .hud__minimap-legend {
-  font-size: 0.5rem;
-  padding: 0.1rem 0.2rem;
-  letter-spacing: 0;
+  margin: 0.15rem 0 0;
+  padding: 0.12rem 0.25rem;
+  font-size: 0.58rem;
+  letter-spacing: 0.01em;
+  border-radius: 7px;
+  background: rgba(6, 12, 20, 0.62);
+}
+
+body.is-touch .hud__minimap-legend-full {
+  display: none;
+}
+
+body.is-touch .hud__minimap-legend-compact {
+  display: inline;
+}
+
+body.is-touch .hud__status {
+  position: relative;
+  top: auto;
+  left: auto;
+  bottom: auto;
+  right: auto;
+  width: 100%;
+  gap: 0.2rem;
 }
 
 .ammo-hud {
@@ -2721,37 +2786,29 @@ body.is-touch .hud__hint {
   display: none !important;
 }
 
-body.is-touch .hud__minimap {
-  width: 72px;
-  height: 72px;
-  top: max(0.5rem, env(safe-area-inset-top));
-  left: max(0.5rem, env(safe-area-inset-left));
-  border-width: 1px;
-  border-radius: 8px;
-}
-
-body.is-touch .hud__status {
-  /* Coluna sob o minimapa — libera o topo central pro tutorial */
-  bottom: auto;
-  top: max(5.15rem, calc(env(safe-area-inset-top) + 4.55rem));
-  left: max(0.5rem, env(safe-area-inset-left));
-  right: auto;
-  width: 118px;
-  gap: 0.22rem;
-}
-
 body.is-touch .hud__bar-track {
   height: 9px;
 }
 
 body.is-touch .hud__bar-label {
-  width: 1.1rem;
-  font-size: 0.8rem;
+  width: 1.05rem;
+  font-size: 0.78rem;
+}
+
+body.is-touch .hud__bar--warmth {
+  flex-wrap: nowrap;
+}
+
+body.is-touch .hud__warmth-cue {
+  font-size: 0.58rem;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 body.is-touch .hud__items {
-  font-size: 0.72rem;
-  padding: 0.2rem 0.45rem;
+  font-size: 0.68rem;
+  padding: 0.18rem 0.4rem;
 }
 
 body.is-touch .hud__camera {
@@ -2839,14 +2896,23 @@ body.touch-more-open .touch__look {
 }
 
 @media (max-width: 700px) {
-  .hud__minimap {
-    width: 110px;
-    height: 110px;
+  .hud__minimap-wrap {
+    width: 120px;
   }
 
-  body.is-touch .hud__minimap {
-    width: 72px;
-    height: 72px;
+  body.is-touch .hud__left {
+    width: min(104px, 28vw);
+  }
+}
+
+@media (max-width: 420px) {
+  body.is-touch .hud__left {
+    width: min(96px, 27vw);
+    gap: 0.22rem;
+  }
+
+  body.is-touch .tutorial-banner {
+    left: max(7.1rem, calc(env(safe-area-inset-left) + 6.5rem));
   }
 }
 
@@ -2888,7 +2954,7 @@ body.touch-more-open .touch__look {
   }
 
   body.is-touch .tutorial-banner {
-    left: max(8.75rem, calc(env(safe-area-inset-left) + 8.25rem));
+    left: max(7.35rem, calc(env(safe-area-inset-left) + 6.75rem));
   }
 }
 
