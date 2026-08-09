@@ -3467,6 +3467,7 @@ class Game {
     this.player.setHeldWeapon("fists");
     this.refreshInventoryUI();
     this._torchLowWarned = false;
+    this._torchMidWarned = false;
 
     const lines = [
       "Nossa, a tocha apagou!",
