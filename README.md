@@ -75,7 +75,8 @@ npm run preview           # dist/ em :5180
 - **Co-op:** [`docs/COOP.md`](docs/COOP.md)  
 - **Pós-v1 / o que foi feito:** [`docs/DEVELOP-ATE-GH63.md`](docs/DEVELOP-ATE-GH63.md)  
 - **APIs:** [`docs/API.md`](docs/API.md)  
-- **Playbook genérico (lições para projetos parecidos):** [`docs/PLAYBOOK-JOGO-WEB.md`](docs/PLAYBOOK-JOGO-WEB.md)
+- **Playbook genérico (lições para projetos parecidos):** [`docs/PLAYBOOK-JOGO-WEB.md`](docs/PLAYBOOK-JOGO-WEB.md)  
+- **Prompt / blueprint híbrido (Neve + Sussurros da Floresta):** [`docs/PROMPT-HIBRIDO-NEVE-FLORESTA.md`](docs/PROMPT-HIBRIDO-NEVE-FLORESTA.md)
 
 O pacote **não inclui** ranking/tickets vivos — preserve `data/` no servidor.
 
