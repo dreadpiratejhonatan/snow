@@ -344,12 +344,27 @@ try {
   };
   const startX = mule.mesh.position.x;
   const startZ = mule.mesh.position.z;
-  for (let i = 0; i < 60; i++) mounts.updateRiding(0.016, rideInput, player);
-  if (Math.hypot(mule.mesh.position.x - startX, mule.mesh.position.z - startZ) < 3) {
-    throw new Error("mount: montaria não andou");
+  for (let i = 0; i < 60; i++) {
+    mounts.updateRiding(0.016, rideInput, player);
+    // espelha o frame real: física do player + toro do mundo
+    player.update(0.016, mounts.stubInput(rideInput));
+    world.update(0.016, i * 0.016, false, 0, player.position);
+  }
+  const rode = Math.hypot(mule.mesh.position.x - startX, mule.mesh.position.z - startZ);
+  if (rode < 3) {
+    throw new Error(`mount: montaria não andou (dist=${rode.toFixed(2)}; toro não deve travar)`);
   }
   if (Math.abs(player.position.x - mule.mesh.position.x) > 0.01) {
     throw new Error("mount: player não segue a sela");
+  }
+  // pose sentada: joelhos dobrados, não em pé atravessando o dorso
+  player.animateLimbs(0.016, true);
+  if (!player.riding || player.leftLeg.rotation.x > -0.8) {
+    throw new Error("mount: cavaleiro deveria estar na pose sentada");
+  }
+  const seatY = mule.mesh.position.y + (mule.cfg.mount.seatHeight ?? 1.5);
+  if (player.position.y > seatY - 0.4) {
+    throw new Error("mount: raiz do player deveria ficar abaixo da sela (quadril na lombada)");
   }
   mounts.armorStock = 1;
   mounts.equipArmor(mule);
