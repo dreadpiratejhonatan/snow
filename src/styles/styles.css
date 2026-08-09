@@ -83,15 +83,22 @@ body.is-touch .hud__traps {
 }
 
 body.is-touch .tutorial-banner {
-  /* À direita das barras (coluna sob o mapa) — sem cobrir ❤/🔥 */
-  top: max(5.15rem, calc(env(safe-area-inset-top) + 4.55rem));
-  left: max(9rem, calc(env(safe-area-inset-left) + 8.5rem));
+  /* À direita da coluna esquerda — nunca cobre mapa/❤/🔥 */
+  top: max(0.5rem, env(safe-area-inset-top));
+  left: max(8.2rem, calc(env(safe-area-inset-left) + 7.7rem));
   right: max(0.55rem, env(safe-area-inset-right));
   transform: none;
   max-width: none;
   width: auto;
   padding: 0.4rem 0.55rem;
   gap: 0.45rem;
+}
+
+/* Crônica aberta: some toast/prompt (um painel só) */
+body:has(#hud-chronicle:not([hidden])) .hud__msg,
+body:has(#hud-chronicle:not([hidden])) .hud__interact {
+  opacity: 0 !important;
+  visibility: hidden;
 }
 
 body.is-touch .tutorial-banner__hint {
@@ -1919,13 +1926,80 @@ body.is-touch .inv-slot__key {
 
 /* ---------- HUD de sobrevivência ---------- */
 
-.hud__status {
+/* Coluna esquerda: mapa + clima + barras (um flex, sem absolutos brigando) */
+.hud__left-stack {
   position: absolute;
-  bottom: 1.5rem;
+  top: 1.2rem;
   left: 1.5rem;
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
+  width: 180px;
+  pointer-events: none;
+}
+
+.hud__climate {
+  margin: 0;
+  padding: 0.2rem 0.4rem;
+  border-radius: 6px;
+  background: rgba(8, 16, 28, 0.72);
+  border: 1px solid rgba(160, 200, 230, 0.22);
+  color: rgba(230, 242, 252, 0.92);
+  font-size: 0.68rem;
+  letter-spacing: 0.02em;
+  line-height: 1.25;
+  max-width: 100%;
+}
+
+.hud__climate[hidden] {
+  display: none !important;
+}
+
+.hud__chronicle {
+  position: absolute;
+  left: 50%;
+  top: 22%;
+  transform: translateX(-50%);
+  z-index: 22;
+  width: min(92vw, 360px);
+  padding: 0.75rem 0.9rem;
+  border-radius: 12px;
+  background: rgba(10, 18, 30, 0.92);
+  border: 1px solid rgba(180, 210, 235, 0.35);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.45);
+  pointer-events: none;
+  text-align: left;
+}
+
+.hud__chronicle[hidden] {
+  display: none !important;
+}
+
+.hud__chronicle-title {
+  margin: 0 0 0.35rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #b8d8f0;
+}
+
+.hud__chronicle-body {
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.4;
+  color: rgba(240, 246, 252, 0.96);
+}
+
+.hud__status {
+  position: relative;
+  bottom: auto;
+  left: auto;
   display: grid;
   gap: 0.45rem;
-  width: 230px;
+  width: 100%;
 }
 
 .hud__bar {
@@ -2010,10 +2084,10 @@ body.is-touch .inv-slot__key {
 }
 
 .hud__minimap-wrap {
-  position: absolute;
-  top: 1.2rem;
-  left: 1.5rem;
-  width: 180px;
+  position: relative;
+  top: auto;
+  left: auto;
+  width: 100%;
   pointer-events: none;
   z-index: 5;
 }
@@ -2039,10 +2113,37 @@ body.is-touch .inv-slot__key {
   text-align: center;
 }
 
-body.is-touch .hud__minimap-wrap {
-  width: 72px;
+body.is-touch .hud__left-stack {
   top: max(0.5rem, env(safe-area-inset-top));
   left: max(0.5rem, env(safe-area-inset-left));
+  width: 118px;
+  gap: 0.22rem;
+}
+
+body.is-touch .hud__minimap-wrap {
+  width: 72px;
+}
+
+body.is-touch .hud__climate {
+  font-size: 0.55rem;
+  padding: 0.12rem 0.28rem;
+  max-width: 118px;
+}
+
+body.is-touch .hud__chronicle {
+  top: auto;
+  bottom: max(7.5rem, calc(env(safe-area-inset-bottom) + 6.8rem));
+  width: min(92vw, 320px);
+  padding: 0.55rem 0.7rem;
+}
+
+body.is-touch .hud__chronicle-title {
+  font-size: 0.65rem;
+}
+
+body.is-touch .hud__chronicle-body {
+  font-size: 0.8rem;
+  line-height: 1.35;
 }
 
 body.is-touch .hud__minimap-legend {
@@ -2724,19 +2825,19 @@ body.is-touch .hud__hint {
 body.is-touch .hud__minimap {
   width: 72px;
   height: 72px;
-  top: max(0.5rem, env(safe-area-inset-top));
-  left: max(0.5rem, env(safe-area-inset-left));
+  top: auto;
+  left: auto;
   border-width: 1px;
   border-radius: 8px;
 }
 
 body.is-touch .hud__status {
-  /* Coluna sob o minimapa — libera o topo central pro tutorial */
+  /* Já está na coluna .hud__left-stack — sem absolute separado */
   bottom: auto;
-  top: max(5.15rem, calc(env(safe-area-inset-top) + 4.55rem));
-  left: max(0.5rem, env(safe-area-inset-left));
+  top: auto;
+  left: auto;
   right: auto;
-  width: 118px;
+  width: 100%;
   gap: 0.22rem;
 }
 

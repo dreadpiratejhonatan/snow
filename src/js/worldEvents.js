@@ -102,14 +102,36 @@ export class WorldEvents {
       wind *= 1.7;
     }
 
+    // rótulo honesto mesmo sem evento (chip Spirit: Estação · Dia/Noite · Clima)
+    let label = this._label(type);
+    let icon = this._icon(type);
+    if (!type) {
+      if (sand > 0.45) {
+        label = "Areia no ar";
+        icon = "🏜️";
+      } else if (rain > 0.35) {
+        label = "Garoa";
+        icon = "🌦️";
+      } else if (wind > 1.25) {
+        label = "Vento";
+        icon = "💨";
+      } else if (snowBoost > 0.4) {
+        label = "Neve";
+        icon = "❄️";
+      } else {
+        label = "Céu aberto";
+        icon = "🌤️";
+      }
+    }
+
     return {
       type,
       rain,
       sand,
       wind,
       snowBoost,
-      label: this._label(type),
-      icon: this._icon(type),
+      label,
+      icon,
     };
   }
 
@@ -132,7 +154,17 @@ export class WorldEvents {
   _startBlizzard(game) {
     this.active = { type: "blizzard", t: 0, dur: 28 + Math.random() * 14 };
     this._raidSpawned = false;
-    game.hud?.showMsg("Nevasca! Visão cai e o frio aperta…", 4500);
+    if (game.hud?.showChronicle) {
+      game.hud.showChronicle({
+        name: "Clima",
+        line: "Nevasca!",
+        fact: "A visão cai e o frio aperta. Busque calor na fogueira.",
+        lineMs: 4000,
+        factMs: 9000,
+      });
+    } else {
+      game.hud?.showMsg("Nevasca! Visão cai e o frio aperta…", 4500);
+    }
     if (game.world?.snow) game.world.snow.visible = true;
   }
 
@@ -150,7 +182,17 @@ export class WorldEvents {
   _startRain(game) {
     this.active = { type: "rain", t: 0, dur: 32 + Math.random() * 22 };
     this._raidSpawned = false;
-    game.hud?.showMsg("Chuva! O vento sopra e o chão molha…", 4200);
+    if (game.hud?.showChronicle) {
+      game.hud.showChronicle({
+        name: "Clima",
+        line: "Chuva!",
+        fact: "O vento sopra e as copas pingam. O frio molhado drena o calor.",
+        lineMs: 4000,
+        factMs: 9000,
+      });
+    } else {
+      game.hud?.showMsg("Chuva! O vento sopra e o chão molha…", 4200);
+    }
   }
 
   _tickRain(game, dt) {
@@ -169,7 +211,17 @@ export class WorldEvents {
   _startSandstorm(game) {
     this.active = { type: "sandstorm", t: 0, dur: 26 + Math.random() * 16 };
     this._raidSpawned = false;
-    game.hud?.showMsg("Tempestade de areia! O vento carrega o deserto…", 4500);
+    if (game.hud?.showChronicle) {
+      game.hud.showChronicle({
+        name: "Clima",
+        line: "Tempestade de areia!",
+        fact: "O vento carrega o deserto. A névoa fica âmbar e a visão some.",
+        lineMs: 4000,
+        factMs: 9000,
+      });
+    } else {
+      game.hud?.showMsg("Tempestade de areia! O vento carrega o deserto…", 4500);
+    }
   }
 
   _tickSandstorm(game, dt) {
@@ -187,7 +239,17 @@ export class WorldEvents {
   _startRaid(game) {
     this.active = { type: "raid", t: 0, dur: 40 };
     this._raidSpawned = false;
-    game.hud?.showMsg("Invasão! Lobos e raposas cercam a base!", 5000);
+    if (game.hud?.showChronicle) {
+      game.hud.showChronicle({
+        name: "Alerta",
+        line: "Invasão!",
+        fact: "Lobos e raposas cercam a base. Defenda a fogueira.",
+        lineMs: 3500,
+        factMs: 8000,
+      });
+    } else {
+      game.hud?.showMsg("Invasão! Lobos e raposas cercam a base!", 5000);
+    }
     game.ambience?.growl?.();
   }
 

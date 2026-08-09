@@ -43,7 +43,13 @@ export class HUD {
     this.flashEl = document.getElementById("damage-flash");
     this.minimap = document.getElementById("minimap");
     this.minimapCtx = this.minimap ? this.minimap.getContext("2d") : null;
+    this.climateEl = document.getElementById("hud-climate");
+    this.chronicleEl = document.getElementById("hud-chronicle");
+    this.chronicleTitle = document.getElementById("hud-chronicle-title");
+    this.chronicleBody = document.getElementById("hud-chronicle-body");
     this.msgTimer = null;
+    this._storyTimer = 0;
+    this._storyBusy = false;
     this.onEquip = null; // (weaponId) => void
     this.onInvClose = null; // () => void — botão X / atalho
     this._invBound = false;
@@ -64,16 +70,82 @@ export class HUD {
   }
 
   updateTime(dayTime, night, season = null, weather = null) {
-    if (!this.timeEl) return;
     const totalMinutes = ((dayTime * 24 + 6) % 24) * 60;
     const hh = String(Math.floor(totalMinutes / 60)).padStart(2, "0");
     const mm = String(Math.floor(totalMinutes % 60)).padStart(2, "0");
-    const icon = night > 0.5 ? "🌙" : "🌞";
+    const isNight = night > 0.5;
+    const icon = isNight ? "🌙" : "🌞";
+    const dayLabel = isNight ? "Noite" : "Dia";
     const seasonBit = season?.icon ? ` ${season.icon}` : "";
     const weatherBit = weather?.icon ? ` ${weather.icon}` : "";
-    this.timeEl.textContent = `${icon} ${hh}:${mm}${seasonBit}${weatherBit}`;
-    const bits = [season?.label, weather?.label].filter(Boolean);
-    if (bits.length) this.timeEl.title = bits.join(" · ");
+    if (this.timeEl) {
+      this.timeEl.textContent = `${icon} ${hh}:${mm}${seasonBit}${weatherBit}`;
+      const bits = [season?.label, weather?.label].filter(Boolean);
+      if (bits.length) this.timeEl.title = bits.join(" · ");
+    }
+    // Chip estilo Spirit — visível no celular (relógio some no touch)
+    if (this.climateEl) {
+      const seasonLabel = season?.label || "—";
+      const weatherLabel = weather?.label || (weather?.rain > 0.4 ? "Chuva" : "Céu aberto");
+      const line = `${seasonLabel} · ${dayLabel} · ${weatherLabel}`;
+      this.climateEl.textContent = line;
+      this.climateEl.hidden = false;
+      this.climateEl.title = `${hh}:${mm}`;
+    }
+  }
+
+  get storyBusy() {
+    return !!this._storyBusy;
+  }
+
+  hideChronicle() {
+    clearTimeout(this._storyTimer);
+    this._storyTimer = 0;
+    this._storyBusy = false;
+    if (this.chronicleEl) this.chronicleEl.hidden = true;
+  }
+
+  _showStoryPanel(title, body, ms, onDone) {
+    if (!this.chronicleEl) {
+      if (typeof onDone === "function") onDone();
+      return;
+    }
+    clearTimeout(this._storyTimer);
+    this._storyBusy = true;
+    if (this.chronicleTitle) this.chronicleTitle.textContent = title || "Crônica";
+    if (this.chronicleBody) this.chronicleBody.textContent = body || "";
+    this.chronicleEl.hidden = false;
+    // some toast enquanto a crônica está aberta
+    if (this.msgEl) this.msgEl.classList.remove("visible");
+    if (this.hintEl) this.hintEl.hidden = true;
+    this._storyTimer = setTimeout(() => {
+      this._storyTimer = 0;
+      if (typeof onDone === "function") onDone();
+      else this.hideChronicle();
+    }, Math.max(2500, ms | 0));
+  }
+
+  /**
+   * Painel sequencial (Spirit): fala → fato, tempo de leitura no celular.
+   * Bloqueia toast/prompt enquanto aberto.
+   */
+  showChronicle({ name = "", line = "", fact = "", lineMs = 10000, factMs = 16000 } = {}) {
+    clearTimeout(this.msgTimer);
+    if (this.msgEl) this.msgEl.classList.remove("visible");
+    if (this.hintEl) this.hintEl.hidden = true;
+
+    const title = String(name || "Crônica");
+    const speak = String(line || "").trim();
+    const lore = String(fact || "").trim();
+    if (!speak && !lore) return;
+
+    if (speak && lore) {
+      this._showStoryPanel(title, speak, lineMs, () => {
+        this._showStoryPanel(title, lore, factMs, () => this.hideChronicle());
+      });
+      return;
+    }
+    this._showStoryPanel(title, speak || lore, speak ? lineMs : factMs, () => this.hideChronicle());
   }
 
   updateCameraMode(mode, { facingFront = false } = {}) {
@@ -313,6 +385,10 @@ export class HUD {
 
   setHint(text) {
     if (!this.hintEl) return;
+    if (this._storyBusy) {
+      this.hintEl.hidden = true;
+      return;
+    }
     if (!text) {
       this.hintEl.hidden = true;
     } else {
@@ -323,6 +399,7 @@ export class HUD {
 
   showMsg(text, dur = 3200) {
     if (!this.msgEl) return;
+    if (this._storyBusy) return; // crônica manda — sem empilhar toast
     this.msgEl.textContent = text;
     this.msgEl.classList.add("visible");
     clearTimeout(this.msgTimer);

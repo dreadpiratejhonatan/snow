@@ -569,15 +569,24 @@ export class World {
     trunk.position.y = trunkH / 2;
     g.add(trunk);
 
+    // Copa separada do tronco (Spirit): vento/chuva mexem nas folhas, não na árvore inteira
+    const canopyRoot = new THREE.Group();
+    canopyRoot.position.y = 0;
+    g.add(canopyRoot);
+
     // pinheiro com neve acumulada em cada camada
+    let canopyTop = trunkH;
+    let canopyR = 1.5;
     for (let k = 0; k < 3; k++) {
       const r = 1.5 - k * 0.32;
+      canopyR = Math.max(canopyR, r);
       const cone = new THREE.Mesh(new THREE.ConeGeometry(r, 1.7, 8), leafMat);
       cone.position.y = trunkH + k * 0.95;
-      g.add(cone);
+      canopyRoot.add(cone);
       const cap = new THREE.Mesh(new THREE.ConeGeometry(r * 0.75, 0.5, 8), this.snowCapMat);
       cap.position.y = trunkH + k * 0.95 + 0.62;
-      g.add(cap);
+      canopyRoot.add(cap);
+      canopyTop = trunkH + k * 0.95 + 0.85;
     }
 
     g.traverse((m) => {
@@ -595,6 +604,11 @@ export class World {
     g.userData.phase = Math.random() * Math.PI * 2;
     g.userData.homeX = x;
     g.userData.homeZ = z;
+    g.userData.canopyRoot = canopyRoot;
+    g.userData.canopyR = canopyR * s;
+    g.userData.canopyTop = canopyTop * s;
+    g.userData.canopyBot = trunkH * s * 0.85;
+    g.userData.trunkBaseY = trunkH;
     this.scene.add(g);
     this.trees.push(g);
     // r = tronco (movimento); coverR maior = copa/tronco bloqueiam tiros
@@ -3716,8 +3730,18 @@ export class World {
         this.grassMat.userData.shader.uniforms.uWind.value = wind;
       }
     }
+    const rainAmt = this._rainAmt || 0;
     for (const tree of this.trees) {
-      tree.rotation.z = Math.sin(elapsed * (0.9 + wind * 0.35) + tree.userData.phase) * 0.03 * wind;
+      const phase = tree.userData.phase || 0;
+      const canopy = tree.userData.canopyRoot;
+      // brisa leve no tronco + flutter forte na copa (e shake de chuva)
+      tree.rotation.z = Math.sin(elapsed * (0.55 + wind * 0.2) + phase) * 0.012 * wind;
+      if (canopy) {
+        const flutter = Math.sin(elapsed * (2.2 + wind * 1.1) + phase * 1.7) * 0.04 * (0.35 + wind);
+        const dripShake = rainAmt > 0.15 ? Math.sin(elapsed * 18 + phase * 3) * 0.028 * rainAmt : 0;
+        canopy.rotation.z = flutter + dripShake;
+        canopy.rotation.x = flutter * 0.55 + dripShake * 0.4;
+      }
     }
 
     const wrap = this.half * 1.5;
