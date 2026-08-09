@@ -868,10 +868,12 @@ export const CONFIG = {
       cooldown: 1.2,
       fire: "thrown",
       ammoType: "grenade",
+      /** Some da mão/inventário ao gastar a última — volta aos punhos. */
+      consumable: true,
       projSpeed: 16,
       explodeRadius: 6,
       skinColor: 0x5a7a4a,
-      desc: "Explode em área após 2s",
+      desc: "Explode em área após 2s · some ao gastar",
     },
     // exclusiva da dungeon secreta — não conta para vitória, é bônus
     relic: {

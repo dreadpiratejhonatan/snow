@@ -167,6 +167,8 @@ export function applyGameState(game, data) {
     if (game.weapons.equippedId === "torch" && (game.weapons.torchFuel || 0) <= 0) {
       game.weapons.remove("torch");
     }
+    // granada com 0 não fica fantasma na mão
+    game.weapons.stripEmptyThrown?.();
     game.player.setHeldWeapon(game.weapons.equippedId);
   }
 

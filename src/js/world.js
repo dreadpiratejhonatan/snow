@@ -1783,13 +1783,13 @@ export class World {
     });
   }
 
-  _addLootGlow(g, color, r = 0.48) {
+  _addLootGlow(g, color, r = 0.62) {
     const glow = new THREE.Mesh(
       new THREE.CircleGeometry(r, 22),
       new THREE.MeshBasicMaterial({
         color: color ?? 0xa8d0e8,
         transparent: true,
-        opacity: 0.55,
+        opacity: 0.7,
         depthWrite: false,
         blending: THREE.AdditiveBlending,
       })
@@ -1799,11 +1799,11 @@ export class World {
     glow.userData.isGlow = true;
     // halo externo suave
     const halo = new THREE.Mesh(
-      new THREE.RingGeometry(r * 0.92, r * 1.35, 28),
+      new THREE.RingGeometry(r * 0.92, r * 1.45, 28),
       new THREE.MeshBasicMaterial({
         color: color ?? 0xa8d0e8,
         transparent: true,
-        opacity: 0.18,
+        opacity: 0.28,
         side: THREE.DoubleSide,
         depthWrite: false,
         blending: THREE.AdditiveBlending,
@@ -2361,8 +2361,8 @@ export class World {
       if (loot < 1) {
         for (const it of this.items || []) {
           if (it.countsForWin || it.collected) continue;
-          // kit inicial / tocha / machado ficam; traps e cura podem rarear
-          if (it.essential || it.weaponId === "torch") continue;
+          // kit / armas / tocha ficam no mapa — rareia só munição, trap e cura
+          if (it.essential || it.weaponId) continue;
           if (rng() > loot) this.collectItem(it, { instant: true });
         }
       }
@@ -2546,15 +2546,16 @@ export class World {
       let near = 0;
       if (playerPos) {
         const d = this.wrapDistXZ(playerPos, it.pos);
-        if (d < 6) near = 1 - d / 6;
+        if (d < 10) near = 1 - d / 10;
       }
       const base = it.mesh.userData.baseScale || 1;
-      const breathe = base * (1 + Math.sin(elapsed * 3.5 + it.phase) * 0.03 + near * 0.12);
+      const breathe = base * (1 + Math.sin(elapsed * 3.5 + it.phase) * 0.04 + near * 0.16);
       it.mesh.scale.setScalar(breathe);
       const glow = it.mesh.userData.glow;
       if (glow?.material) {
-        glow.material.opacity = 0.22 + near * 0.28 + Math.sin(elapsed * 4 + it.phase) * 0.06;
-        glow.scale.setScalar(1 + near * 0.25);
+        // brilho mais visível na neve/noite — loot não “some” no branco
+        glow.material.opacity = 0.4 + near * 0.35 + Math.sin(elapsed * 4 + it.phase) * 0.08;
+        glow.scale.setScalar(1.2 + near * 0.45);
       }
       for (const m of it.mesh.userData.pulse || []) {
         if (m.material?.emissiveIntensity != null) {
@@ -2581,7 +2582,7 @@ export class World {
         }
         pos.needsUpdate = true;
       }
-      if (!it.discovered && playerPos && this.wrapDistXZ(playerPos, it.pos) < 22) {
+      if (!it.discovered && playerPos && this.wrapDistXZ(playerPos, it.pos) < 40) {
         it.discovered = true;
         this._justDiscovered = it;
       }
@@ -2821,6 +2822,10 @@ export class World {
     this.flushPendingEnemies(elapsed);
     for (const e of this.enemies) {
       e.update(dt, elapsed, playerPos, this._enemyHooks);
+    }
+    // independente: sem combate entre si — só afastamento suave
+    for (const e of this.enemies) {
+      if (e.alive && !e.tamed) e.softSeparatePeers(dt);
     }
   }
 

@@ -1259,10 +1259,6 @@ class Game {
         this.ambience.teleportWhoosh();
       } else if (ev === "gunfire") {
         this.ambience.gunfireBurst();
-      } else if (ev === "npc_fight") {
-        if (Math.random() < 0.08) {
-          this.hud.showMsg("Inimigos estão brigando entre si!", 2200);
-        }
       } else if (ev === "dead") {
         const drops = enemy?._lastDrops || [];
         if (enemy?.type === "boto") this.toastAchievement(unlockAchievement("boto_kill"));
@@ -1444,6 +1440,9 @@ class Game {
   }
 
   refreshInventoryUI() {
+    if (this.weapons.stripEmptyThrown?.()) {
+      this.player?.setHeldWeapon?.(this.weapons.current.id);
+    }
     this.hud.renderInventory(this.weapons.slots());
     this.refreshAmmoHud();
   }
@@ -3226,8 +3225,16 @@ class Game {
   }
 
   fireWeapon(weapon, p, opts = {}) {
-    // sem munição: clique seco
+    // sem munição: granada gasta some → punhos; armas com mag/reserva fazem clique seco
     if (weapon.ammoType && !this.weapons.canFire()) {
+      if (this.weapons.stripIfEmpty(weapon.id)) {
+        this.cancelWeaponCharge();
+        this.player.setHeldWeapon("fists");
+        this.refreshInventoryUI();
+        this.hud.showMsg("Sem granadas — punhos!", 1800);
+        this.fireWeapon(this.weapons.current, p, opts);
+        return;
+      }
       this.attackCd = 0.35;
       const at = CONFIG.ammoTypes[weapon.ammoType];
       const needsReload = (weapon.magSize || 0) > 0;
@@ -3248,7 +3255,13 @@ class Game {
     this.attackCd = weapon.cooldown || CONFIG.player.attackCooldown;
     this.weapons.consumeAmmo();
     this.warnIfAmmoCritical(weapon);
-    this.player.setHeldWeapon(weapon.id);
+    // última granada: some da mão na hora — senão bloqueia o soco
+    if (this.weapons.stripIfEmpty(weapon.id)) {
+      this.player.setHeldWeapon("fists");
+      this.hud.showMsg("Granada arremessada!", 1400);
+    } else {
+      this.player.setHeldWeapon(weapon.id);
+    }
     this.player.playAttack(weapon.fire === "hitscan" || weapon.fire === "projectile" ? "ranged" : "melee");
 
     const chargeT = opts.charge;
