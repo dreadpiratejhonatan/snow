@@ -77,6 +77,33 @@ try {
   if (world.bear.hp > 160) throw new Error("urso alfa deveria estar nerfado");
 
   console.log("Items OK —", world.items.length, "espalhados, total p/ vencer:", world.itemsTotal);
+  const torchCount = world.items.filter((i) => i.weaponId === "torch" && !i.collected).length;
+  if (torchCount < 2) {
+    throw new Error(`deveria haver ≥2 tochas no mapa (veio ${torchCount})`);
+  }
+  const newLoot = ["Garrafa térmica", "Binóculos", "Botas de neve", "Sinalizador", "Kit médico"];
+  for (const name of newLoot) {
+    if (!world.items.some((i) => i.name === name)) {
+      throw new Error(`loot novo ausente: ${name}`);
+    }
+  }
+  // Difícil não pode apagar tochas / essenciais da base
+  {
+    const sceneH = new THREE.Scene();
+    const hardW = new World(sceneH, { seed: 424242 });
+    hardW.applyDifficulty("hard");
+    const aliveTorch = hardW.items.filter((i) => i.weaponId === "torch" && !i.collected).length;
+    if (aliveTorch < 2) {
+      throw new Error(`hard thin removeu tochas (restaram ${aliveTorch})`);
+    }
+    const nearGear = hardW.items.filter(
+      (i) => !i.collected && i.essential && (i.weaponId === "spear" || i.weaponId === "bow")
+    );
+    if (nearGear.length < 2) {
+      throw new Error("hard thin removeu armas essenciais perto da base");
+    }
+    console.log("Loot restore OK — torches", torchCount, "hard still has", aliveTorch);
+  }
   const it = world.items[0];
   world.collectItem(it);
   if (!it.collected) throw new Error("collectItem falhou");
