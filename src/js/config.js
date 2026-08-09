@@ -670,8 +670,17 @@ export const CONFIG = {
       skin: 0xf0d4b8,
       tie: 0x2a1a10,
     },
+    mika: {
+      id: "mika",
+      name: "Mika",
+      face: "faces/natan.png",
+      suit: 0x173d4a,
+      shirt: 0x204d59,
+      skin: 0xe8d6bb,
+      tie: 0x94d8d8,
+    },
   },
-  skinOrder: ["natan", "jorge", "caio", "lorenzo", "ze"],
+  skinOrder: ["natan", "jorge", "caio", "lorenzo", "ze", "mika"],
   /** IDs antigos → personagem (localStorage / saves). */
   skinAlias: {
     classic: "natan",
@@ -682,7 +691,6 @@ export const CONFIG = {
     ghost: "natan",
     rita: "natan",
     bruno: "natan",
-    mega_brain: "natan",
     neymar: "natan",
   },
   weapons: {
