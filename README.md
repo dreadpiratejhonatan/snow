@@ -76,7 +76,8 @@ npm run preview           # dist/ em :5180
 - **Pós-v1 / o que foi feito:** [`docs/DEVELOP-ATE-GH63.md`](docs/DEVELOP-ATE-GH63.md)  
 - **APIs:** [`docs/API.md`](docs/API.md)  
 - **Playbook genérico (lições para projetos parecidos):** [`docs/PLAYBOOK-JOGO-WEB.md`](docs/PLAYBOOK-JOGO-WEB.md)  
-- **Prompt / blueprint híbrido (Neve + Sussurros da Floresta):** [`docs/PROMPT-HIBRIDO-NEVE-FLORESTA.md`](docs/PROMPT-HIBRIDO-NEVE-FLORESTA.md)
+- **Prompt / blueprint híbrido (Neve + Sussurros da Floresta):** [`docs/PROMPT-HIBRIDO-NEVE-FLORESTA.md`](docs/PROMPT-HIBRIDO-NEVE-FLORESTA.md)  
+- **Merged agent brief (Cursor SPIRIT × 2NO Snow):** [`docs/MERGED-AGENT-BRIEF.md`](docs/MERGED-AGENT-BRIEF.md)
 
 O pacote **não inclui** ranking/tickets vivos — preserve `data/` no servidor.
 
