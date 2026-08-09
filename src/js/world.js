@@ -2198,15 +2198,15 @@ export class World {
     let placed = false;
     for (let tries = 0; tries < 80; tries++) {
       if (wantNear) {
-        // anel perto do spawn — fácil de achar no celular
+        // kit inicial: perto o bastante pra achar, longe o bastante pra não lotar o spawn
         const a = Math.random() * Math.PI * 2;
-        const r = 7 + Math.random() * 11;
+        const r = 14 + Math.random() * 12; // 14–26
         x = ox + Math.cos(a) * r;
         z = oz + Math.sin(a) * r;
       } else if (wantMid) {
-        // anel médio — ainda no mapa “útil”, não no fim do mundo
+        // anel médio — exige sair da fogueira
         const a = Math.random() * Math.PI * 2;
-        const r = 20 + Math.random() * 28;
+        const r = 32 + Math.random() * 36; // 32–68
         x = ox + Math.cos(a) * r;
         z = oz + Math.sin(a) * r;
       } else {
@@ -2215,7 +2215,7 @@ export class World {
       }
       const h = this.getHeight(x, z);
       const distHome = Math.hypot(x - ox, z - oz);
-      const minDist = wantNear ? 5.5 : wantMid ? 16 : 28;
+      const minDist = wantNear ? 12 : wantMid ? 28 : 36;
       const farFromBase = distHome > minDist;
       const flat = this.getSlope(x, z) < 0.85;
       if (h > this.waterLevel + 0.6 && farFromBase && (!wantNear || flat)) {
@@ -2223,10 +2223,10 @@ export class World {
         break;
       }
     }
-    // fallback garantido: perto da fogueira, no chão andável
+    // fallback garantido: anel andável (sem empilhar na fogueira)
     if (!placed && (wantNear || wantMid)) {
       const a = Math.random() * Math.PI * 2;
-      const r = wantNear ? 9 : 24;
+      const r = wantNear ? 18 : 40;
       x = ox + Math.cos(a) * r;
       z = oz + Math.sin(a) * r;
     }
@@ -2247,13 +2247,9 @@ export class World {
     mesh.visible = true;
     mesh.userData.baseScale = mesh.scale.x || 1;
     this.scene.add(mesh);
+    // só essenciais explícitos / tocha / machado — o resto pode rarear por dificuldade
     const essential =
-      !!def.essential ||
-      def.weaponId === "torch" ||
-      def.weaponId === "axe" ||
-      !!def.trapId ||
-      !!def.healthHeal ||
-      (wantNear && (!!def.weaponId || !!def.ammoType));
+      !!def.essential || def.weaponId === "torch" || def.weaponId === "axe";
     this.items.push({
       name: def.name,
       color: def.color,
@@ -2261,7 +2257,8 @@ export class World {
       mesh,
       pos: new THREE.Vector3(x, y, z),
       collected: false,
-      discovered: !!def.weaponId || wantNear || !!def.trapId || !!def.healthHeal,
+      // minimapa: só o kit inicial marcado; o resto revela por proximidade / husky
+      discovered: !!def.essential && wantNear,
       phase: Math.random() * Math.PI * 2,
       weaponId: def.weaponId || null,
       ammoType: def.ammoType || null,
@@ -2271,6 +2268,7 @@ export class World {
       healthHeal: def.healthHeal || 0,
       countsForWin,
       essential,
+      nearBase: wantNear,
       saveId,
     });
   }
@@ -2306,15 +2304,19 @@ export class World {
     }
     i = 0;
     for (const def of CONFIG.trapPickups || []) {
-      this._spawnItemDef(def, { countsForWin: false, nearBase: true, saveId: `trap:${i++}` });
+      this._spawnItemDef(def, {
+        countsForWin: false,
+        nearBase: !!def.nearBase,
+        midRing: !!def.midRing,
+        saveId: `trap:${i++}`,
+      });
     }
     i = 0;
     for (const def of CONFIG.healPickups || []) {
-      // metade perto da base, metade no anel médio
       this._spawnItemDef(def, {
         countsForWin: false,
-        nearBase: i % 2 === 0,
-        midRing: i % 2 === 1,
+        nearBase: !!def.nearBase,
+        midRing: !!def.midRing,
         saveId: `heal:${i++}`,
       });
     }
@@ -2323,7 +2325,7 @@ export class World {
   }
 
   /**
-   * Aplica multiplicadores de dificuldade (spawn delay, rareia pickups no Difícil).
+   * Aplica multiplicadores de dificuldade (spawn delay, rareia pickups).
    * Spawn/loot thinning só uma vez por mundo; `thinPickups: false` no Continuar.
    */
   applyDifficulty(diffId, opts = {}) {
@@ -2338,18 +2340,78 @@ export class World {
     }
 
     const thin = opts.thinPickups !== false;
-    const loot = this.diff.loot ?? 1;
-    if (thin && !this._diffLootThinned && loot < 1) {
+    if (thin && !this._diffLootThinned) {
       // RNG seedado — host/guest Hard ficam alinhados no co-op
       const rng = createRng((this.seed ^ 0x9e3779b9) >>> 0);
-      for (const it of this.items || []) {
-        if (it.countsForWin || it.collected) continue;
-        // starter / essenciais nunca somem (tocha, armas da base, traps, cura…)
-        if (it.essential || it.trapId || it.healthHeal) continue;
-        if (it.weaponId === "torch") continue;
-        if (rng() > loot) this.collectItem(it, { instant: true });
+      const loot = this.diff.loot ?? 1;
+      if (loot < 1) {
+        for (const it of this.items || []) {
+          if (it.countsForWin || it.collected) continue;
+          // kit inicial / tocha / machado ficam; traps e cura podem rarear
+          if (it.essential || it.weaponId === "torch") continue;
+          if (rng() > loot) this.collectItem(it, { instant: true });
+        }
       }
+      this._capNearBaseLoot(rng);
       this._diffLootThinned = true;
+    }
+  }
+
+  /**
+   * Limita quantos pickups ficam no anel da fogueira por dificuldade.
+   * Essenciais (tocha, lança…) têm prioridade; o excesso some.
+   */
+  _capNearBaseLoot(rng) {
+    const cap = this.diff?.nearBaseCap;
+    if (cap == null || cap < 0) return;
+    const ox = this.home?.x ?? 0;
+    const oz = this.home?.z ?? 0;
+    const radius = 28;
+    const near = (this.items || []).filter((it) => {
+      if (it.collected) return false;
+      const d = Math.hypot(it.pos.x - ox, it.pos.z - oz);
+      return d <= radius;
+    });
+    if (near.length <= cap) return;
+
+    // manter essenciais primeiro; entre o resto, sorteia quem sai
+    const keepers = [];
+    const expendable = [];
+    for (const it of near) {
+      if (it.essential || it.weaponId === "torch") keepers.push(it);
+      else expendable.push(it);
+    }
+    // embaralha descartáveis
+    for (let i = expendable.length - 1; i > 0; i--) {
+      const j = Math.floor(rng() * (i + 1));
+      [expendable[i], expendable[j]] = [expendable[j], expendable[i]];
+    }
+    let kept = keepers.length;
+    for (const it of expendable) {
+      if (kept < cap) {
+        kept++;
+        continue;
+      }
+      this.collectItem(it, { instant: true });
+    }
+    // se ainda passou do cap só com essenciais, remove essenciais extras
+    // (nunca a última tocha / lança se forem as únicas)
+    if (keepers.length > cap) {
+      const ranked = [...keepers].sort((a, b) => {
+        const rank = (it) =>
+          it.weaponId === "torch" ? 0 : it.weaponId === "spear" ? 1 : it.essential ? 2 : 3;
+        return rank(a) - rank(b);
+      });
+      for (let i = cap; i < ranked.length; i++) {
+        // nunca apaga a última tocha do mapa inteiro
+        if (ranked[i].weaponId === "torch") {
+          const torches = (this.items || []).filter(
+            (t) => t.weaponId === "torch" && !t.collected && t !== ranked[i]
+          );
+          if (!torches.length) continue;
+        }
+        this.collectItem(ranked[i], { instant: true });
+      }
     }
   }
 

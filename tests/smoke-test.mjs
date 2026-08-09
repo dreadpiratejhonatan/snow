@@ -87,7 +87,7 @@ try {
       throw new Error(`loot novo ausente: ${name}`);
     }
   }
-  // Difícil não pode apagar tochas / essenciais da base
+  // Difícil não pode apagar tochas / kit inicial; Médio não lotar a fogueira
   {
     const sceneH = new THREE.Scene();
     const hardW = new World(sceneH, { seed: 424242 });
@@ -96,13 +96,33 @@ try {
     if (aliveTorch < 2) {
       throw new Error(`hard thin removeu tochas (restaram ${aliveTorch})`);
     }
-    const nearGear = hardW.items.filter(
-      (i) => !i.collected && i.essential && (i.weaponId === "spear" || i.weaponId === "bow")
+    const spearOk = hardW.items.some((i) => !i.collected && i.weaponId === "spear" && i.essential);
+    if (!spearOk) throw new Error("hard thin removeu a lança essencial");
+
+    const sceneM = new THREE.Scene();
+    const medW = new World(sceneM, { seed: 424242 });
+    medW.applyDifficulty("medium");
+    const hx = medW.home?.x ?? 0;
+    const hz = medW.home?.z ?? 0;
+    const nearMed = medW.items.filter(
+      (i) => !i.collected && Math.hypot(i.pos.x - hx, i.pos.z - hz) <= 28
     );
-    if (nearGear.length < 2) {
-      throw new Error("hard thin removeu armas essenciais perto da base");
+    const cap = medW.diff.nearBaseCap ?? 4;
+    if (nearMed.length > cap) {
+      throw new Error(`medium: ${nearMed.length} loot na base (cap ${cap})`);
     }
-    console.log("Loot restore OK — torches", torchCount, "hard still has", aliveTorch);
+    const preReveal = medW.items.filter((i) => !i.collected && i.discovered).length;
+    if (preReveal > 4) {
+      throw new Error(`minimapa não deveria nascer lotado (discovered=${preReveal})`);
+    }
+    console.log(
+      "Loot balance OK — torches",
+      torchCount,
+      "hard torches",
+      aliveTorch,
+      "medium near-base",
+      nearMed.length
+    );
   }
   const it = world.items[0];
   world.collectItem(it);
@@ -535,17 +555,20 @@ try {
       throw new Error(`item ${it.name}: mesh trapType=${it.mesh?.userData?.trapType} ≠ ${it.trapId}`);
     }
   }
-  const spawn = world.getSpawn();
-  const nearTraps = groundTraps.filter((t) => world.wrapDistXZ(spawn, t.pos) < 22);
-  if (nearTraps.length < 3) {
-    throw new Error(`armadilhas perto do spawn sumiram (${nearTraps.length}/3+)`);
+  // armadilhas espalhadas (não todas na fogueira) — ainda precisam existir no mapa
+  if (groundTraps.length < 5) {
+    throw new Error(`armadilhas no mapa sumiram (${groundTraps.length})`);
   }
-  for (const t of nearTraps) {
+  const trapKinds = new Set(groundTraps.map((t) => t.trapId));
+  for (const id of ["mine", "bait", "fence"]) {
+    if (!trapKinds.has(id)) throw new Error(`trap ${id} ausente no mapa`);
+  }
+  for (const t of groundTraps) {
     if (!t.mesh?.visible || !t.mesh.parent) {
       throw new Error(`trap ${t.trapId} sem mesh visível na cena`);
     }
   }
-  console.log("Trap visuals OK —", groundTraps.map((t) => t.trapId).join(", "), "near", nearTraps.length);
+  console.log("Trap visuals OK —", [...trapKinds].join(", "), "total", groundTraps.length);
 
   for (let i = 0; i < 60; i++) {
     world.update(0.016, i * 0.016, 0.5, 0.1, player.position);
