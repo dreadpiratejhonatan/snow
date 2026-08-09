@@ -634,16 +634,20 @@ export const CONFIG = {
   trapPickups: [
     { name: "Mina", color: 0x6a6a6a, trapId: "mine", amount: 1 },
     { name: "Mina", color: 0x6a6a6a, trapId: "mine", amount: 1 },
+    { name: "Mina", color: 0x6a6a6a, trapId: "mine", amount: 1 },
+    { name: "Isca de carne", color: 0xc87840, trapId: "bait", amount: 1 },
     { name: "Isca de carne", color: 0xc87840, trapId: "bait", amount: 1 },
     { name: "Cerca improvisada", color: 0x8a6a40, trapId: "fence", amount: 1 },
     { name: "Cerca improvisada", color: 0x8a6a40, trapId: "fence", amount: 1 },
   ],
-  /** Poções de vida (não contam para vitória). */
+  /** Poções / kit de cura (não contam para vitória). */
   healPickups: [
     { name: "Poção de vida", color: 0xc42838, healthHeal: 40 },
     { name: "Poção de vida", color: 0xc42838, healthHeal: 40 },
     { name: "Poção menor", color: 0xe05060, healthHeal: 25 },
     { name: "Poção menor", color: 0xe05060, healthHeal: 25 },
+    { name: "Kit médico", color: 0xe8e8f0, healthHeal: 55 },
+    { name: "Kit médico", color: 0xe8e8f0, healthHeal: 55 },
   ],
   // Personagens default (rostos pixel em /faces/*.png)
   skins: {
@@ -902,35 +906,44 @@ export const CONFIG = {
     shell: { name: "Cartuchos", icon: "▮" },
     grenade: { name: "Granadas", icon: "●" },
   },
-  // pickups de arma (não contam para vitória) — munição inicial enxuta
+  // pickups de arma (não contam para vitória) — vários perto da base + tochas extras
   weaponPickups: [
-    { name: "Lança de gelo", color: 0xa8e8ff, weaponId: "spear", nearBase: true },
-    { name: "Tocha", color: 0xff9a3c, weaponId: "torch", nearBase: true },
-    { name: "Claymore enferrujada", color: 0xb8c8d8, weaponId: "claymore", nearBase: true },
-    { name: "Arco de caçador", color: 0x9be07a, weaponId: "bow", ammoType: "arrow", amount: 5, nearBase: true },
-    { name: "Revólver antigo", color: 0xd8c25a, weaponId: "revolver", ammoType: "bullet", amount: 6, nearBase: true },
+    { name: "Lança de gelo", color: 0xa8e8ff, weaponId: "spear", nearBase: true, essential: true },
+    { name: "Tocha", color: 0xff9a3c, weaponId: "torch", nearBase: true, essential: true },
+    { name: "Tocha reserva", color: 0xffb060, weaponId: "torch", nearBase: true, essential: true },
+    { name: "Claymore enferrujada", color: 0xb8c8d8, weaponId: "claymore", nearBase: true, essential: true },
+    { name: "Arco de caçador", color: 0x9be07a, weaponId: "bow", ammoType: "arrow", amount: 5, nearBase: true, essential: true },
+    { name: "Revólver antigo", color: 0xd8c25a, weaponId: "revolver", ammoType: "bullet", amount: 6, nearBase: true, essential: true },
     { name: "Escopeta", color: 0xb87848, weaponId: "shotgun", ammoType: "shell", amount: 3, nearBase: true },
-    { name: "AK-47", color: 0x6a5a3a, weaponId: "ak47", ammoType: "bullet", amount: 12 },
-    { name: "Besta", color: 0x8a9ab0, weaponId: "crossbow", ammoType: "arrow", amount: 4 },
+    { name: "Tocha de campo", color: 0xff8a30, weaponId: "torch", midRing: true, essential: true },
+    { name: "AK-47", color: 0x6a5a3a, weaponId: "ak47", ammoType: "bullet", amount: 12, midRing: true },
+    { name: "Besta", color: 0x8a9ab0, weaponId: "crossbow", ammoType: "arrow", amount: 4, midRing: true },
   ],
-  // caixas de munição — poucas e pequenas (sobrevivência)
+  // caixas de munição — algumas perto da base para o começo
   ammoPickups: [
-    { name: "Flechas (+arco)", color: 0x9be07a, ammoType: "arrow", amount: 5 },
-    { name: "Balas (+revólver)", color: 0xd8c25a, ammoType: "bullet", amount: 6 },
-    { name: "Cartuchos (+escopeta)", color: 0xe08a5a, ammoType: "shell", amount: 2 },
-    { name: "Granada", color: 0x5a7a4a, weaponId: "grenade", ammoType: "grenade", amount: 1 },
+    { name: "Flechas (+arco)", color: 0x9be07a, ammoType: "arrow", amount: 5, nearBase: true, essential: true },
+    { name: "Balas (+revólver)", color: 0xd8c25a, ammoType: "bullet", amount: 6, nearBase: true, essential: true },
+    { name: "Cartuchos (+escopeta)", color: 0xe08a5a, ammoType: "shell", amount: 2, nearBase: true },
+    { name: "Granada", color: 0x5a7a4a, weaponId: "grenade", ammoType: "grenade", amount: 1, nearBase: true },
+    { name: "Flechas extras", color: 0x7bc86a, ammoType: "arrow", amount: 4, midRing: true },
+    { name: "Balas extras", color: 0xc8b050, ammoType: "bullet", amount: 5, midRing: true },
+    { name: "Granada de reserva", color: 0x4a6a3a, weaponId: "grenade", ammoType: "grenade", amount: 1, midRing: true },
   ],
   // itens de sobrevivência (+ troféu do urso alfa)
   items: [
-    { name: "Lanterna antiga", color: 0xffd75a },
-    { name: "Manta térmica", color: 0xc8a070 },
-    { name: "Mapa rasgado", color: 0xd8c49a },
-    { name: "Bússola", color: 0x7ad0ff },
-    { name: "Machado", color: 0xb0b8c2, weaponId: "axe" },
-    { name: "Latas de comida", color: 0x9ce09c },
-    { name: "Corda", color: 0xd9a066 },
-    { name: "Isqueiro", color: 0xff9a3c },
-    { name: "Rádio", color: 0xb28aff },
+    { name: "Lanterna antiga", color: 0xffd75a, nearBase: true },
+    { name: "Manta térmica", color: 0xc8a070, nearBase: true },
+    { name: "Botas de neve", color: 0x3a4a5a, nearBase: true },
+    { name: "Mapa rasgado", color: 0xd8c49a, midRing: true },
+    { name: "Bússola", color: 0x7ad0ff, midRing: true },
+    { name: "Machado", color: 0xb0b8c2, weaponId: "axe", nearBase: true, essential: true },
+    { name: "Latas de comida", color: 0x9ce09c, midRing: true },
+    { name: "Corda", color: 0xd9a066, midRing: true },
+    { name: "Isqueiro", color: 0xff9a3c, nearBase: true },
+    { name: "Rádio", color: 0xb28aff, midRing: true },
+    { name: "Garrafa térmica", color: 0x5a8aaa, midRing: true },
+    { name: "Binóculos", color: 0x4a5568, midRing: true },
+    { name: "Sinalizador", color: 0xff4040, midRing: true },
   ],
   thirdPerson: {
     distance: 4.8,

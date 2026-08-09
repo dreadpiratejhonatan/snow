@@ -1673,7 +1673,8 @@ export class World {
     if (def.saveId?.startsWith?.("win:trophy") || /troféu/i.test(def.name || "")) return "trophy";
     if (def.weaponId) return "weapon";
     const n = (def.name || "").toLowerCase();
-    if (/poção|pocao|kit|médic|medic/.test(n) || def.healthHeal) return "potion";
+    if (/kit médico|kit medico|medkit/.test(n)) return "medkit";
+    if (/poção|pocao|médic|medic/.test(n) || def.healthHeal) return "potion";
     if (/mapa/.test(n)) return "map";
     if (/rádio|radio/.test(n)) return "radio";
     if (/lanterna/.test(n)) return "lantern";
@@ -1681,6 +1682,11 @@ export class World {
     if (/corda/.test(n)) return "rope";
     if (/lata|comida/.test(n)) return "cans";
     if (/isqueiro/.test(n)) return "lighter";
+    if (/manta|cobertor/.test(n)) return "blanket";
+    if (/garrafa|térmica|termica|thermos/.test(n)) return "thermos";
+    if (/binóculo|binoculo/.test(n)) return "binoculars";
+    if (/bota/.test(n)) return "boots";
+    if (/sinalizador|flare/.test(n)) return "flare";
     return "crate";
   }
 
@@ -1697,7 +1703,19 @@ export class World {
         emissiveIntensity: 0.5,
       });
     }
-    if (kind === "ammo" || kind === "metal" || kind === "radio" || kind === "lantern" || kind === "compass" || kind === "lighter" || kind === "cans") {
+    if (
+      kind === "ammo" ||
+      kind === "metal" ||
+      kind === "radio" ||
+      kind === "lantern" ||
+      kind === "compass" ||
+      kind === "lighter" ||
+      kind === "cans" ||
+      kind === "thermos" ||
+      kind === "binoculars" ||
+      kind === "boots" ||
+      kind === "flare"
+    ) {
       return new THREE.MeshStandardMaterial({
         color: c,
         map: T.metal || null,
@@ -1709,7 +1727,15 @@ export class World {
         emissiveIntensity: 0.14,
       });
     }
-    if (kind === "potion" || kind === "medkit" || kind === "map" || kind === "rope" || kind === "cloth" || kind === "trap") {
+    if (
+      kind === "potion" ||
+      kind === "medkit" ||
+      kind === "map" ||
+      kind === "rope" ||
+      kind === "cloth" ||
+      kind === "trap" ||
+      kind === "blanket"
+    ) {
       return new THREE.MeshStandardMaterial({
         color: c,
         map: T.cloth || null,
@@ -2035,6 +2061,71 @@ export class World {
       flame.position.y = 0.36;
       g.add(body, top, flame);
       g.userData.pulse = [flame];
+    } else if (kind === "blanket") {
+      const fold = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.08, 0.28), mat);
+      fold.position.y = 0.1;
+      fold.rotation.y = 0.2;
+      const fold2 = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.06, 0.24), accent);
+      fold2.position.set(0.02, 0.16, 0);
+      fold2.rotation.y = -0.15;
+      g.add(fold, fold2);
+    } else if (kind === "thermos") {
+      const body = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.11, 0.36, 12), mat);
+      body.position.y = 0.24;
+      const cup = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.1, 10), accent);
+      cup.position.y = 0.46;
+      const strap = new THREE.Mesh(new THREE.TorusGeometry(0.12, 0.015, 5, 14, Math.PI), dark);
+      strap.position.set(0.12, 0.3, 0);
+      strap.rotation.z = Math.PI / 2;
+      g.add(body, cup, strap);
+    } else if (kind === "binoculars") {
+      const left = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.08, 0.22, 10), mat);
+      left.rotation.x = Math.PI / 2;
+      left.position.set(-0.08, 0.16, 0);
+      const right = left.clone();
+      right.position.x = 0.08;
+      const bridge = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.05, 0.06), dark);
+      bridge.position.y = 0.16;
+      const lensL = new THREE.Mesh(new THREE.CircleGeometry(0.055, 12), accent);
+      lensL.position.set(-0.08, 0.16, 0.12);
+      const lensR = lensL.clone();
+      lensR.position.x = 0.08;
+      g.add(left, right, bridge, lensL, lensR);
+    } else if (kind === "boots") {
+      for (const side of [-1, 1]) {
+        const boot = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.14, 0.22), mat);
+        boot.position.set(side * 0.1, 0.12, 0);
+        const toe = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.08, 0.1), dark);
+        toe.position.set(side * 0.1, 0.08, 0.14);
+        g.add(boot, toe);
+      }
+    } else if (kind === "flare") {
+      const tube = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.045, 0.42, 8), mat);
+      tube.position.y = 0.28;
+      tube.rotation.z = 0.35;
+      const tip = new THREE.Mesh(
+        new THREE.ConeGeometry(0.05, 0.12, 6),
+        new THREE.MeshStandardMaterial({
+          color: 0xff4040,
+          emissive: 0xff2020,
+          emissiveIntensity: 0.85,
+          roughness: 0.45,
+        })
+      );
+      tip.position.set(0.08, 0.5, 0);
+      tip.rotation.z = 0.35;
+      g.add(tube, tip);
+      g.userData.pulse = [tip];
+    } else if (kind === "medkit") {
+      const box = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.22, 0.26), mat);
+      box.position.y = 0.18;
+      const crossV = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.18, 0.02), accent);
+      crossV.position.set(0, 0.2, 0.14);
+      const crossH = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.06, 0.02), accent);
+      crossH.position.set(0, 0.2, 0.14);
+      const handle = new THREE.Mesh(new THREE.TorusGeometry(0.08, 0.015, 5, 10, Math.PI), dark);
+      handle.position.y = 0.34;
+      g.add(box, crossV, crossH, handle);
     } else {
       // caixa de suprimentos com cantoneiras
       const box = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.26, 0.36), mat);
@@ -2087,17 +2178,25 @@ export class World {
     return g;
   }
 
-  _spawnItemDef(def, { countsForWin = true, nearBase = false, saveId = null } = {}) {
+  _spawnItemDef(def, { countsForWin = true, nearBase = false, midRing = false, saveId = null } = {}) {
     let x = 0;
     let z = 0;
     const ox = this.home?.x ?? 0;
     const oz = this.home?.z ?? 0;
+    const wantNear = nearBase || !!def.nearBase;
+    const wantMid = !wantNear && (midRing || !!def.midRing);
     let placed = false;
     for (let tries = 0; tries < 80; tries++) {
-      if (nearBase) {
-        // anel perto do spawn — fácil de achar no celular (antes 12–30m sumia na névoa)
+      if (wantNear) {
+        // anel perto do spawn — fácil de achar no celular
         const a = Math.random() * Math.PI * 2;
-        const r = 7 + Math.random() * 10;
+        const r = 7 + Math.random() * 11;
+        x = ox + Math.cos(a) * r;
+        z = oz + Math.sin(a) * r;
+      } else if (wantMid) {
+        // anel médio — ainda no mapa “útil”, não no fim do mundo
+        const a = Math.random() * Math.PI * 2;
+        const r = 20 + Math.random() * 28;
         x = ox + Math.cos(a) * r;
         z = oz + Math.sin(a) * r;
       } else {
@@ -2106,18 +2205,20 @@ export class World {
       }
       const h = this.getHeight(x, z);
       const distHome = Math.hypot(x - ox, z - oz);
-      const farFromBase = distHome > (nearBase ? 5.5 : 30);
+      const minDist = wantNear ? 5.5 : wantMid ? 16 : 28;
+      const farFromBase = distHome > minDist;
       const flat = this.getSlope(x, z) < 0.85;
-      if (h > this.waterLevel + 0.6 && farFromBase && (!nearBase || flat)) {
+      if (h > this.waterLevel + 0.6 && farFromBase && (!wantNear || flat)) {
         placed = true;
         break;
       }
     }
     // fallback garantido: perto da fogueira, no chão andável
-    if (!placed && nearBase) {
+    if (!placed && (wantNear || wantMid)) {
       const a = Math.random() * Math.PI * 2;
-      x = ox + Math.cos(a) * 9;
-      z = oz + Math.sin(a) * 9;
+      const r = wantNear ? 9 : 24;
+      x = ox + Math.cos(a) * r;
+      z = oz + Math.sin(a) * r;
     }
     const kind = this._lootKind({ ...def, countsForWin, saveId });
     let mesh;
@@ -2136,6 +2237,13 @@ export class World {
     mesh.visible = true;
     mesh.userData.baseScale = mesh.scale.x || 1;
     this.scene.add(mesh);
+    const essential =
+      !!def.essential ||
+      def.weaponId === "torch" ||
+      def.weaponId === "axe" ||
+      !!def.trapId ||
+      !!def.healthHeal ||
+      (wantNear && (!!def.weaponId || !!def.ammoType));
     this.items.push({
       name: def.name,
       color: def.color,
@@ -2143,7 +2251,7 @@ export class World {
       mesh,
       pos: new THREE.Vector3(x, y, z),
       collected: false,
-      discovered: !!def.weaponId || !!nearBase || !!def.trapId,
+      discovered: !!def.weaponId || wantNear || !!def.trapId || !!def.healthHeal,
       phase: Math.random() * Math.PI * 2,
       weaponId: def.weaponId || null,
       ammoType: def.ammoType || null,
@@ -2152,6 +2260,7 @@ export class World {
       trapAmount: def.trapId ? def.amount || 1 : 0,
       healthHeal: def.healthHeal || 0,
       countsForWin,
+      essential,
       saveId,
     });
   }
@@ -2160,19 +2269,30 @@ export class World {
     this.items = [];
     let i = 0;
     for (const def of CONFIG.items) {
-      this._spawnItemDef(def, { countsForWin: true, saveId: `win:${i++}` });
+      this._spawnItemDef(def, {
+        countsForWin: true,
+        nearBase: !!def.nearBase,
+        midRing: !!def.midRing,
+        saveId: `win:${i++}`,
+      });
     }
     i = 0;
     for (const def of CONFIG.weaponPickups || []) {
       this._spawnItemDef(def, {
         countsForWin: false,
-        nearBase: !!def.nearBase || def.weaponId === "torch",
+        nearBase: !!def.nearBase,
+        midRing: !!def.midRing,
         saveId: `wpn:${i++}`,
       });
     }
     i = 0;
     for (const def of CONFIG.ammoPickups || []) {
-      this._spawnItemDef(def, { countsForWin: false, saveId: `ammo:${i++}` });
+      this._spawnItemDef(def, {
+        countsForWin: false,
+        nearBase: !!def.nearBase,
+        midRing: !!def.midRing,
+        saveId: `ammo:${i++}`,
+      });
     }
     i = 0;
     for (const def of CONFIG.trapPickups || []) {
@@ -2180,7 +2300,13 @@ export class World {
     }
     i = 0;
     for (const def of CONFIG.healPickups || []) {
-      this._spawnItemDef(def, { countsForWin: false, nearBase: Math.random() < 0.4, saveId: `heal:${i++}` });
+      // metade perto da base, metade no anel médio
+      this._spawnItemDef(def, {
+        countsForWin: false,
+        nearBase: i % 2 === 0,
+        midRing: i % 2 === 1,
+        saveId: `heal:${i++}`,
+      });
     }
     // vitória = itens de sobrevivência + troféu do urso + troféu do Boto
     this.itemsTotal = CONFIG.items.length + 2;
@@ -2208,8 +2334,9 @@ export class World {
       const rng = createRng((this.seed ^ 0x9e3779b9) >>> 0);
       for (const it of this.items || []) {
         if (it.countsForWin || it.collected) continue;
-        // armadilhas / cura perto da base sempre ficam (guia visual no começo)
-        if (it.trapId || it.healthHeal) continue;
+        // starter / essenciais nunca somem (tocha, armas da base, traps, cura…)
+        if (it.essential || it.trapId || it.healthHeal) continue;
+        if (it.weaponId === "torch") continue;
         if (rng() > loot) this.collectItem(it, { instant: true });
       }
       this._diffLootThinned = true;
