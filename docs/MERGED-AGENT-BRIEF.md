@@ -9,10 +9,12 @@
 
 Sources merged:
 
-- Cursor: `docs/PROMPT-REBUILD-FROM-SCRATCH.md` (SPIRIT)
-- 2NO: `docs/PROMPT-HIBRIDO-NEVE-FLORESTA.md` + shipped Snow lessons (gh113 mounts, gh114 loot, playbook)
+- **Cursor (pasted brief):** “Rebuild SPIRIT-class forest game” — mission, build order A–G, steal/do-not-repeat, phone tests, scorecard categories (also in SPIRIT repo as `docs/PROMPT-REBUILD-FROM-SCRATCH.md`)
+- **2NO (this repo):** `docs/PROMPT-HIBRIDO-NEVE-FLORESTA.md` + Snow code lessons (gh113 mounts/locomotion, gh114 loot density, torus wrap, co-op, `PLAYBOOK-JOGO-WEB.md`)
 
 **Preference rule:** When desktop art fights mobile truth, **mobile wins** — HUD readability, camera/head sync, weather honesty, and dialogue timing beat prettier desktop-only shots.
+
+**This file is a MERGE**, not a rewrite of Cursor’s brief alone. Cursor wins phone feel rows; 2NO wins systems/ops rows; §6 bans are a union.
 
 ---
 
