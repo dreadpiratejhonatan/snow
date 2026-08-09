@@ -447,6 +447,42 @@ try {
   if (Math.abs(player.position.x - mule.mesh.position.x) > 0.01) {
     throw new Error("mount: player não segue a sela");
   }
+  // strafe não pode reescrever yaw da câmera (bug “girar nas rodas”)
+  player.yaw = 0.35;
+  const yawBefore = player.yaw;
+  const strafeInput = {
+    analog: null,
+    sprint: false,
+    moveForward: true,
+    moveBack: false,
+    moveLeft: true,
+    moveRight: false,
+    jump: false,
+  };
+  for (let i = 0; i < 45; i++) {
+    mounts.updateRiding(0.016, strafeInput, player);
+    player.update(0.016, mounts.stubInput(strafeInput));
+  }
+  if (Math.abs(player.yaw - yawBefore) > 0.05) {
+    throw new Error(
+      `mount: yaw da câmera não deve girar com strafe (era ${yawBefore}, virou ${player.yaw})`
+    );
+  }
+  // ataque montado: animação de braço + dano a inimigo perto
+  const dummy = world.spawnEnemyNow("bear_minion");
+  dummy.mesh.position.set(
+    player.position.x,
+    world.groundHeight(player.position.x, player.position.z + 1.6),
+    player.position.z + 1.6
+  );
+  const hp0 = dummy.hp;
+  player.playAttack("melee");
+  player.animateLimbs(0.05, false);
+  if (!(player.attackAnim > 0) || !(player.rightArm.rotation.x < -0.7)) {
+    throw new Error("mount: ataque montado deveria animar o braço");
+  }
+  const hit = world.damageEnemyAt(player.position, 25, 3.5);
+  if (!hit || dummy.hp >= hp0) throw new Error("mount: deveria poder ferir inimigo montado");
   // pose sentada: joelhos dobrados, não em pé atravessando o dorso
   player.animateLimbs(0.016, true);
   if (!player.riding || player.leftLeg.rotation.x > -0.8) {

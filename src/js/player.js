@@ -248,7 +248,7 @@ export class Player {
   animateLimbs(dt, moving) {
     if (!this.leftLeg) return;
 
-    // Pose de sela: joelhos dobrados a cavalo, braços nas rédeas.
+    // Pose de sela: joelhos dobrados a cavalo; braços atacam / miram na montaria.
     // Evita o corpo em pé atravessando o lombo do animal (pele sobre pele).
     if (this.riding) {
       if (moving) this.walkPhase += dt * 7;
@@ -258,12 +258,24 @@ export class Player {
       this.rightLeg.rotation.x = -1.2 - bob;
       this.leftLeg.rotation.z = 0.28;
       this.rightLeg.rotation.z = -0.28;
-      this.leftArm.rotation.x = -0.65;
-      this.rightArm.rotation.x = -0.55;
-      this.leftArm.rotation.z = 0.18;
-      this.rightArm.rotation.z = -0.1;
+      if (this.attackAnim > 0) this.attackAnim = Math.max(0, this.attackAnim - dt * 3.5);
+      const atk = this.attackAnim;
+      const punch = Math.sin((1 - atk) * Math.PI) * (atk > 0 ? 1 : 0);
+      const holding = this.weaponIdHeld && this.weaponIdHeld !== "fists";
+      const ranged =
+        holding &&
+        (CONFIG.weapons[this.weaponIdHeld]?.fire === "hitscan" ||
+          CONFIG.weapons[this.weaponIdHeld]?.fire === "projectile" ||
+          CONFIG.weapons[this.weaponIdHeld]?.fire === "thrown");
+      const bowLike = this.weaponIdHeld === "bow" || this.weaponIdHeld === "crossbow";
+      const readyR = holding ? (bowLike ? 1.05 : ranged ? 0.85 : 0.7) : 0.55;
+      const readyL = bowLike ? 0.95 : holding && ranged ? 0.45 : 0.35;
+      this.leftArm.rotation.x = -readyL - (bowLike ? punch * 0.35 : 0);
+      this.leftArm.rotation.z = bowLike ? 0.3 : 0.12;
+      this.rightArm.rotation.x = -readyR - punch * (ranged ? 0.85 : 1.45);
+      this.rightArm.rotation.z = punch * (ranged ? 0.12 : 0.35) + (holding ? 0.08 : 0);
       if (this.mesh) {
-        this.mesh.rotation.x = 0.08;
+        this.mesh.rotation.x = 0.08 - punch * 0.08;
         this.mesh.rotation.z = 0;
       }
       for (const t of this.tentacles) {
@@ -271,7 +283,7 @@ export class Player {
       }
       if (this.fpWeaponRoot) this.syncFpWeaponVisibility();
       if (this.weaponMount) {
-        this.weaponMount.rotation.x = 0;
+        this.weaponMount.rotation.x = -punch * (ranged ? 0.35 : 0.7);
         this.weaponMount.rotation.y = 0;
       }
       return;
@@ -472,10 +484,19 @@ export class Player {
       this.velocity.set(0, 0, 0);
       this.kb.set(0, 0, 0);
       this.onGround = true;
-      this.aiming = false;
-      // cavaleiro acompanha o yaw da montaria / câmera
-      const rideFacing = this.yaw + Math.PI;
-      this._bodyYaw += shortestAngleDelta(this._bodyYaw, rideFacing) * Math.min(1, dt * 10);
+      // mira/ADS liberados na montaria — MountManager já alinhou _bodyYaw ao animal
+      const cam = CONFIG.camera || {};
+      const aiming =
+        !!input.rightDown && !input.orbitModifier && !input.mobile && !input.blockAim;
+      this.aiming = aiming;
+      const fovZoom =
+        aiming && (!cam.aimFirstPersonOnly || this.cameraMode === "first");
+      const targetFov = fovZoom
+        ? cam.fovAim ?? 46
+        : cam.fov ?? 75;
+      const fovLerp = fovZoom ? (cam.fovLerp ?? 10) : 6;
+      this.camera.fov += (targetFov - this.camera.fov) * Math.min(1, dt * fovLerp);
+      this.camera.updateProjectionMatrix();
       this.animateLimbs(dt, !!this.mountMoving);
       this.syncMesh();
       this.syncCamera(dt);

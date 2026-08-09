@@ -15,6 +15,13 @@ function interactDist() {
   return CONFIG.mountTame?.interactDist ?? 4.8;
 }
 
+function shortestAngleDelta(from, to) {
+  let d = to - from;
+  while (d > Math.PI) d -= Math.PI * 2;
+  while (d < -Math.PI) d += Math.PI * 2;
+  return d;
+}
+
 export class MountManager {
   constructor(world, scene) {
     this.world = world;
@@ -79,6 +86,8 @@ export class MountManager {
     if (player) {
       player.riding = true;
       player.mountMoving = false;
+      // corpo do cavaleiro alinha à montaria; câmera (yaw) fica livre
+      player._bodyYaw = enemy.mesh.rotation.y;
     }
     return true;
   }
@@ -110,6 +119,7 @@ export class MountManager {
 
   /**
    * Move a montaria com o input do jogador e prende o jogador na sela.
+   * Câmera (player.yaw) fica livre — movimento é relativo ao olhar.
    * Chamar ANTES de player.update (que roda com input sem movimento).
    */
   updateRiding(dt, input, player) {
@@ -121,7 +131,7 @@ export class MountManager {
     const mcfg = e.cfg.mount;
     const speed = input.sprint ? mcfg.sprint : mcfg.speed;
 
-    // mesma convenção do Player.update (analog.y positivo = frente)
+    // wish relativo à câmera (não reescreve yaw — isso fazia o animal “girar nas rodas”)
     const forward = new THREE.Vector3(-Math.sin(player.yaw), 0, -Math.cos(player.yaw));
     const right = new THREE.Vector3(Math.cos(player.yaw), 0, -Math.sin(player.yaw));
     const wish = new THREE.Vector3();
@@ -138,14 +148,20 @@ export class MountManager {
     const pos = e.mesh.position;
     const moving = wish.lengthSq() > 0.001;
     this._moving = moving;
+    let step = 0;
     if (moving) {
       wish.normalize();
-      pos.x += wish.x * speed * dt;
-      pos.z += wish.z * speed * dt;
+      const dx = wish.x * speed * dt;
+      const dz = wish.z * speed * dt;
+      pos.x += dx;
+      pos.z += dz;
+      step = Math.hypot(dx, dz);
       // coords contínuas: o toro visual costura o mapa sem teleporte
       this.world.collide(pos, mcfg.radius, 0.5);
-      // corpo do animal vira na direção do movimento
-      e.mesh.rotation.y = Math.atan2(wish.x, wish.z);
+      // animal vira suavemente na direção do passo (não teleporta a rotação)
+      const targetFacing = Math.atan2(wish.x, wish.z);
+      e.mesh.rotation.y +=
+        shortestAngleDelta(e.mesh.rotation.y, targetFacing) * Math.min(1, dt * 9);
     }
     // stash lógico atualizado (desmontar / saves) — mesh fica contínuo enquanto ridden
     e._torus = {
@@ -153,8 +169,9 @@ export class MountManager {
       z: this.world.wrapCoord(pos.z),
     };
 
-    this._gallopT = (this._gallopT || 0) + dt * (moving ? speed * 1.6 : 0);
-    const bob = moving ? Math.abs(Math.sin(this._gallopT)) * 0.12 : 0;
+    // cadência de galope por distância — evita pernas girando como rodas
+    if (moving) this._gallopT = (this._gallopT || 0) + step * 2.8;
+    const bob = moving ? Math.abs(Math.sin(this._gallopT)) * 0.06 : 0;
     pos.y = this.world.groundHeight(pos.x, pos.z) + (e._mountBaseY || 0) + bob;
 
     this._animateMountLegs(e, dt, moving);
@@ -169,24 +186,26 @@ export class MountManager {
     player.onGround = true;
     player.riding = true;
     player.mountMoving = moving;
-    // corpo do cavaleiro acompanha a montaria (não só a câmera)
-    if (moving) {
-      player.yaw = Math.atan2(-wish.x, -wish.z);
-    }
+    // corpo do cavaleiro acompanha a montaria; yaw da câmera permanece livre (mira/ataque)
+    const face = e.mesh.rotation.y;
+    if (player._bodyYaw == null) player._bodyYaw = face;
+    player._bodyYaw += shortestAngleDelta(player._bodyYaw, face) * Math.min(1, dt * 10);
   }
 
   _animateMountLegs(e, dt, moving) {
     const legs = e.mesh?.userData?.legs;
     if (!legs?.length) return;
     if (!moving) {
-      for (const leg of legs) leg.rotation.x = 0;
+      for (const leg of legs) {
+        leg.rotation.x *= Math.max(0, 1 - dt * 10);
+      }
       return;
     }
     const phase = this._gallopT;
     for (let i = 0; i < legs.length; i++) {
       // diagonal gait: FL/BR juntos, FR/BL juntos
       const diag = i === 0 || i === 3 ? 1 : -1;
-      legs[i].rotation.x = Math.sin(phase) * 0.55 * diag;
+      legs[i].rotation.x = Math.sin(phase) * 0.4 * diag;
     }
   }
 
