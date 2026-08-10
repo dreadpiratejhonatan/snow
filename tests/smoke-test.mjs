@@ -28,6 +28,9 @@ try {
   if (!world.campfire || !world.baseGroup) {
     throw new Error("torus: campfire/baseGroup precisam existir p/ apresentar na costura");
   }
+  if (!world.crashRocket || !world.crashRocketPos) {
+    throw new Error("torus: crashRocket precisa existir p/ apresentar na costura");
+  }
   console.log("World wrap (globe) OK — seam dist:", seam.toFixed(2));
 
   const camera = new THREE.PerspectiveCamera(75, 1.6, 0.1, 500);
@@ -348,6 +351,52 @@ try {
   }
   player.orbitYaw = 0;
   console.log("Aim/crosshair OK");
+
+  // Foguete caído (teaser de trama): grande, longe da base, fumaça + luzes
+  {
+    const rp = world.crashRocketPos;
+    if (!world.crashRocket || !rp) throw new Error("crash rocket: landmark ausente");
+    if (world.getHeight(rp.x, rp.z) < world.waterLevel + 1) {
+      throw new Error("crash rocket: caiu no gelo/lago");
+    }
+    if (Math.hypot(rp.x - world.basePos.x, rp.z - world.basePos.z) < 50) {
+      throw new Error("crash rocket: perto demais da base");
+    }
+    if (Math.hypot(rp.x, rp.z) < 60) {
+      throw new Error("crash rocket: perto demais do spawn");
+    }
+    if (!world.crashSmoke || !world.crashSmokeData?.length) {
+      throw new Error("crash rocket: fumaça ausente");
+    }
+    if (!world.crashEngineLight || !world.crashCabinLight) {
+      throw new Error("crash rocket: luzes ausentes");
+    }
+    // update anima fumaça/luz sem explodir
+    const y0 = world.crashSmoke.geometry.attributes.position.getY(0);
+    world.update(0.05, 10, 0.6, 0.1, { x: rp.x, y: rp.y + 2, z: rp.z });
+    const y1 = world.crashSmoke.geometry.attributes.position.getY(0);
+    if (y1 === y0 && world.crashSmokeData[0].life === 0) {
+      throw new Error("crash rocket: fumaça não atualizou");
+    }
+    // determinístico pela seed (RNG próprio)
+    const sceneC1 = new THREE.Scene();
+    const wA = new World(sceneC1, { seed: 424242 });
+    const sceneC2 = new THREE.Scene();
+    const wB = new World(sceneC2, { seed: 424242 });
+    if (
+      Math.abs(wA.crashRocketPos.x - wB.crashRocketPos.x) > 0.01 ||
+      Math.abs(wA.crashRocketPos.z - wB.crashRocketPos.z) > 0.01
+    ) {
+      throw new Error("crash rocket: mesma seed deveria dar a mesma posição");
+    }
+    console.log(
+      "Crash rocket OK —",
+      rp.x.toFixed(1),
+      rp.z.toFixed(1),
+      "smoke",
+      world.crashSmokeData.length
+    );
+  }
 
   // Dungeon secreta: entrada seeded fora do gelo, longe da base/spawn; bolso com chão próprio
   const dungeon = new SecretDungeon(world, scene);
