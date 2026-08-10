@@ -833,6 +833,48 @@ try {
     console.log("Torus base beacon OK — multi-wrap dist base", dBase.toFixed(1), "fire", dFire.toFixed(1));
   }
 
+  // Ghost enemy (gh118): wrapDelta ±size único colocava o mesh longe em Euclidean
+  // enquanto wrapDist (HUD/minimapa/dano) ainda lia “perto”. ~1.6 voltas é o caso.
+  {
+    let bear = world.enemies.find((e) => e.type === "bear_minion" && e.alive);
+    if (!bear) bear = world.spawnEnemyAt("bear_minion", 20, 30);
+    // coords lógicas canônicas (como prepareTorusLogic)
+    bear.mesh.position.x = world.wrapCoord(20);
+    bear.mesh.position.z = world.wrapCoord(30);
+    bear._torus = { x: bear.mesh.position.x, z: bear.mesh.position.z };
+    const far = {
+      x: world.half + world.size * 1.6,
+      y: 4,
+      z: 10,
+    };
+    world.presentTorusVisuals(far);
+    const euclid = Math.hypot(bear.mesh.position.x - far.x, bear.mesh.position.z - far.z);
+    const wrapD = world.wrapDistXZ(far, bear.mesh.position);
+    if (euclid > 50) {
+      throw new Error(
+        `torus: urso deveria apresentar perto após multi-volta (euclid=${euclid.toFixed(1)} wrap=${wrapD.toFixed(1)})`
+      );
+    }
+    if (Math.abs(euclid - wrapD) > 0.5) {
+      throw new Error(
+        `torus: wrapDist e Euclidean do urso deveriam coincidir após present (euclid=${euclid.toFixed(1)} wrap=${wrapD.toFixed(1)})`
+      );
+    }
+    // HUD usa nearestHostile(wrapDist≤28) — com mesh apresentado, wrap≈euclid
+    if (wrapD >= 28) {
+      throw new Error(`torus: urso no alcance do HUD (wrap=${wrapD.toFixed(1)})`);
+    }
+    if (!world.nearestHostile(far, 28)) {
+      throw new Error("torus: nearestHostile deveria achar inimigo após present multi-volta");
+    }
+    console.log(
+      "Torus enemy present OK — euclid",
+      euclid.toFixed(1),
+      "wrap",
+      wrapD.toFixed(1)
+    );
+  }
+
   console.log("SMOKE OK — pos final:", player.position.toArray().map((n) => n.toFixed(2)).join(", "));
 } catch (err) {
   console.error("SMOKE FAIL:", err);
