@@ -631,6 +631,28 @@ try {
   }
   console.log("Co-op invite OK");
 
+  // Chef announce: não pausa / não vira cutscene
+  {
+    const { playChefCutscene, isCinematicActive } = await import("../src/js/cutscene.js");
+    const fakeHud = {
+      announces: [],
+      showAnnounce(title, body) {
+        this.announces.push({ title, body });
+      },
+    };
+    const fakeGame = { hud: fakeHud, state: "playing", _pandaCutDone: false };
+    playChefCutscene(fakeGame, { type: "panda", tamed: false });
+    if (fakeGame.state !== "playing") throw new Error("chef: não deveria pausar em cutscene");
+    if (isCinematicActive()) throw new Error("chef: cinematic não deveria ativar");
+    if (!fakeHud.announces.length || !/Panda/i.test(fakeHud.announces[0].title)) {
+      throw new Error("chef: deveria usar showAnnounce no canto");
+    }
+    playChefCutscene(fakeGame, { type: "panda", tamed: false });
+    if (fakeHud.announces.length !== 1) throw new Error("chef: aviso só uma vez por run");
+    console.log("Chef announce OK — soft toast, sem cutscene");
+  }
+
+
   // Armadilhas no chão: mina / isca / cerca com mesh e anim distintos (não tudo “cara de mina”)
   const trapMeshes = {
     mine: world.createTrapPickupMesh("mine"),

@@ -40,6 +40,9 @@ export class HUD {
     this.trapEl = document.getElementById("trap-info");
     this.hintEl = document.getElementById("interact-hint");
     this.msgEl = document.getElementById("hud-msg");
+    this.announceEl = document.getElementById("hud-announce");
+    this.announceTitle = document.getElementById("hud-announce-title");
+    this.announceBody = document.getElementById("hud-announce-body");
     this.flashEl = document.getElementById("damage-flash");
     this.minimap = document.getElementById("minimap");
     this.minimapCtx = this.minimap ? this.minimap.getContext("2d") : null;
@@ -48,6 +51,8 @@ export class HUD {
     this.chronicleTitle = document.getElementById("hud-chronicle-title");
     this.chronicleBody = document.getElementById("hud-chronicle-body");
     this.msgTimer = null;
+    this._announceTimer = null;
+    this._announceHideTimer = null;
     this._storyTimer = 0;
     this._storyBusy = false;
     this.onEquip = null; // (weaponId) => void
@@ -403,7 +408,50 @@ export class HUD {
     this.msgEl.textContent = text;
     this.msgEl.classList.add("visible");
     clearTimeout(this.msgTimer);
-    this.msgTimer = setTimeout(() => this.msgEl.classList.remove("visible"), dur);
+    // fade-out começa um pouco antes do fim (CSS transition)
+    const fade = 420;
+    this.msgTimer = setTimeout(
+      () => this.msgEl.classList.remove("visible"),
+      Math.max(fade, dur - fade)
+    );
+  }
+
+  /**
+   * Aviso de chef / evento no canto: fade in → lê → fade out.
+   * Não pausa o jogo, não rouba câmera, pointer-events: none.
+   */
+  showAnnounce(title, body = "", dur = 5600) {
+    if (!this.announceEl) {
+      // fallback: toast curto sem bloquear
+      const line = [title, body].filter(Boolean).join(" — ");
+      if (line) this.showMsg(line, Math.min(4200, dur));
+      return;
+    }
+    clearTimeout(this._announceTimer);
+    clearTimeout(this._announceHideTimer);
+    if (this.announceTitle) this.announceTitle.textContent = title || "";
+    if (this.announceBody) {
+      this.announceBody.textContent = body || "";
+      this.announceBody.hidden = !body;
+    }
+    this.announceEl.hidden = false;
+    this.announceEl.setAttribute("aria-hidden", "false");
+    // restart CSS fade
+    this.announceEl.classList.remove("is-visible", "is-leaving");
+    void this.announceEl.offsetWidth;
+    this.announceEl.classList.add("is-visible");
+
+    const fadeOut = 700;
+    const hold = Math.max(2200, (dur | 0) - fadeOut);
+    this._announceTimer = setTimeout(() => {
+      this.announceEl.classList.add("is-leaving");
+      this.announceEl.classList.remove("is-visible");
+      this._announceHideTimer = setTimeout(() => {
+        this.announceEl.hidden = true;
+        this.announceEl.classList.remove("is-leaving");
+        this.announceEl.setAttribute("aria-hidden", "true");
+      }, fadeOut);
+    }, hold);
   }
 
   flashDamage() {
