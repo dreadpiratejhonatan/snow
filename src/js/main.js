@@ -3671,26 +3671,64 @@ class Game {
     }
     ctx.restore();
 
-    const dot = (x, z, color, r = 3) => {
-      const [mx, my] = toScreen(x, z);
-      if (mx < -4 || my < -4 || mx > S + 4 || my > S + 4) return;
-      ctx.fillStyle = color;
-      ctx.beginPath();
-      ctx.arc(mx, my, r, 0, Math.PI * 2);
-      ctx.fill();
+    /** Marcador no mapa; se sair da janela, gruda na borda (sempre visível). */
+    const placeMarker = (x, z, { clampEdge = false } = {}) => {
+      let [mx, my] = toScreen(x, z);
+      const margin = 9;
+      let onEdge = false;
+      if (mx < margin || my < margin || mx > S - margin || my > S - margin) {
+        if (!clampEdge) return null;
+        const cx = S / 2;
+        const cy = S / 2;
+        let dx = mx - cx;
+        let dy = my - cy;
+        if (Math.abs(dx) < 1e-6 && Math.abs(dy) < 1e-6) dy = -1;
+        const lim = S / 2 - margin;
+        const t = lim / Math.max(Math.abs(dx), Math.abs(dy));
+        mx = cx + dx * t;
+        my = cy + dy * t;
+        onEdge = true;
+      }
+      return { mx, my, onEdge };
     };
 
-    // base pulsa quando o frio aperta (guia visual → fogueira)
+    const dot = (x, z, color, r = 3, opts = {}) => {
+      const m = placeMarker(x, z, opts);
+      if (!m) return;
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(m.mx, m.my, r, 0, Math.PI * 2);
+      ctx.fill();
+      if (m.onEdge) {
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(m.mx, m.my, r + 3, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+    };
+
+    // base + fogueira: sempre no minimapa (wrap-aware; borda se longe)
     const cold = (this.warmth ?? 100) < 35;
     const pulse = cold ? 4 + Math.sin(performance.now() * 0.008) * 2.2 : 4;
-    if (cold) {
-      const [bx, by] = toScreen(world.basePos.x, world.basePos.z);
-      ctx.fillStyle = "rgba(255, 176, 60, 0.28)";
-      ctx.beginPath();
-      ctx.arc(bx, by, pulse + 5, 0, Math.PI * 2);
-      ctx.fill();
+    const base = world.basePos;
+    const fire = world.campfirePos || base;
+    if (base) {
+      if (cold) {
+        const m = placeMarker(base.x, base.z, { clampEdge: true });
+        if (m) {
+          ctx.fillStyle = "rgba(255, 176, 60, 0.28)";
+          ctx.beginPath();
+          ctx.arc(m.mx, m.my, pulse + 5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+      dot(base.x, base.z, "#ffb03c", pulse, { clampEdge: true });
     }
-    dot(world.basePos.x, world.basePos.z, "#ffb03c", pulse);
+    if (fire && (!base || world.wrapDistXZ(fire, base) > 1.2)) {
+      // fogueira um pouco mais quente/vermelha — sempre guiando o retorno
+      dot(fire.x, fire.z, "#ff6a2a", cold ? 3.5 : 3, { clampEdge: true });
+    }
 
     for (const it of world.items) {
       if (it.collected || !it.discovered) continue;
@@ -3726,7 +3764,7 @@ class Game {
       ctx.fillRect(4, S - 18, 118, 14);
       ctx.fillStyle = "rgba(230,240,248,0.9)";
       ctx.font = "10px sans-serif";
-      ctx.fillText("🏠 base  ◆ loot  ▲ você", 8, S - 7);
+      ctx.fillText("🏠 base  🔥 fogueira  ▲ você", 8, S - 7);
     }
   }
 
