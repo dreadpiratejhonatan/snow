@@ -94,9 +94,8 @@ body.is-touch .tutorial-banner {
   gap: 0.45rem;
 }
 
-/* Crônica aberta: some toast/prompt (um painel só) */
-body:has(#hud-chronicle:not([hidden])) .hud__msg,
-body:has(#hud-chronicle:not([hidden])) .hud__interact {
+/* Toast do canto manda — esconde o msg central legado se ainda existir */
+body:has(#hud-announce.is-visible) .hud__msg {
   opacity: 0 !important;
   visibility: hidden;
 }
@@ -1957,20 +1956,9 @@ body.is-touch .inv-slot__key {
   display: none !important;
 }
 
+/* Crônica legada (centro) — desativada; conteúdo vai pro toast do canto */
 .hud__chronicle {
-  position: absolute;
-  left: 50%;
-  top: 22%;
-  transform: translateX(-50%);
-  z-index: 22;
-  width: min(92vw, 360px);
-  padding: 0.75rem 0.9rem;
-  border-radius: 12px;
-  background: rgba(10, 18, 30, 0.92);
-  border: 1px solid rgba(180, 210, 235, 0.35);
-  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.45);
-  pointer-events: none;
-  text-align: left;
+  display: none !important;
 }
 
 .hud__chronicle[hidden] {
@@ -2459,9 +2447,11 @@ body:not(.is-touch) .ammo-hud {
 }
 
 .hud__msg {
+  /* legado — showMsg agora usa #hud-announce no canto */
   position: absolute;
   top: 22%;
   left: 50%;
+  z-index: 1;
   transform: translateX(-50%) translateY(6px);
   padding: 0.5rem 1.1rem;
   border-radius: 8px;
@@ -2530,6 +2520,15 @@ body:not(.is-touch) .ammo-hud {
 }
 
 .hud__announce-body[hidden] {
+  display: none !important;
+}
+
+.hud__announce.is-compact .hud__announce-title {
+  font-weight: 600;
+  color: #eef4fa;
+}
+
+.hud__announce.is-compact .hud__announce-body {
   display: none !important;
 }
 

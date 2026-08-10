@@ -652,6 +652,49 @@ try {
     console.log("Chef announce OK — soft toast, sem cutscene");
   }
 
+  // Todos os pop-ups (showMsg / crônica) usam o toast do canto
+  {
+    // Node smoke: valida o contrato via stub (sem DOM)
+    const announces = [];
+    const hud = {
+      _storyBusy: false,
+      showAnnounce(title, body, dur, onDone) {
+        announces.push({ title, body, dur });
+        onDone?.();
+      },
+      showMsg(text, dur = 3200) {
+        if (this._storyBusy) return;
+        this.showAnnounce("", String(text), dur);
+      },
+      showChronicle({ name = "", line = "", fact = "" } = {}) {
+        const title = name || "Crônica";
+        const speak = String(line || "").trim();
+        const lore = String(fact || "").trim();
+        this._storyBusy = true;
+        if (speak && lore) {
+          this.showAnnounce(title, speak, 3000, () => {
+            this.showAnnounce(title, lore, 3000, () => {
+              this._storyBusy = false;
+            });
+          });
+        } else {
+          this.showAnnounce(title, speak || lore, 3000, () => {
+            this._storyBusy = false;
+          });
+        }
+      },
+    };
+    hud.showMsg("Pegou machado", 2000);
+    if (!announces.length || announces[0].body !== "Pegou machado") {
+      throw new Error("toast: showMsg deveria ir pro announce do canto");
+    }
+    hud.showChronicle({ name: "Nevasca", line: "O vento uiva.", fact: "Frio sobe." });
+    if (announces.length < 3 || announces[1].title !== "Nevasca") {
+      throw new Error("toast: crônica deveria usar o canto em sequência");
+    }
+    console.log("All toasts corner OK");
+  }
+
 
   // Armadilhas no chão: mina / isca / cerca com mesh e anim distintos (não tudo “cara de mina”)
   const trapMeshes = {

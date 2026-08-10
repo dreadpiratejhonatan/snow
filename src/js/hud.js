@@ -107,50 +107,38 @@ export class HUD {
     clearTimeout(this._storyTimer);
     this._storyTimer = 0;
     this._storyBusy = false;
+    // crônica agora usa o toast do canto — limpa junto
+    if (this.announceEl?.classList.contains("is-visible")) {
+      this.announceEl.classList.add("is-leaving");
+      this.announceEl.classList.remove("is-visible");
+    }
     if (this.chronicleEl) this.chronicleEl.hidden = true;
   }
 
-  _showStoryPanel(title, body, ms, onDone) {
-    if (!this.chronicleEl) {
-      if (typeof onDone === "function") onDone();
-      return;
-    }
-    clearTimeout(this._storyTimer);
-    this._storyBusy = true;
-    if (this.chronicleTitle) this.chronicleTitle.textContent = title || "Crônica";
-    if (this.chronicleBody) this.chronicleBody.textContent = body || "";
-    this.chronicleEl.hidden = false;
-    // some toast enquanto a crônica está aberta
-    if (this.msgEl) this.msgEl.classList.remove("visible");
-    if (this.hintEl) this.hintEl.hidden = true;
-    this._storyTimer = setTimeout(() => {
-      this._storyTimer = 0;
-      if (typeof onDone === "function") onDone();
-      else this.hideChronicle();
-    }, Math.max(2500, ms | 0));
-  }
-
   /**
-   * Painel sequencial (Spirit): fala → fato, tempo de leitura no celular.
-   * Bloqueia toast/prompt enquanto aberto.
+   * Crônica / eventos: mesmo toast do canto (fade), sem pausar nem cobrir a mira.
    */
-  showChronicle({ name = "", line = "", fact = "", lineMs = 10000, factMs = 16000 } = {}) {
-    clearTimeout(this.msgTimer);
-    if (this.msgEl) this.msgEl.classList.remove("visible");
-    if (this.hintEl) this.hintEl.hidden = true;
-
+  showChronicle({ name = "", line = "", fact = "", lineMs = 7000, factMs = 8000 } = {}) {
     const title = String(name || "Crônica");
     const speak = String(line || "").trim();
     const lore = String(fact || "").trim();
     if (!speak && !lore) return;
 
+    this._storyBusy = true;
+    const done = () => {
+      this._storyBusy = false;
+    };
+    // tempo de leitura no canto — sem travar interact / movimento
+    const t1 = Math.min(9000, Math.max(2800, lineMs | 0));
+    const t2 = Math.min(10000, Math.max(3200, factMs | 0));
+
     if (speak && lore) {
-      this._showStoryPanel(title, speak, lineMs, () => {
-        this._showStoryPanel(title, lore, factMs, () => this.hideChronicle());
+      this.showAnnounce(title, speak, t1, () => {
+        this.showAnnounce(title, lore, t2, done);
       });
       return;
     }
-    this._showStoryPanel(title, speak || lore, speak ? lineMs : factMs, () => this.hideChronicle());
+    this.showAnnounce(title, speak || lore, speak ? t1 : t2, done);
   }
 
   updateCameraMode(mode, { facingFront = false } = {}) {
@@ -390,10 +378,7 @@ export class HUD {
 
   setHint(text) {
     if (!this.hintEl) return;
-    if (this._storyBusy) {
-      this.hintEl.hidden = true;
-      return;
-    }
+    // prompts [E] sempre visíveis — toasts no canto não mandam na usabilidade
     if (!text) {
       this.hintEl.hidden = true;
     } else {
@@ -402,47 +387,72 @@ export class HUD {
     }
   }
 
+  /** Todo popup de jogo: canto superior direito, fade in/out, sem bloquear. */
   showMsg(text, dur = 3200) {
-    if (!this.msgEl) return;
-    if (this._storyBusy) return; // crônica manda — sem empilhar toast
-    this.msgEl.textContent = text;
-    this.msgEl.classList.add("visible");
-    clearTimeout(this.msgTimer);
-    // fade-out começa um pouco antes do fim (CSS transition)
-    const fade = 420;
-    this.msgTimer = setTimeout(
-      () => this.msgEl.classList.remove("visible"),
-      Math.max(fade, dur - fade)
-    );
+    if (!text) return;
+    if (this._storyBusy) return; // crônica em leitura no canto — não atropela
+    this.showAnnounce("", String(text), dur);
   }
 
   /**
-   * Aviso de chef / evento no canto: fade in → lê → fade out.
+   * Toast único do canto: fade in → lê → fade out.
    * Não pausa o jogo, não rouba câmera, pointer-events: none.
+   * @param {string} title
+   * @param {string} [body]
+   * @param {number} [dur]
+   * @param {(() => void)|null} [onDone]
    */
-  showAnnounce(title, body = "", dur = 5600) {
-    if (!this.announceEl) {
-      // fallback: toast curto sem bloquear
-      const line = [title, body].filter(Boolean).join(" — ");
-      if (line) this.showMsg(line, Math.min(4200, dur));
+  showAnnounce(title, body = "", dur = 5600, onDone = null) {
+    const t = String(title || "").trim();
+    const b = String(body || "").trim();
+    if (!t && !b) {
+      if (typeof onDone === "function") onDone();
       return;
     }
+
+    // fallback se o DOM do canto não existir
+    if (!this.announceEl) {
+      if (this.msgEl) {
+        this.msgEl.textContent = [t, b].filter(Boolean).join(" — ");
+        this.msgEl.classList.add("visible");
+        clearTimeout(this.msgTimer);
+        this.msgTimer = setTimeout(() => {
+          this.msgEl.classList.remove("visible");
+          if (typeof onDone === "function") onDone();
+        }, Math.max(1200, dur | 0));
+      } else if (typeof onDone === "function") {
+        onDone();
+      }
+      return;
+    }
+
     clearTimeout(this._announceTimer);
     clearTimeout(this._announceHideTimer);
-    if (this.announceTitle) this.announceTitle.textContent = title || "";
-    if (this.announceBody) {
-      this.announceBody.textContent = body || "";
-      this.announceBody.hidden = !body;
+    this._announceOnDone = typeof onDone === "function" ? onDone : null;
+
+    if (this.announceTitle) {
+      this.announceTitle.textContent = t || b;
+      this.announceTitle.hidden = false;
     }
+    if (this.announceBody) {
+      // uma linha só: título leva o texto; corpo some
+      if (t && b) {
+        this.announceBody.textContent = b;
+        this.announceBody.hidden = false;
+      } else {
+        this.announceBody.textContent = "";
+        this.announceBody.hidden = true;
+      }
+    }
+    this.announceEl.classList.toggle("is-compact", !(t && b));
     this.announceEl.hidden = false;
     this.announceEl.setAttribute("aria-hidden", "false");
-    // restart CSS fade
     this.announceEl.classList.remove("is-visible", "is-leaving");
     void this.announceEl.offsetWidth;
     this.announceEl.classList.add("is-visible");
 
-    const fadeOut = 700;
-    const hold = Math.max(2200, (dur | 0) - fadeOut);
+    const fadeOut = 650;
+    const hold = Math.max(1400, (dur | 0) - fadeOut);
     this._announceTimer = setTimeout(() => {
       this.announceEl.classList.add("is-leaving");
       this.announceEl.classList.remove("is-visible");
@@ -450,6 +460,9 @@ export class HUD {
         this.announceEl.hidden = true;
         this.announceEl.classList.remove("is-leaving");
         this.announceEl.setAttribute("aria-hidden", "true");
+        const cb = this._announceOnDone;
+        this._announceOnDone = null;
+        cb?.();
       }, fadeOut);
     }, hold);
   }
