@@ -78,3 +78,5 @@ jobs:
             data/tickets-rate.json
             data/rooms/**
             data/rooms/**/*
+
+# redeploy after secrets refresh 2026-08-10T12:25:37Z
