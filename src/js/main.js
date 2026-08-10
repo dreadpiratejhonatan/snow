@@ -2974,6 +2974,19 @@ class Game {
 
     const moving = Math.hypot(this.player.velocity.x, this.player.velocity.z) > 0.5;
     const threat = this.world.anyEnemyChasing(this.player.position);
+    const crashPos = this.world.crashRocketPos;
+    const crashDist = crashPos
+      ? this.world.wrapDistXZ(this.player.position, crashPos)
+      : 999;
+    // teaser de trama: anúncio único ao chegar perto (missão ainda não existe)
+    if (!this._crashRocketSeen && crashDist < 26) {
+      this._crashRocketSeen = true;
+      this.hud.showMsg(
+        "Uma nave caída… tanques vazios. O combustível acabou.",
+        5200
+      );
+      this.ambience.discover?.();
+    }
     this.ambience.update(dt, {
       night,
       moving,
@@ -2981,6 +2994,7 @@ class Game {
       onGround: this.player.onGround,
       onIce: this.world.isOnIce(this.player.position.x, this.player.position.z),
       fireDist: this.world.wrapDistXZ(this.player.position, this.world.campfirePos),
+      crashDist,
       bearChasing: threat.chasing,
       bearDist: threat.dist,
       lowHealth: this.health < 35 && !this.ended,

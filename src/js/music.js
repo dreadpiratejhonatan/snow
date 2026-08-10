@@ -226,9 +226,12 @@ export class MusicPlayer {
     this.onTrack = null; // (name) => void
     this.mood = "explore"; // explore | combat
     this._moodBlend = 0; // 0 explore → 1 combat
+    this._wonderBlend = 0; // 0 normal → 1 perto do foguete caído (fantástico)
+    this._wonderTarget = 0;
 
     this.bus = null;
     this.combatBus = null;
+    this.wonderBus = null;
     this.padGain = null;
     this.padFilter = null;
     this.padOsc = [];
@@ -281,6 +284,11 @@ export class MusicPlayer {
     this.combatBus.gain.value = 0;
     this.combatBus.connect(master);
     this.setupCombatLayer(ctx);
+
+    this.wonderBus = ctx.createGain();
+    this.wonderBus.gain.value = 0;
+    this.wonderBus.connect(master);
+    this.setupWonderLayer(ctx);
 
     this.mode = "proc";
     this.setupProcGraph(ctx);
@@ -418,6 +426,46 @@ export class MusicPlayer {
 
   setMood(mood) {
     this.mood = mood === "combat" ? "combat" : "explore";
+  }
+
+  /** 0..1 — intensidade “fantástica” perto do foguete caído. */
+  setWonder(amount) {
+    this._wonderTarget = Math.max(0, Math.min(1, amount || 0));
+  }
+
+  setupWonderLayer(ctx) {
+    // pad etéreo: quintas altas + shimmer suave (não combate)
+    this._wonderPad = ctx.createOscillator();
+    this._wonderPad.type = "sine";
+    this._wonderPad.frequency.value = 196;
+    this._wonderPadGain = ctx.createGain();
+    this._wonderPadGain.gain.value = 0.022;
+    const lp = ctx.createBiquadFilter();
+    lp.type = "lowpass";
+    lp.frequency.value = 1200;
+    lp.Q.value = 0.7;
+    this._wonderFilter = lp;
+    this._wonderPad.connect(lp).connect(this._wonderPadGain).connect(this.wonderBus);
+    this._wonderPad.start();
+
+    this._wonderFifth = ctx.createOscillator();
+    this._wonderFifth.type = "triangle";
+    this._wonderFifth.frequency.value = 294;
+    this._wonderFifthGain = ctx.createGain();
+    this._wonderFifthGain.gain.value = 0.012;
+    const hp = ctx.createBiquadFilter();
+    hp.type = "highpass";
+    hp.frequency.value = 180;
+    this._wonderFifth.connect(hp).connect(this._wonderFifthGain).connect(this.wonderBus);
+    this._wonderFifth.start();
+
+    this._wonderShimmer = ctx.createOscillator();
+    this._wonderShimmer.type = "sine";
+    this._wonderShimmer.frequency.value = 523.25;
+    this._wonderShimmerGain = ctx.createGain();
+    this._wonderShimmerGain.gain.value = 0.006;
+    this._wonderShimmer.connect(this._wonderShimmerGain).connect(this.wonderBus);
+    this._wonderShimmer.start();
   }
 
   setupCombatLayer(ctx) {
@@ -643,22 +691,44 @@ export class MusicPlayer {
 
     const want = this.mood === "combat" ? 1 : 0;
     this._moodBlend += (want - this._moodBlend) * Math.min(1, dt * 1.4);
+    this._wonderBlend += (this._wonderTarget - this._wonderBlend) * Math.min(1, dt * 1.15);
+    // combate abafa o maravilhoso; exploração deixa brilhar
+    const wonder = this._wonderBlend * (1 - this._moodBlend * 0.85);
 
     if (this.bus) {
       const base = this.preferProcOnly ? 0.42 : 0.28;
-      const exploreVol = (base - this._moodBlend * 0.06) * dangerMul;
+      const exploreVol = (base - this._moodBlend * 0.06 + wonder * 0.14) * dangerMul;
       this.bus.gain.value += (exploreVol - this.bus.gain.value) * Math.min(1, dt * 1.6);
     }
     if (this.combatBus) {
       const cVol = 0.12 * this._moodBlend * dangerMul;
       this.combatBus.gain.value += (cVol - this.combatBus.gain.value) * Math.min(1, dt * 2);
     }
+    if (this.wonderBus) {
+      const wVol = 0.55 * wonder * dangerMul;
+      this.wonderBus.gain.value += (wVol - this.wonderBus.gain.value) * Math.min(1, dt * 1.4);
+    }
     if (this._combatPad) {
       const f = 44 + this._moodBlend * 14 + Math.sin(ctx.currentTime * 0.45) * 2;
       this._combatPad.frequency.setTargetAtTime(f, ctx.currentTime, 0.4);
     }
+    if (this._wonderFilter && wonder > 0.02) {
+      const open = 900 + wonder * 1400 + Math.sin(ctx.currentTime * 0.35) * 120;
+      this._wonderFilter.frequency.setTargetAtTime(open, ctx.currentTime, 0.5);
+    }
+    if (this._wonderPad && wonder > 0.02) {
+      const f = 185 + Math.sin(ctx.currentTime * 0.22) * 8 + wonder * 18;
+      this._wonderPad.frequency.setTargetAtTime(f, ctx.currentTime, 0.6);
+    }
+    if (this._wonderShimmer && wonder > 0.05) {
+      const sh = 500 + Math.sin(ctx.currentTime * 0.9) * 40 + wonder * 80;
+      this._wonderShimmer.frequency.setTargetAtTime(sh, ctx.currentTime, 0.35);
+      if (this._wonderShimmerGain) {
+        this._wonderShimmerGain.gain.setTargetAtTime(0.004 + wonder * 0.01, ctx.currentTime, 0.4);
+      }
+    }
     if (this.fileGain && this.mode === "file") {
-      const fVol = (0.62 - this._moodBlend * 0.12) * dangerMul;
+      const fVol = (0.62 - this._moodBlend * 0.12 + wonder * 0.18) * dangerMul;
       this.fileGain.gain.value += (fVol - this.fileGain.gain.value) * Math.min(1, dt * 1.6);
     }
 

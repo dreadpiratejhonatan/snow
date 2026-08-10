@@ -125,6 +125,7 @@ export class World {
       this.buildAurora();
       this.buildCampfire();
       this.buildBase();
+      this.buildCrashRocket();
       this.buildItems();
       this.buildRabbits();
       this.buildEnemies();
@@ -545,6 +546,15 @@ export class World {
         this.basePos.x,
         this.basePos.z,
         this.baseGroup.position.y,
+        playerPos
+      );
+    }
+    if (this.crashRocket && this.crashRocketPos) {
+      this.presentNearPlayer(
+        this.crashRocket,
+        this.crashRocketPos.x,
+        this.crashRocketPos.z,
+        this.crashRocket.position.y,
         playerPos
       );
     }
@@ -1683,6 +1693,286 @@ export class World {
       top: by + 1.45, // alto o bastante para cobrir peito/mira
       climbable: true,
       cover: true,
+    });
+  }
+
+  /**
+   * Foguete/nave caída (teaser de trama) — Landmark secreto estilo Kerbal:
+   * grande, sem combustível, fumaça nos motores, luzes de emergência.
+   * RNG próprio (não consome o Math.random do layout).
+   */
+  buildCrashRocket() {
+    const rng = createRng((this.seed ^ 0xa11e11) >>> 0);
+    let x = 0;
+    let z = 0;
+    let ok = false;
+    for (let tries = 0; tries < 140; tries++) {
+      const a = rng() * Math.PI * 2;
+      // anel secreto: longe o bastante para ser descoberta, ainda no mapa
+      const r = 72 + rng() * Math.min(38, Math.max(8, this.bounds - 78));
+      x = Math.cos(a) * r;
+      z = Math.sin(a) * r;
+      if (this.getHeight(x, z) < this.waterLevel + 1.2) continue;
+      const base = this.basePos || { x: 0, z: 0 };
+      if (Math.hypot(x - base.x, z - base.z) < 55) continue;
+      if (Math.hypot(x, z) < 68) continue;
+      ok = true;
+      break;
+    }
+    if (!ok) {
+      x = this.bounds * 0.78;
+      z = this.bounds * 0.42;
+    }
+    const gy = this.groundHeight(x, z);
+    this.crashRocketPos = new THREE.Vector3(x, gy, z);
+
+    const T = this.tex || {};
+    const hull = new THREE.MeshStandardMaterial({
+      color: 0xd8dde4,
+      roughness: 0.42,
+      metalness: 0.55,
+      map: T.metal || null,
+      bumpMap: T.metalBump || null,
+      bumpScale: 0.04,
+    });
+    const hullDark = new THREE.MeshStandardMaterial({
+      color: 0x3a3e48,
+      roughness: 0.55,
+      metalness: 0.7,
+      map: T.metal || null,
+    });
+    const stripe = new THREE.MeshStandardMaterial({
+      color: 0xc45a28,
+      roughness: 0.48,
+      metalness: 0.35,
+      emissive: 0x3a1808,
+      emissiveIntensity: 0.25,
+    });
+    const soot = new THREE.MeshStandardMaterial({
+      color: 0x1a1c20,
+      roughness: 0.92,
+      metalness: 0.15,
+    });
+    const glass = new THREE.MeshStandardMaterial({
+      color: 0x6ec8ff,
+      roughness: 0.15,
+      metalness: 0.2,
+      emissive: 0x1a6a9a,
+      emissiveIntensity: 0.55,
+      transparent: true,
+      opacity: 0.85,
+    });
+    const warn = new THREE.MeshStandardMaterial({
+      color: 0xffb020,
+      roughness: 0.4,
+      metalness: 0.3,
+      emissive: 0xff8800,
+      emissiveIntensity: 0.9,
+    });
+
+    const root = new THREE.Group();
+    root.position.set(x, gy, z);
+    // caído de lado, nariz semi-enterrado — “impacto”
+    root.rotation.order = "YXZ";
+    root.rotation.y = Math.atan2(-x, -z) + 0.55;
+    root.rotation.z = 1.12; // ~64°
+    root.rotation.x = 0.18;
+
+    const ship = new THREE.Group();
+    // eixo local: +Y = comprimento do foguete (estilo stack KSP)
+    ship.position.set(0, 2.2, 0);
+    root.add(ship);
+
+    // --- stack (proporções grandes) ---
+    const mkCyl = (rBot, rTop, h, mat, y) => {
+      const m = new THREE.Mesh(new THREE.CylinderGeometry(rTop, rBot, h, 14), mat);
+      m.position.y = y;
+      ship.add(m);
+      return m;
+    };
+
+    // motor cluster (base)
+    const engPlate = new THREE.Mesh(new THREE.CylinderGeometry(2.35, 2.5, 0.55, 14), hullDark);
+    engPlate.position.y = 0.4;
+    ship.add(engPlate);
+
+    this._crashEngineTips = [];
+    const nozzleMat = soot;
+    for (let i = 0; i < 4; i++) {
+      const a = (i / 4) * Math.PI * 2 + 0.4;
+      const nx = Math.cos(a) * 1.15;
+      const nz = Math.sin(a) * 1.15;
+      const bell = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.55, 1.35, 10), nozzleMat);
+      bell.position.set(nx, -0.35, nz);
+      ship.add(bell);
+      const rim = new THREE.Mesh(new THREE.TorusGeometry(0.55, 0.06, 6, 12), hullDark);
+      rim.rotation.x = Math.PI / 2;
+      rim.position.set(nx, -1.0, nz);
+      ship.add(rim);
+      this._crashEngineTips.push(new THREE.Vector3(nx, -1.15, nz));
+    }
+    // motor central
+    {
+      const bell = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.72, 1.7, 12), nozzleMat);
+      bell.position.set(0, -0.55, 0);
+      ship.add(bell);
+      this._crashEngineTips.push(new THREE.Vector3(0, -1.4, 0));
+    }
+
+    // tanque inferior (combustível — vazio)
+    mkCyl(2.2, 2.15, 5.2, hull, 3.2);
+    const bandLo = mkCyl(2.22, 2.22, 0.35, stripe, 1.4);
+    void bandLo;
+    mkCyl(2.18, 2.18, 0.28, hullDark, 4.8);
+
+    // tanque médio
+    mkCyl(2.05, 2.0, 4.4, hull, 7.9);
+    mkCyl(2.08, 2.08, 0.32, stripe, 6.5);
+    mkCyl(2.02, 2.02, 0.22, hullDark, 9.4);
+
+    // módulo de comando (cápsula)
+    mkCyl(1.55, 1.35, 2.2, hull, 11.4);
+    const window = new THREE.Mesh(new THREE.SphereGeometry(0.55, 12, 10, 0, Math.PI * 2, 0, Math.PI * 0.55), glass);
+    window.position.set(0, 11.55, 1.15);
+    window.rotation.x = 0.35;
+    ship.add(window);
+
+    // nariz
+    const nose = new THREE.Mesh(new THREE.ConeGeometry(1.35, 3.4, 14), hull);
+    nose.position.y = 14.1;
+    ship.add(nose);
+    const tip = new THREE.Mesh(new THREE.SphereGeometry(0.28, 8, 8), warn);
+    tip.position.y = 15.75;
+    ship.add(tip);
+
+    // aletas (estilo delta KSP)
+    for (let i = 0; i < 4; i++) {
+      const a = (i / 4) * Math.PI * 2;
+      const fin = new THREE.Mesh(new THREE.BoxGeometry(0.12, 2.4, 1.8), stripe);
+      fin.position.set(Math.cos(a) * 2.35, 1.6, Math.sin(a) * 2.35);
+      fin.rotation.y = a;
+      fin.rotation.z = 0.15;
+      ship.add(fin);
+    }
+
+    // marcas de “sem combustível”: painéis abertos / manchas
+    const hatch = new THREE.Mesh(new THREE.BoxGeometry(1.1, 1.6, 0.08), hullDark);
+    hatch.position.set(2.15, 7.2, 0);
+    hatch.rotation.y = Math.PI / 2;
+    hatch.rotation.z = 0.4;
+    ship.add(hatch);
+    const gauge = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 0.12, 12), warn);
+    gauge.rotation.z = Math.PI / 2;
+    gauge.position.set(2.22, 5.1, 0.8);
+    ship.add(gauge);
+    // rótulo “vazio” (placa escura)
+    const emptyPlate = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.55, 0.06), soot);
+    emptyPlate.position.set(2.2, 4.2, -0.6);
+    emptyPlate.rotation.y = Math.PI / 2;
+    ship.add(emptyPlate);
+
+    // craterinha / neve derretida + destroços no chão (coords do root, não do ship)
+    const crater = new THREE.Mesh(
+      new THREE.CylinderGeometry(6.5, 7.2, 0.55, 16),
+      new THREE.MeshStandardMaterial({
+        color: 0x6a7078,
+        roughness: 1,
+        map: T.rock || null,
+      })
+    );
+    crater.position.set(1.2, 0.05, -0.8);
+    crater.scale.y = 0.35;
+    root.add(crater);
+
+    for (let i = 0; i < 9; i++) {
+      const a = rng() * Math.PI * 2;
+      const rr = 2.5 + rng() * 5;
+      const chunk = new THREE.Mesh(
+        new THREE.DodecahedronGeometry(0.35 + rng() * 0.55, 0),
+        rng() > 0.45 ? hullDark : this.rockMat
+      );
+      chunk.position.set(Math.cos(a) * rr, 0.25 + rng() * 0.3, Math.sin(a) * rr);
+      chunk.rotation.set(rng() * 2, rng() * 2, rng() * 2);
+      root.add(chunk);
+    }
+
+    // luzes: calor residual nos motores + brilho fantástico no cockpit
+    this.crashEngineLight = new THREE.PointLight(0xff6a28, 1.6, 28, 1.8);
+    this.crashEngineLight.position.set(0, 0.2, 0);
+    root.add(this.crashEngineLight);
+    this.crashCabinLight = new THREE.PointLight(0x66d8ff, 1.1, 22, 1.6);
+    this.crashCabinLight.position.set(0, 5.5, 2.5);
+    root.add(this.crashCabinLight);
+    this.crashWarnLight = new THREE.PointLight(0xffaa33, 0.85, 16, 2);
+    this.crashWarnLight.position.set(0, 8, 0);
+    root.add(this.crashWarnLight);
+
+    // fumaça dos motores (espaço local do root — pontas aproximadas)
+    const smokeCount = this.lowFx ? 22 : 40;
+    const smokePos = new Float32Array(smokeCount * 3);
+    this.crashSmokeData = [];
+    for (let i = 0; i < smokeCount; i++) {
+      const tip = this._crashEngineTips[i % this._crashEngineTips.length];
+      // tip está em coords do ship; ship em y=2.2 no root — aproximação no root
+      const ox = tip.x + (rng() - 0.5) * 0.35;
+      const oy = tip.y + 2.2;
+      const oz = tip.z + (rng() - 0.5) * 0.35;
+      smokePos.set([ox, oy, oz], i * 3);
+      this.crashSmokeData.push({
+        ox,
+        oy,
+        oz,
+        y: 0,
+        phase: rng() * Math.PI * 2,
+        speed: 0.55 + rng() * 0.7,
+        life: rng() * 4,
+      });
+    }
+    const smokeGeo = new THREE.BufferGeometry();
+    smokeGeo.setAttribute("position", new THREE.BufferAttribute(smokePos, 3));
+    this.crashSmoke = new THREE.Points(
+      smokeGeo,
+      new THREE.PointsMaterial({
+        color: 0x8a8e96,
+        size: 0.55,
+        transparent: true,
+        opacity: 0.42,
+        depthWrite: false,
+        sizeAttenuation: true,
+      })
+    );
+    root.add(this.crashSmoke);
+
+    root.traverse((m) => {
+      if (m.isMesh) {
+        m.castShadow = true;
+        m.receiveShadow = true;
+      }
+    });
+    // luzes e pontos de fumaça não precisam sombra
+    this.crashSmoke.castShadow = false;
+
+    this.crashRocket = root;
+    this.scene.add(root);
+
+    // colisão larga — casco caído ocupa bastante chão
+    this.colliders.push({
+      x,
+      z,
+      y: gy,
+      r: 5.2,
+      top: gy + 4.8,
+      climbable: true,
+      cover: true,
+      coverR: 6.5,
+    });
+    this.colliders.push({
+      x: x + Math.cos(root.rotation.y) * 4,
+      z: z + Math.sin(root.rotation.y) * 4,
+      y: gy,
+      r: 3.4,
+      top: gy + 3.6,
+      climbable: true,
     });
   }
 
@@ -3810,6 +4100,42 @@ export class World {
         sp.setZ(i, Math.cos(elapsed * 0.6 + s.phase) * 0.14 * (s.y * 0.4));
       }
       sp.needsUpdate = true;
+    }
+
+    // foguete caído: fumaça nos motores + luzes de emergência
+    if (this.crashRocket && this.crashSmokeData?.length) {
+      const sp = this.crashSmoke.geometry.attributes.position;
+      for (let i = 0; i < this.crashSmokeData.length; i++) {
+        const s = this.crashSmokeData[i];
+        s.life += dt * s.speed;
+        if (s.life > 4.2) s.life = 0;
+        const rise = s.life * 1.15;
+        const drift = 0.35 + s.life * 0.22;
+        sp.setXYZ(
+          i,
+          s.ox + Math.sin(elapsed * 0.7 + s.phase) * drift,
+          s.oy + rise,
+          s.oz + Math.cos(elapsed * 0.55 + s.phase) * drift * 0.85
+        );
+      }
+      sp.needsUpdate = true;
+      if (this.crashSmoke.material) {
+        this.crashSmoke.material.opacity = 0.28 + Math.sin(elapsed * 1.3) * 0.08;
+      }
+      if (this.crashEngineLight) {
+        this.crashEngineLight.intensity =
+          (1.15 + Math.sin(elapsed * 7.5) * 0.35 + Math.sin(elapsed * 19) * 0.15) *
+          (0.7 + night * 0.85);
+      }
+      if (this.crashCabinLight) {
+        this.crashCabinLight.intensity =
+          (0.75 + Math.sin(elapsed * 2.2) * 0.2) * (0.55 + night * 1.1);
+      }
+      if (this.crashWarnLight) {
+        // pisca de emergência
+        const blink = Math.sin(elapsed * 5.5) > 0.15 ? 1 : 0.12;
+        this.crashWarnLight.intensity = blink * (0.55 + night * 0.9);
+      }
     }
 
     this.updateItems(dt, elapsed, playerPos);

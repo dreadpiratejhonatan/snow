@@ -348,8 +348,13 @@ export class Ambience {
     }
     const inCombat = !!(s.bearChasing && s.bearDist < 22);
     this.music.setMood?.(inCombat ? "combat" : "explore");
-    // combate: volume um pouco mais presente; exploração: calmo
-    const danger = inCombat ? 0.85 : s.lowHealth ? 0.7 : 1;
+    // foguete caído: aura fantástica (trilha mais intensa / etérea)
+    const crashDist = s.crashDist ?? 999;
+    const crashProx = crashDist < 48 ? Math.max(0, 1 - crashDist / 48) : 0;
+    const wonder = crashProx * crashProx; // curva suave perto do marco
+    this.music.setWonder?.(wonder);
+    // combate: volume um pouco mais presente; exploração: calmo; wonder: sobe
+    const danger = (inCombat ? 0.85 : s.lowHealth ? 0.7 : 1) * (1 + wonder * 0.35);
     this.music.update(dt, danger);
   }
 
@@ -986,6 +991,26 @@ export class Ambience {
       if (this.popTimer <= 0) {
         this.popTimer = 1.5 + Math.random() * 3;
         this.blip(420 + Math.random() * 260, 0.06, 0.05 * prox, "square", 120);
+      }
+    }
+
+    // foguete caído: chiado de vapor / metal quente (mais forte perto)
+    if (s.crashDist != null && s.crashDist < 32) {
+      const prox = 1 - s.crashDist / 32;
+      this._crashHissTimer = (this._crashHissTimer ?? 0) - dt;
+      if (this._crashHissTimer <= 0) {
+        this._crashHissTimer = 0.35 + Math.random() * 0.55;
+        this.noiseBurst(
+          0.12 + Math.random() * 0.1,
+          0.018 * prox,
+          280 + Math.random() * 220,
+          0.7,
+          "lowpass",
+          0.25 * prox
+        );
+        if (Math.random() < 0.35) {
+          this.blip(180 + Math.random() * 80, 0.2, 0.012 * prox, "sine", 140, 0.4 * prox);
+        }
       }
     }
 
