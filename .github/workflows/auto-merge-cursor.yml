@@ -105,7 +105,9 @@ jobs:
           gh pr merge "$PR" --squash --delete-branch --subject "Auto-merge cursor PR #${PR}"
 
           # workflow_dispatch is allowed to start new runs even from GITHUB_TOKEN.
-          echo "Dispatching production deploys on develop…"
+          # HostGator = phone site (jhonatanribeiro.com/snow/). Pages env only
+          # allows main/master — dispatching Pages from develop always fails and
+          # is noise (see docs/GUIA-DO-ZERO-AO-DEPLOY.md).
+          echo "Dispatching HostGator deploy on develop…"
           gh workflow run "Deploy HostGator" --ref develop
-          gh workflow run "Deploy GitHub Pages" --ref develop
-          echo "Done — watch Actions for HostGator + Pages."
+          echo "Done — watch Actions → Deploy HostGator (Pages is main-only)."

@@ -13,6 +13,10 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      # FTP-Deploy-Action ainda declara Node 20; runners forçam 24 —
+      # pin explícito evita surpresa de runtime no login FTP.
+      ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: "true"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -38,6 +42,9 @@ jobs:
           local-dir: ./release/hostgator-snow/
           # Diretório remoto: valor só no secret HOSTGATOR_FTP_DIR
           server-dir: ${{ secrets.HOSTGATOR_FTP_DIR }}
+          # HostGator costuma aceitar FTP plain; se o painel exigir TLS, use ftps
+          protocol: ftp
+          security: loose
           dangerous-clean-slate: false
           exclude: |
             **/.git*

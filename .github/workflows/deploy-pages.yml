@@ -3,8 +3,9 @@ name: Deploy GitHub Pages
 
 on:
   push:
-    # main = Pages padrão; develop também publica Pages
-    branches: [main, develop]
+    # github-pages env só permite main/master — develop sempre era rejeitado
+    # ("Branch develop is not allowed…"). HostGator cobre o site do celular.
+    branches: [main]
   workflow_dispatch:
 
 permissions:
