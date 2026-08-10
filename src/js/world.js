@@ -4144,6 +4144,8 @@ export class World {
 
   /**
    * Delta XZ mais curto entre dois pontos (atravessa a “costura” do globo).
+   * Funciona com coords contínuas do jogador (várias voltas no toro) —
+   * o ajuste ±size único quebrava a base/fogueira após dar a volta no mapa.
    * @returns {{ dx: number, dz: number }}
    */
   wrapDelta(ax, az, bx, bz) {
@@ -4151,10 +4153,9 @@ export class World {
     const h = this.half;
     let dx = bx - ax;
     let dz = bz - az;
-    if (dx > h) dx -= s;
-    else if (dx < -h) dx += s;
-    if (dz > h) dz -= s;
-    else if (dz < -h) dz += s;
+    // normaliza para (−half, half] mesmo com |delta| >> size
+    dx = ((((dx + h) % s) + s) % s) - h;
+    dz = ((((dz + h) % s) + s) % s) - h;
     return { dx, dz };
   }
 

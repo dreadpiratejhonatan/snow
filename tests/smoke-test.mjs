@@ -730,6 +730,38 @@ try {
     );
   }
   console.log("Torus seamless OK — player x:", player.position.x.toFixed(1), "tileOx:", world._torusTileOx);
+
+  // Após várias voltas no toro, base/fogueira ainda “aparecem” perto (wrapDelta modular)
+  {
+    const far = {
+      x: world.half + world.size * 2.5,
+      y: 4,
+      z: world.half + world.size * 1.25,
+    };
+    const dBase = world.wrapDistXZ(far, world.basePos);
+    const dFire = world.wrapDistXZ(far, world.campfirePos);
+    if (!(dBase < world.half) || !(dFire < world.half)) {
+      throw new Error(
+        `torus: wrapDist após multi-volta deveria achar base/fogueira (base=${dBase.toFixed(1)} fire=${dFire.toFixed(1)})`
+      );
+    }
+    world.presentTorusVisuals(far);
+    const bd = Math.hypot(
+      world.baseGroup.position.x - far.x,
+      world.baseGroup.position.z - far.z
+    );
+    const fd = Math.hypot(
+      world.campfire.position.x - far.x,
+      world.campfire.position.z - far.z
+    );
+    if (bd > world.half + 5 || fd > world.half + 5) {
+      throw new Error(
+        `torus: base/fogueira deveriam apresentar perto após multi-volta (bd=${bd.toFixed(1)} fd=${fd.toFixed(1)})`
+      );
+    }
+    console.log("Torus base beacon OK — multi-wrap dist base", dBase.toFixed(1), "fire", dFire.toFixed(1));
+  }
+
   console.log("SMOKE OK — pos final:", player.position.toArray().map((n) => n.toFixed(2)).join(", "));
 } catch (err) {
   console.error("SMOKE FAIL:", err);
