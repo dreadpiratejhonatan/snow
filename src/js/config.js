@@ -10,7 +10,7 @@ export const CONFIG = {
     shadowMapSize: 512,
     bloom: false,
     snowCount: 320,
-    rainCount: 220,
+    rainCount: 320,
     sandCount: 200,
     flowerCount: 180,
     grassCount: 900,
@@ -34,7 +34,7 @@ export const CONFIG = {
     fireflyCount: 90,
     birdCount: 4,
     snowCount: 700,
-    rainCount: 520,
+    rainCount: 720,
     sandCount: 480,
     flowerCount: 420,
     /** Neve desktop: atualiza a cada N frames (groundHeight/floco foi removido). */

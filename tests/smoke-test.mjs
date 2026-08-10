@@ -594,6 +594,16 @@ try {
   if (!world.rain.visible || world.rain.material.opacity < 0.3) {
     throw new Error("weather: chuva deveria ficar visível com rain=0.8");
   }
+  if (!world.rain.isLineSegments) {
+    throw new Error("weather: chuva deveria ser LineSegments (gotas visíveis, não Points sumidos)");
+  }
+  if (world.rain.material.fog !== false) {
+    throw new Error("weather: material da chuva não pode usar fog (sumia na névoa)");
+  }
+  const rainVerts = world.rain.geometry.attributes.position.count;
+  if (rainVerts < (world.rainData?.length || 0) * 2) {
+    throw new Error("weather: cada gota precisa de 2 vértices (traço)");
+  }
   world.setWeather({ rain: 0, sand: 0.9, wind: 1.8, snowBoost: 0 });
   world.updateSandstorm(0.05, 1, { x: 0, y: 4, z: 0 });
   if (!world.sand.visible) {

@@ -875,33 +875,42 @@ export class World {
     }
   }
 
-  /** Chuva: pontos rápidos ao redor do jogador. */
+  /** Chuva: traços curtos ao redor da câmera (visível mesmo com névoa). */
   buildRainfall() {
     const count = this.lowFx
-      ? CONFIG.mobileGfx?.rainCount ?? 220
-      : CONFIG.world.rainCount ?? 520;
-    const positions = new Float32Array(count * 3);
+      ? CONFIG.mobileGfx?.rainCount ?? 280
+      : CONFIG.world.rainCount ?? 720;
+    // 2 vértices por gota → LineSegments (não some na névoa como Points minúsculos)
+    const positions = new Float32Array(count * 2 * 3);
     this.rainData = [];
     for (let i = 0; i < count; i++) {
-      positions.set(
-        [(Math.random() * 2 - 1) * 36, 4 + Math.random() * 18, (Math.random() * 2 - 1) * 36],
-        i * 3
-      );
-      this.rainData.push({ speed: 14 + Math.random() * 10, phase: Math.random() * Math.PI * 2 });
+      const x = (Math.random() * 2 - 1) * 22;
+      const y = 6 + Math.random() * 16;
+      const z = (Math.random() * 2 - 1) * 22;
+      const len = 0.45 + Math.random() * 0.55;
+      positions.set([x, y, z, x, y - len, z], i * 6);
+      this.rainData.push({
+        speed: 16 + Math.random() * 14,
+        phase: Math.random() * Math.PI * 2,
+        len,
+      });
     }
     const geo = new THREE.BufferGeometry();
     geo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-    this.rain = new THREE.Points(
+    this.rain = new THREE.LineSegments(
       geo,
-      new THREE.PointsMaterial({
-        color: 0xa8c4e0,
-        size: this.lowFx ? 0.12 : 0.09,
+      new THREE.LineBasicMaterial({
+        color: 0xd0e4f8,
         transparent: true,
         opacity: 0,
         depthWrite: false,
+        fog: false,
+        blending: THREE.AdditiveBlending,
       })
     );
     this.rain.visible = false;
+    this.rain.frustumCulled = false;
+    this.rain.renderOrder = 3;
     this.scene.add(this.rain);
     this._rainAmt = 0;
   }
@@ -1225,13 +1234,14 @@ export class World {
   updateRainfall(dt, elapsed, playerPos) {
     const amt = this._rainAmt || 0;
     if (!this.rain) return;
-    if (amt < 0.06) {
+    if (amt < 0.05) {
       this.rain.visible = false;
       if (this.rain.material) this.rain.material.opacity = 0;
       return;
     }
     this.rain.visible = true;
-    this.rain.material.opacity = Math.min(0.95, 0.25 + amt * 0.7);
+    // garoa já dá pra ver; tempestade fica densa
+    this.rain.material.opacity = Math.min(0.9, 0.35 + amt * 0.55);
     const skip = this.lowFx ? 2 : 1;
     this._rainFrame = ((this._rainFrame || 0) + 1) % skip;
     if (this._rainFrame !== 0) return;
@@ -1240,20 +1250,25 @@ export class World {
     const sp = this.rain.geometry.attributes.position;
     const wind = this._windAmt ?? 1;
     const n = this.rainData.length;
-    const floorY = (p.y || 4) - 1.2;
+    const floorY = (p.y || 4) - 0.6;
+    const radius = this.lowFx ? 20 : 26;
+    const windLean = wind * 0.12;
     for (let i = 0; i < n; i++) {
       const d = this.rainData[i];
-      let x = sp.getX(i) + wind * dt * 2.2;
-      let y = sp.getY(i) - d.speed * dt * (0.7 + amt);
-      let z = sp.getZ(i) + Math.sin(elapsed + d.phase) * dt * 0.4 * wind;
+      // ponta de cima da gota (vértice par)
+      let x = sp.getX(i * 2) + wind * dt * 3.2;
+      let y = sp.getY(i * 2) - d.speed * dt * (0.85 + amt * 0.6);
+      let z = sp.getZ(i * 2) + Math.sin(elapsed * 1.2 + d.phase) * dt * 0.55 * wind;
       const dx = x - p.x;
       const dz = z - p.z;
-      if (y < floorY || dx * dx + dz * dz > 40 * 40) {
-        x = p.x + (Math.random() * 2 - 1) * 34;
-        z = p.z + (Math.random() * 2 - 1) * 34;
-        y = p.y + 8 + Math.random() * 14;
+      if (y < floorY || dx * dx + dz * dz > radius * radius) {
+        x = p.x + (Math.random() * 2 - 1) * radius * 0.92;
+        z = p.z + (Math.random() * 2 - 1) * radius * 0.92;
+        y = (p.y || 4) + 7 + Math.random() * 12;
       }
-      sp.setXYZ(i, x, y, z);
+      const len = d.len * (0.85 + amt * 0.55);
+      sp.setXYZ(i * 2, x, y, z);
+      sp.setXYZ(i * 2 + 1, x - windLean, y - len, z);
     }
     sp.needsUpdate = true;
   }
