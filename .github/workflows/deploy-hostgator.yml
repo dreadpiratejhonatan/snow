@@ -33,16 +33,17 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: FTP upload (preserve live data/)
+      # Plain FTP first (histórico HostGator). Se 530/TLS, tenta FTPS.
+      - name: FTP upload (plain)
+        id: ftp_plain
+        continue-on-error: true
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.HOSTGATOR_FTP_HOST }}
           username: ${{ secrets.HOSTGATOR_FTP_USER }}
           password: ${{ secrets.HOSTGATOR_FTP_PASSWORD }}
           local-dir: ./release/hostgator-snow/
-          # Diretório remoto: valor só no secret HOSTGATOR_FTP_DIR
           server-dir: ${{ secrets.HOSTGATOR_FTP_DIR }}
-          # HostGator costuma aceitar FTP plain; se o painel exigir TLS, use ftps
           protocol: ftp
           security: loose
           dangerous-clean-slate: false
@@ -56,4 +57,24 @@ jobs:
             data/rooms/**
             data/rooms/**/*
 
-# redeploy kick 2026-08-10T11:44:57Z
+      - name: FTP upload (FTPS fallback)
+        if: steps.ftp_plain.outcome != 'success'
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.HOSTGATOR_FTP_HOST }}
+          username: ${{ secrets.HOSTGATOR_FTP_USER }}
+          password: ${{ secrets.HOSTGATOR_FTP_PASSWORD }}
+          local-dir: ./release/hostgator-snow/
+          server-dir: ${{ secrets.HOSTGATOR_FTP_DIR }}
+          protocol: ftps
+          security: loose
+          dangerous-clean-slate: false
+          exclude: |
+            **/.git*
+            **/.git*/**
+            data/leaderboard.json
+            data/tickets.json
+            data/tickets-admin.key
+            data/tickets-rate.json
+            data/rooms/**
+            data/rooms/**/*
