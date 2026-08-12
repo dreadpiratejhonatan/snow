@@ -6,6 +6,9 @@ Documentação completa: [`docs/V1-OFICIAL.md`](docs/V1-OFICIAL.md) · Tag Git: 
 
 ## Atualizações recentes (pós-v1.0)
 
+### [gh124] — MARCELÃO (12 ago 2026)
+- Personagem jogável **MARCELÃO**: alto, forte, sem camisa, pele de atleta; rosto com boca fina, nariz grande, olhos pequenos e cabelo curto volumoso
+
 ### [gh97] — Balões espaçados (8 ago 2026)
 - Balões de fala e sussurros com intervalos **aleatórios médios/longos** (sem spam no relógio)
 
@@ -109,7 +112,7 @@ Documentação completa: [`docs/V1-OFICIAL.md`](docs/V1-OFICIAL.md) · Tag Git: 
 - Vitória exige **Troféu do Urso Alfa** + **Troféu do Boto**
 
 ## Personagens
-- **Natan**, **Jorge Bolado**, **Caio**, **Lorenzo**, **ZÉ**
+- **Natan**, **Jorge Bolado**, **Caio**, **Lorenzo**, **ZÉ**, **MARCELÃO**
 - Preview 3D; cards em ordem aleatória; rosto só na frente da cabeça
 
 ## Mundo e áudio

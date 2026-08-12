@@ -193,8 +193,17 @@ try {
   if (were.alive) throw new Error("explosão deveria matar o lobisomem");
   const ammoDrop = world.items.find((i) => i.ammoType);
   if (!ammoDrop) throw new Error("nenhum pickup/drop de munição no mundo");
-  if (!CONFIG.skins.natan || !CONFIG.skins.ze) {
-    throw new Error("CONFIG.skins ausente (natan/ze)");
+  if (!CONFIG.skins.natan || !CONFIG.skins.ze || !CONFIG.skins.marcelao) {
+    throw new Error("CONFIG.skins ausente (natan/ze/marcelao)");
+  }
+  if (CONFIG.skins.marcelao.name !== "MARCELÃO") {
+    throw new Error("MARCELÃO deve ter nome em caps");
+  }
+  if (!CONFIG.skins.marcelao.shirtless) {
+    throw new Error("MARCELÃO deve ser shirtless");
+  }
+  if (!CONFIG.skinOrder.includes("marcelao")) {
+    throw new Error("marcelao ausente em skinOrder");
   }
 
   // armadilhas perto da base
@@ -596,6 +605,16 @@ try {
   if (player.skinId !== "natan") throw new Error("alias neymar deveria virar natan");
   player.applySkin("mega_brain");
   if (player.skinId !== "natan") throw new Error("alias mega_brain deveria virar natan");
+
+  player.applySkin("marcelao");
+  if (player.skinId !== "marcelao") throw new Error("applySkin marcelao falhou");
+  if (player.shirtStrip?.visible) throw new Error("MARCELÃO shirtless: camisa deveria sumir");
+  if (player.tieStrip?.visible) throw new Error("MARCELÃO shirtless: gravata deveria sumir");
+  if (Math.abs(player.mesh.scale.y - 1.2) > 0.01) {
+    throw new Error("MARCELÃO deveria ser mais alto (bodyScale.y)");
+  }
+  player.applySkin("natan");
+  if (!player.shirtStrip?.visible) throw new Error("voltar pra Natan deveria mostrar camisa");
 
   // Solo sazonal: verão tinges o chão de verde; inverno volta branco
   const summer = CONFIG.world.seasons.find((s) => s.id === "summer");

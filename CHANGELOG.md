@@ -28,8 +28,11 @@ Primeira versão **oficial** (`release/v1.0`, tag `v1.0.0`).
 
 ## [Unreleased]
 
-Trabalho na branch `develop` após `v1.0.0` (cache **`gh101`**).  
+Trabalho na branch `develop` após `v1.0.0` (cache **`gh124`**).  
 Resumo narrativo: [`docs/DEVELOP-ATE-GH63.md`](docs/DEVELOP-ATE-GH63.md) · [`DEVELOP-GH64-ATE-GH73.md`](docs/DEVELOP-GH64-ATE-GH73.md).
+
+### Added
+- Personagem jogável **MARCELÃO** — rosto em `faces/marcelao.png`; alto, forte, sem camisa (pele de atleta / estilo Berserk)
 
 ### Changed
 - **Usabilidade (gh101)**: frio pulsa na barra 🔥 + “→ fogueira”; morte/vitória sem dump do pause; munição + Recarregar sempre visíveis (botão R no touch); legenda do minimapa + base pulsa no frio; reportar problema rápido no pause/morte
