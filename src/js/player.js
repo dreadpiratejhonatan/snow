@@ -52,6 +52,37 @@ export class Player {
     this.mats.shirt.color.setHex(def.shirt);
     this.mats.skin.color.setHex(def.skin);
     this.mats.tie.color.setHex(def.tie);
+
+    const shirtless = !!def.shirtless;
+    const upperMat = shirtless ? this.mats.skin : this.mats.suit;
+    if (this.torsoMesh) this.torsoMesh.material = upperMat;
+    if (this.leftShoulder) this.leftShoulder.material = upperMat;
+    if (this.rightShoulder) this.rightShoulder.material = upperMat;
+    for (const m of this.armShaftMeshes || []) m.material = upperMat;
+    if (this.shirtStrip) this.shirtStrip.visible = !shirtless;
+    if (this.tieStrip) this.tieStrip.visible = !shirtless;
+
+    const bs = def.bodyScale;
+    if (bs && typeof bs === "object") {
+      this.mesh.scale.set(bs.x ?? 1, bs.y ?? 1, bs.z ?? 1);
+    } else {
+      const s = typeof bs === "number" ? bs : 1;
+      this.mesh.scale.setScalar(s);
+    }
+    const ts = def.torsoScale;
+    if (this.torsoMesh) {
+      if (ts && typeof ts === "object") {
+        this.torsoMesh.scale.set(ts.x ?? 1, ts.y ?? 1, ts.z ?? 1);
+      } else {
+        this.torsoMesh.scale.setScalar(1);
+      }
+    }
+    const armS = shirtless ? def.armScale || 1.25 : 1;
+    if (this.leftArm) this.leftArm.scale.set(armS, 1, armS);
+    if (this.rightArm) this.rightArm.scale.set(armS, 1, armS);
+    if (this.leftShoulder) this.leftShoulder.scale.setScalar(shirtless ? 1.35 : 1);
+    if (this.rightShoulder) this.rightShoulder.scale.setScalar(shirtless ? 1.35 : 1);
+
     const faceMat = this.mats.face;
     if (faceMat && def.face) {
       const token = def.id;
@@ -84,6 +115,7 @@ export class Player {
     // torso afunilado (ombros mais largos que a cintura)
     const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.12, 0.72, 12), suit);
     torso.position.y = 1.28;
+    this.torsoMesh = torso;
 
     // ombros arredondados
     const shoulderGeo = new THREE.SphereGeometry(0.075, 10, 8);
@@ -91,6 +123,8 @@ export class Player {
     leftShoulder.position.set(-0.19, 1.6, 0);
     const rightShoulder = new THREE.Mesh(shoulderGeo, suit);
     rightShoulder.position.set(0.19, 1.6, 0);
+    this.leftShoulder = leftShoulder;
+    this.rightShoulder = rightShoulder;
 
     // camisa e gravata na frente do peito
     const shirtStrip = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.045, 0.6, 8), shirt);
@@ -98,6 +132,8 @@ export class Player {
     const tieStrip = new THREE.Mesh(new THREE.ConeGeometry(0.04, 0.34, 6), tie);
     tieStrip.rotation.x = Math.PI;
     tieStrip.position.set(0, 1.36, 0.16);
+    this.shirtStrip = shirtStrip;
+    this.tieStrip = tieStrip;
 
     // headRoot: pescoço + cabeça + rosto giram com o olhar (contrato Spirit / celular)
     this.headRoot = new THREE.Group();
@@ -129,6 +165,7 @@ export class Player {
     this.leftArm.position.set(-0.23, 1.58, 0);
     this.rightArm = this.makeLimb(0.05, 1.0, suit, 0.04, skin);
     this.rightArm.position.set(0.23, 1.58, 0);
+    this.armShaftMeshes = [this.leftArm.children[0], this.rightArm.children[0]].filter(Boolean);
 
     // ponto de ancoragem da arma na mão direita (3ª pessoa)
     this.weaponMount = new THREE.Group();

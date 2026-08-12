@@ -96,6 +96,9 @@ export class SkinPreview {
     const facePlane = new THREE.Mesh(new THREE.PlaneGeometry(0.28, 0.3), face);
     facePlane.position.set(0, 1.9, 0.162);
     body.add(torso, shirtStrip, neck, head, facePlane);
+    this.bodyRoot = body;
+    this.torsoMesh = torso;
+    this.shirtStrip = shirtStrip;
     this.root.add(body);
   }
 
@@ -105,6 +108,27 @@ export class SkinPreview {
     this.mats.suit.color.setHex(def.suit);
     this.mats.shirt.color.setHex(def.shirt);
     this.mats.skin.color.setHex(def.skin);
+
+    const shirtless = !!def.shirtless;
+    if (this.torsoMesh) this.torsoMesh.material = shirtless ? this.mats.skin : this.mats.suit;
+    if (this.shirtStrip) this.shirtStrip.visible = !shirtless;
+    const bs = def.bodyScale;
+    if (this.bodyRoot) {
+      if (bs && typeof bs === "object") {
+        this.bodyRoot.scale.set(bs.x ?? 1, bs.y ?? 1, bs.z ?? 1);
+      } else {
+        this.bodyRoot.scale.setScalar(typeof bs === "number" ? bs : 1);
+      }
+    }
+    const ts = def.torsoScale;
+    if (this.torsoMesh) {
+      if (ts && typeof ts === "object") {
+        this.torsoMesh.scale.set(ts.x ?? 1, ts.y ?? 1, ts.z ?? 1);
+      } else {
+        this.torsoMesh.scale.setScalar(1);
+      }
+    }
+
     const tex = await loadFaceTexture(def.face);
     if (!tex) return;
     this.mats.face.map = tex;

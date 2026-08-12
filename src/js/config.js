@@ -697,8 +697,22 @@ export const CONFIG = {
       skin: 0xf0d4b8,
       tie: 0x2a1a10,
     },
+    marcelao: {
+      id: "marcelao",
+      name: "MARCELÃO",
+      face: "faces/marcelao.png",
+      // Calça escura; torso/braços usam pele (shirtless + bodyScale no player)
+      suit: 0x1a1a22,
+      shirt: 0xd4a07a,
+      skin: 0xd4a07a,
+      tie: 0xd4a07a,
+      shirtless: true,
+      bodyScale: { x: 1.22, y: 1.2, z: 1.18 },
+      torsoScale: { x: 1.38, y: 1.12, z: 1.32 },
+      armScale: 1.4,
+    },
   },
-  skinOrder: ["natan", "jorge", "caio", "lorenzo", "ze"],
+  skinOrder: ["natan", "jorge", "caio", "lorenzo", "ze", "marcelao"],
   /** IDs antigos → personagem (localStorage / saves). */
   skinAlias: {
     classic: "natan",
@@ -712,6 +726,7 @@ export const CONFIG = {
     mega_brain: "natan",
     neymar: "natan",
     robertson: "natan",
+    marcelão: "marcelao",
   },
   weapons: {
     fists: {
