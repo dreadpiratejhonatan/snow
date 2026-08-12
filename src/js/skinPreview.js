@@ -86,6 +86,10 @@ export class SkinPreview {
     const body = new THREE.Group();
     const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.12, 0.72, 12), suit);
     torso.position.y = 1.28;
+    const leftShoulder = new THREE.Mesh(new THREE.SphereGeometry(0.075, 10, 8), suit);
+    leftShoulder.position.set(-0.19, 1.6, 0);
+    const rightShoulder = new THREE.Mesh(new THREE.SphereGeometry(0.075, 10, 8), suit);
+    rightShoulder.position.set(0.19, 1.6, 0);
     const shirtStrip = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.045, 0.55, 8), shirt);
     shirtStrip.position.set(0, 1.32, 0.13);
     const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.055, 0.12, 8), skin);
@@ -95,10 +99,32 @@ export class SkinPreview {
     head.position.y = 1.9;
     const facePlane = new THREE.Mesh(new THREE.PlaneGeometry(0.28, 0.3), face);
     facePlane.position.set(0, 1.9, 0.162);
-    body.add(torso, shirtStrip, neck, head, facePlane);
+    // Braços + pernas: contraste calça/pele deixa shirtless legível no picker
+    const leftArm = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.04, 0.85, 8), suit);
+    leftArm.position.set(-0.24, 1.15, 0);
+    const rightArm = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.04, 0.85, 8), suit);
+    rightArm.position.set(0.24, 1.15, 0);
+    const leftLeg = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.05, 0.9, 8), suit);
+    leftLeg.position.set(-0.09, 0.5, 0);
+    const rightLeg = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.05, 0.9, 8), suit);
+    rightLeg.position.set(0.09, 0.5, 0);
+    body.add(
+      torso,
+      leftShoulder,
+      rightShoulder,
+      shirtStrip,
+      neck,
+      head,
+      facePlane,
+      leftArm,
+      rightArm,
+      leftLeg,
+      rightLeg
+    );
     this.bodyRoot = body;
     this.torsoMesh = torso;
     this.shirtStrip = shirtStrip;
+    this.upperMeshes = [torso, leftShoulder, rightShoulder, leftArm, rightArm];
     this.root.add(body);
   }
 
@@ -110,7 +136,8 @@ export class SkinPreview {
     this.mats.skin.color.setHex(def.skin);
 
     const shirtless = !!def.shirtless;
-    if (this.torsoMesh) this.torsoMesh.material = shirtless ? this.mats.skin : this.mats.suit;
+    const upperMat = shirtless ? this.mats.skin : this.mats.suit;
+    for (const m of this.upperMeshes || []) m.material = upperMat;
     if (this.shirtStrip) this.shirtStrip.visible = !shirtless;
     const bs = def.bodyScale;
     if (this.bodyRoot) {
@@ -127,6 +154,10 @@ export class SkinPreview {
       } else {
         this.torsoMesh.scale.setScalar(1);
       }
+    }
+    const armS = shirtless ? def.armScale || 1.25 : 1;
+    for (const m of this.upperMeshes || []) {
+      if (m !== this.torsoMesh) m.scale.set(armS, 1, armS);
     }
 
     const tex = await loadFaceTexture(def.face);
